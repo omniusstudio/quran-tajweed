@@ -130,13 +130,15 @@ export function ExercisesPage({ kind, param, go }: { kind?: ExerciseKind; param?
 
 type Grade = (id: string, ok: boolean) => void;
 
-function useQueue<T extends { id: string }>(deck: Deck, items: T[]) {
+/** `prefer` narrows the pool while it still has something to ask (e.g. words that have audio); the rest follow. */
+function useQueue<T extends { id: string }>(deck: Deck, items: T[], prefer?: (item: T) => boolean) {
+  const pick = (ex: string[]) => (prefer ? pickNext(deck, items.filter(prefer), ex) : undefined) ?? pickNext(deck, items, ex);
   const [asked, setAsked] = useState<string[]>([]);
-  const [item, setItem] = useState<T | undefined>(() => pickNext(deck, items, []));
+  const [item, setItem] = useState<T | undefined>(() => pick([]));
   const next = () => {
     const ex = item ? [...asked.slice(-30), item.id] : asked;
     setAsked(ex);
-    setItem(pickNext(deck, items, ex));
+    setItem(pick(ex));
   };
   return { item, next, count: asked.length };
 }
@@ -288,7 +290,9 @@ function Imalah({ deck, grade }: { deck: Deck; grade: Grade }) {
 
 function Madd({ deck, grade }: { deck: Deck; grade: Grade }) {
   const items = useMemo(maddItems, []);
-  const { item, next, count } = useQueue<MaddItem>(deck, items);
+  // Ask about words the learner can actually hear first: sūrahs with a shipped or saved alignment.
+  const hasAudio = (i: MaddItem) => !!loadAlignment(DEFAULT_RECITER, i.ref.surah);
+  const { item, next, count } = useQueue<MaddItem>(deck, items, hasAudio);
   const [ok, setOk] = useState<boolean | null>(null);
   const align = item ? loadAlignment(DEFAULT_RECITER, item.ref.surah) : undefined;
   const player = usePlayer(item ? audioUrl(DEFAULT_RECITER, item.ref.surah) : null);

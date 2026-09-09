@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "content": "python3 ../scripts/extract_viewer_text.py"
+    "content": "python3 ../scripts/extract_viewer_text.py",
+    "audio": "python3 ../scripts/fetch_audio.py"
   },
   "dependencies": {
     "react": "^18.3.1",

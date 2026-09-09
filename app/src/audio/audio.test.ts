@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fromExport, locate, proportionalWords, toExport, type SurahAlign } from './alignment';
+import { fromExport, loadAlignment, locate, proportionalWords, toExport, type SurahAlign } from './alignment';
 import { normalise, segmentsFromSilences, silences } from './peaks';
 import { SURAHS, bare, wordCues } from './quran';
 import { CLIP_MANIFEST } from '../content/clipManifest';
@@ -30,6 +30,56 @@ describe('alignment', () => {
     const back = fromExport(JSON.parse(JSON.stringify(ex)));
     expect(back.verses).toEqual(A.verses);
     expect(back.surah).toBe(112);
+  });
+
+  it('keeps the preamble (istiʿādhah) and the unreviewed flag through export and import', () => {
+    const withPre: SurahAlign = { ...A, preamble: [0.1, 0.4], header: [0.42, 0.48], auto: true };
+    const back = fromExport(JSON.parse(JSON.stringify(toExport(withPre))));
+    expect(back.preamble).toEqual([0.1, 0.4]);
+    expect(back.header).toEqual([0.42, 0.48]);
+    expect(back.auto).toBe(true);
+    expect(fromExport(toExport(A)).auto).toBeUndefined();
+    expect(locate(withPre, 0.2)).toBeNull(); // nothing highlights during the istiʿādhah
+  });
+
+  it('ships alignments that match the muṣḥaf text word for word and run forward in time', () => {
+    const shipped = import.meta.glob('../content/alignments/*/*.json', { eager: true, import: 'default' }) as Record<string, unknown>;
+    const paths = Object.keys(shipped);
+    expect(paths.length).toBeGreaterThan(0);
+    for (const path of paths) {
+      const a = fromExport(shipped[path]);
+      expect(path).toContain(`/${a.reciter}/${String(a.surah).padStart(3, '0')}.json`);
+      const s = SURAHS.find((x) => x.number === a.surah)!;
+      expect(s, path).toBeDefined();
+      expect(a.verses.map((v) => v.basri)).toEqual(s.verses.map((v) => v.basri));
+      let t = a.preamble?.[1] ?? 0;
+      if (s.header) {
+        expect(a.header, `${path}: header span`).toBeDefined();
+        expect(a.header![0]).toBeGreaterThanOrEqual(t);
+        expect(a.header![1]).toBeGreaterThan(a.header![0]);
+        t = a.header![1];
+      }
+      a.verses.forEach((v, i) => {
+        expect(v.words.length, `${path}: verse ${v.basri} word count`).toBe(s.verses[i].words.length);
+        expect(v.start).toBeGreaterThanOrEqual(t);
+        expect(v.words[0][0]).toBe(v.start);
+        expect(v.words[v.words.length - 1][1]).toBe(v.end);
+        for (const [x, y] of v.words) expect(y, `${path}: verse ${v.basri}`).toBeGreaterThan(x);
+        for (let j = 1; j < v.words.length; j++) expect(v.words[j][0]).toBe(v.words[j - 1][1]);
+        t = v.end;
+      });
+    }
+  });
+
+  it('loads a shipped alignment as a verse array the follow-along mode can use', () => {
+    const a = loadAlignment('nourin_siddig', 1)!;
+    expect(a).toBeDefined();
+    expect(Array.isArray(a.verses)).toBe(true);
+    expect(a.verses).toHaveLength(7);
+    expect(a.preamble).toBeDefined();
+    expect(locate(a, a.verses[0].start + 0.05)).toEqual({ verse: 0, word: 0 });
+    expect(locate(a, a.preamble![0] + 0.1)).toBeNull();
+    expect(loadAlignment('nourin_siddig', 999)).toBeUndefined();
   });
 
   it('spreads words proportionally and exactly fills the verse span', () => {

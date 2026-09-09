@@ -152,7 +152,7 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
             </a>
           </p>
         )}
-        {align?.auto && <p className="todo">⚠ محاذاة تقديرية (يُراجع): حدود الآيات مكتشفة آلياً والكلمات موزعة بالتقدير.</p>}
+        {align?.auto && <p className="todo">⚠ محاذاة لم تُراجَع بالسماع بعد (يُراجع): قد تسبق إضاءة الكلمة صوتها أو تتأخر عنه قليلاً.</p>}
       </div>
 
       <div className="controls sticky">
@@ -184,6 +184,7 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
         <span className={`nose${ghunnahOn ? ' on' : ''}`}>
           <span aria-hidden>👃</span> {ghunnahOn ? 'غنة' : 'الأنف'}
         </span>
+        {align?.preamble && player.time >= align.preamble[0] && player.time < align.preamble[1] && <span className="badge">الاستعاذة</span>}
         {cues?.imalah && <span className="badge">إمالة</span>}
         {cues?.tashil && <span className="badge">تسهيل</span>}
       </div>

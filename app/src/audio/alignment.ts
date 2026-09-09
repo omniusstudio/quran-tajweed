@@ -16,6 +16,8 @@ export interface SurahAlign {
   version: 1;
   surah: number;
   reciter: string;
+  /** Span of the istiʿādhah (or anything else the reciter says before the basmalah); nothing highlights during it. */
+  preamble?: Span;
   /** Span of the unnumbered basmalah / header, if the reciter reads it. */
   header?: Span;
   verses: VerseAlign[];
@@ -23,7 +25,7 @@ export interface SurahAlign {
   auto?: boolean;
 }
 
-const shipped = import.meta.glob('../content/alignments/*/*.json', { eager: true, import: 'default' }) as Record<string, SurahAlign>;
+const shipped = import.meta.glob('../content/alignments/*/*.json', { eager: true, import: 'default' }) as Record<string, unknown>;
 
 function key(reciter: string, surah: number) {
   return `nutq.align.${reciter}.${surah}`;
@@ -37,7 +39,8 @@ export function loadAlignment(reciter: string, surah: number): SurahAlign | unde
     /* ignore */
   }
   const path = Object.keys(shipped).find((p) => p.endsWith(`/${reciter}/${String(surah).padStart(3, '0')}.json`));
-  return path ? shipped[path] : undefined;
+  // Shipped files are in the export format (verses keyed by Baṣrī number); convert them like an import.
+  return path ? fromExport(shipped[path]) : undefined;
 }
 
 export function saveAlignment(a: SurahAlign) {
@@ -60,16 +63,16 @@ export function clearLocalAlignment(reciter: string, surah: number) {
 export function toExport(a: SurahAlign) {
   const verses: Record<string, { start: number; end: number; words: Span[] }> = {};
   for (const v of a.verses) verses[String(v.basri)] = { start: v.start, end: v.end, words: v.words };
-  return { version: 1, reciter: a.reciter, surah: a.surah, header: a.header, verses };
+  return { version: 1, reciter: a.reciter, surah: a.surah, preamble: a.preamble, header: a.header, verses, auto: a.auto || undefined };
 }
 
 export function fromExport(obj: unknown): SurahAlign {
-  const o = obj as { version?: number; reciter: string; surah: number; header?: Span; verses: Record<string, { start: number; end: number; words: Span[] }> };
+  const o = obj as { version?: number; reciter: string; surah: number; preamble?: Span; header?: Span; verses: Record<string, { start: number; end: number; words: Span[] }>; auto?: boolean };
   if (!o || typeof o.surah !== 'number' || !o.verses) throw new Error('ملف المحاذاة غير صالح');
   const verses = Object.entries(o.verses)
     .map(([k, v]) => ({ basri: Number(k), start: v.start, end: v.end, words: v.words }))
     .sort((x, y) => x.basri - y.basri);
-  return { version: 1, reciter: o.reciter, surah: o.surah, header: o.header, verses };
+  return { version: 1, reciter: o.reciter, surah: o.surah, preamble: o.preamble, header: o.header, verses, auto: o.auto ? true : undefined };
 }
 
 /** Which verse / word is sounding at time t. */

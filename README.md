@@ -108,9 +108,15 @@ play); and the release checklist at `#/checklist`. See PROMPT.md §10.
   IndexedDB.
 - **المحاذاة** (`#/align/1`): the alignment editor. Waveform + zoom strip, Enter
   marks the next boundary at the playhead, silence detection proposes verse
-  boundaries, proportional word spread as a starting point, save to the
-  browser, export/import JSON keyed by sūrah / Baṣrī verse / word index. Put a
-  finished export at `app/src/content/alignments/<reciter>/<NNN>.json` to ship it.
+  boundaries (one extra leading segment is taken as the istiʿādhah and kept
+  out of the highlighting), proportional word spread as a starting point, save
+  to the browser, export/import JSON keyed by sūrah / Baṣrī verse / word index.
+  Put a finished export at `app/src/content/alignments/<reciter>/<NNN>.json` to
+  ship it; the export keeps an `auto` flag until "✓ راجعتُ الحدود بالسماع" is
+  pressed, and the follow-along page shows a يُراجع notice while it is set.
+  Shipped so far: `nourin_siddig/001.json` (al-Fātiḥah; verse boundaries from
+  the recording's pauses, word boundaries placed from its energy/frication
+  profile — still to be confirmed by ear, hence flagged).
 - **تسجيل المعلم** (`#/recorder`): walks the teacher through the clip manifest
   (letters alone and with each vowel, madd letters, minimal pairs, every lesson
   example) and exports all takes as a zip with the fixed file names.

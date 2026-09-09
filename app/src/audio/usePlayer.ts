@@ -75,8 +75,9 @@ export function usePlayer(src: string | null): Player {
     audio.addEventListener('play', onPlay);
     audio.addEventListener('pause', onPause);
     audio.addEventListener('ended', onPause);
-    let raf = 0;
-    const tick = () => {
+    // Range stops and loops are checked on every animation frame; `timeupdate` (about 4 Hz) keeps them
+    // working when the tab is hidden and the browser pauses requestAnimationFrame.
+    const check = () => {
       const t = audio.currentTime;
       setTime(t);
       const r = rangeRef.current;
@@ -87,11 +88,17 @@ export function usePlayer(src: string | null): Player {
       } else if (loopRef.current && !audio.paused && (t >= loopRef.current[1] || t < loopRef.current[0] - 0.5)) {
         audio.currentTime = loopRef.current[0];
       }
+    };
+    let raf = 0;
+    const tick = () => {
+      check();
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
+    audio.addEventListener('timeupdate', check);
     return () => {
       cancelAnimationFrame(raf);
+      audio.removeEventListener('timeupdate', check);
       audio.removeEventListener('loadedmetadata', onMeta);
       audio.removeEventListener('error', onErr);
       audio.removeEventListener('play', onPlay);

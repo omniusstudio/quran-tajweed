@@ -171,8 +171,11 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
     const gaps = silences(env, PER_SEC);
     const segs = segmentsFromSilences(gaps, duration);
     const expected = s.verses.length + (s.header ? 1 : 0);
+    // One extra segment at the start is the istiʿādhah (mp3quran recordings of al-Fātiḥah open with it).
+    const preamble = segs.length === expected + 1;
     update((a) => {
       let i = 0;
+      a.preamble = preamble ? segs[i++] : undefined;
       if (s.header && segs.length) a.header = segs[i++];
       a.verses.forEach((v, vi) => {
         const seg = segs[i++];
@@ -182,7 +185,10 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
         v.words = proportionalWords(s.verses[vi].words, seg[0], seg[1]);
       });
     }, true);
-    setMsg(`اكتُشفت ${arNum(segs.length)} مقاطع صوتية، والمتوقع ${arNum(expected)}${segs.length === expected ? ' — تطابق تام، راجع الحدود واحفظ.' : ' — راجع الحدود يدوياً.'}`);
+    setMsg(
+      `اكتُشفت ${arNum(segs.length)} مقاطع صوتية، والمتوقع ${arNum(expected)}` +
+        (segs.length === expected ? ' — تطابق تام، راجع الحدود واحفظ.' : preamble ? ' — عُدّ المقطع الأول استعاذة، راجع الحدود واحفظ.' : ' — راجع الحدود يدوياً.'),
+    );
   };
 
   const distribute = () => {
@@ -192,6 +198,12 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
       });
     }, true);
     setMsg('وُزّعت الكلمات داخل كل آية بالتقدير؛ اضبطها بالسماع.');
+  };
+
+  /** The owner has checked every boundary by ear: drop the "تقديرية / يُراجع" flag without moving anything. */
+  const markReviewed = () => {
+    update(() => undefined, false);
+    setMsg('عُلّمت المحاذاة كمراجَعة بالسماع؛ احفظ ثم صدّر.');
   };
 
   const exportJson = () => {
@@ -281,6 +293,7 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
         <div className="row wrap" style={{ marginBlockStart: 8 }}>
           <button className="toggle" onClick={detectVerses} disabled={!env}>اكتشاف الوقفات → حدود الآيات</button>
           <button className="toggle" onClick={distribute}>توزيع الكلمات تقديرياً</button>
+          <button className="toggle" onClick={markReviewed} disabled={!align.auto}>✓ راجعتُ الحدود بالسماع</button>
           <button className="toggle" onClick={save}>حفظ (S)</button>
           <button className="toggle" onClick={exportJson}>تصدير JSON</button>
           <label className="toggle">
@@ -296,6 +309,13 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
       </div>
 
       <div className="card marks">
+        {align.preamble && (
+          <div className="mark-row">
+            <span className="small">الاستعاذة (قبل البسملة، لا تُضاء)</span>
+            <span className="mono">{`${fmt(align.preamble[0])} – ${fmt(align.preamble[1])}`}</span>
+            <button className="mini" onClick={() => align.preamble && player.playRange(align.preamble[0], align.preamble[1])}>▶</button>
+          </div>
+        )}
         {s.header && (
           <div className="mark-row">
             <span className="ayah small">{s.header}</span>
