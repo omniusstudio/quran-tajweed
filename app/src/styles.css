@@ -213,3 +213,17 @@ a.toggle { text-decoration: none; color: inherit; }
 .tag.duri { border-color: #c98c2a; color: #8a5a10; background: #fff7e6; }
 .tag.madd { border-color: var(--blue); color: var(--blue); }
 .tag.nun, .tag.mim, .tag.ghunnah { border-color: var(--green); color: var(--green); }
+
+/* ---- reference, drills, PWA-era nav ---- */
+.tabs.tools { margin-block-start: -6px; }
+.tabs.tools button { font-size: .85rem; padding: 4px 12px; color: var(--muted); }
+.tabs.tools button[aria-pressed="true"] { color: #fff; }
+table.cmp { border-collapse: collapse; margin-block-start: 6px; }
+table.cmp th, table.cmp td { border: 1px solid var(--line); padding: 4px 10px; text-align: start; }
+table.cmp td.q { font-family: var(--quran); font-size: 1.5rem; color: var(--green); }
+table.cmp td.hafs { color: var(--muted); }
+.ref-example { margin-block-end: 6px; }
+details > summary { cursor: pointer; margin-block: 6px; }
+.drill-word { display: flex; flex-direction: column; gap: 6px; }
+canvas.thumb { width: 120px; height: 24px; border: 1px solid var(--line); border-radius: 4px; background: #fff; }
+button.toggle.rec { background: var(--red); color: #fff; border-color: var(--red); animation: pulse 1s infinite; }

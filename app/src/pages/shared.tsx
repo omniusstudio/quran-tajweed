@@ -1,4 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import { loadAlignment } from '../audio/alignment';
+import { DEFAULT_RECITER, audioUrl } from '../audio/quran';
 import type { Example } from '../content/lessons';
 import { linkTerms } from '../content/terms';
 import { refImage } from '../content/refImages';
@@ -37,9 +39,38 @@ export function Ayah({ ex, maxWords = 22 }: { ex: Example; maxWords?: number }) 
         {hi < ex.words.length && ' …'}
       </div>
       <div className="ref">
-        {ex.surahName}، الآية {arNum(ex.basri)} (حفص: {arNum(ex.kufi)})
+        {ex.surahName}، الآية {arNum(ex.basri)} (حفص: {arNum(ex.kufi)}) <PlayVerse surah={ex.surah} basri={ex.basri} />
       </div>
     </div>
+  );
+}
+
+/** ▶ for a verse whose sūrah has cached audio and an alignment (v1 sūrahs, once the owner aligned them). */
+export function PlayVerse({ surah, basri }: { surah: number; basri: number }) {
+  const a = loadAlignment(DEFAULT_RECITER, surah);
+  const v = a?.verses.find((x) => x.basri === basri);
+  const audio = useRef<HTMLAudioElement | null>(null);
+  if (!v || !(v.end > v.start)) return null;
+  const play = () => {
+    if (!audio.current) {
+      audio.current = new Audio(audioUrl(DEFAULT_RECITER, surah));
+      (audio.current as HTMLAudioElement & { preservesPitch: boolean }).preservesPitch = true;
+    }
+    const el = audio.current;
+    el.currentTime = v.start;
+    const stop = () => {
+      if (el.currentTime >= v.end) {
+        el.pause();
+        el.removeEventListener('timeupdate', stop);
+      }
+    };
+    el.addEventListener('timeupdate', stop);
+    void el.play();
+  };
+  return (
+    <button className="mini" onClick={play} title="اسمع الآية">
+      ▶ اسمع
+    </button>
   );
 }
 

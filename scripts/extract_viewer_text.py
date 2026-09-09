@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Content pipeline (M1/M2 seed): convert content_beginner.py -> app/src/content/lessons.json.
+"""Content pipeline: content_beginner.py -> app/src/content/lessons.json and
+content_duri.py -> app/src/content/duri_ref.json.
 
 Every example is resolved against duri.json by surah + Basri verse + normalised word
 match. The script exits non-zero if any target word is not found in the cited verse,
@@ -13,6 +14,7 @@ DATA = ROOT / 'data'
 sys.path.insert(0, str(DATA))
 
 from content_beginner import SECTIONS  # noqa: E402
+from content_duri import SECTIONS as DURI_SECTIONS  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from hafs_align import align_words, hafs_words  # noqa: E402
 
@@ -77,29 +79,38 @@ def fig_to_json(f):
     m = IMG_RE.search(svg)
     return {'img': m.group(1) if m else None, 'caption': caption}
 
-out = {'sections': []}
-n = 0
-for si, sec in enumerate(SECTIONS, 1):
-    rules = []
-    for ri, r in enumerate(sec['rules'], 1):
-        ex = []
-        for (s, v, t) in r['examples']:
-            n += 1
-            e = resolve(s, v, t)
-            if e: ex.append(e)
-        rules.append({
-            'id': f's{si}r{ri}', 'name': r['name'], 'text': r['text'],
-            'figures': [fig_to_json(f) for f in r.get('figures', [])],
-            'examples': ex,
-        })
-    out['sections'].append({'id': f's{si}', 'title': sec['title'], 'intro': sec.get('intro'), 'rules': rules})
+def convert(sections, prefix):
+    out = {'sections': []}
+    n = 0
+    for si, sec in enumerate(sections, 1):
+        rules = []
+        for ri, r in enumerate(sec['rules'], 1):
+            ex = []
+            for (s, v, t) in r['examples']:
+                n += 1
+                e = resolve(s, v, t)
+                if e: ex.append(e)
+            rules.append({
+                'id': f'{prefix}{si}r{ri}', 'name': r['name'], 'text': r['text'],
+                'figures': [fig_to_json(f) for f in r.get('figures', [])],
+                'examples': ex,
+            })
+        out['sections'].append({'id': f'{prefix}{si}', 'title': sec['title'], 'intro': sec.get('intro'), 'rules': rules})
+    return out, n
+
+
+out, n = convert(SECTIONS, 's')
+ref, n_ref = convert(DURI_SECTIONS, 'd')
 
 if MISSES:
     print('\n'.join(MISSES), file=sys.stderr)
-    print(f'FAILED: {len(MISSES)} of {n} examples not found', file=sys.stderr)
+    print(f'FAILED: {len(MISSES)} of {n + n_ref} examples not found', file=sys.stderr)
     sys.exit(1)
 
 dst = ROOT / 'app' / 'src' / 'content' / 'lessons.json'
 dst.parent.mkdir(parents=True, exist_ok=True)
 json.dump(out, open(dst, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(f'OK: {n} examples verified -> {dst.relative_to(ROOT)}')
+dst2 = ROOT / 'app' / 'src' / 'content' / 'duri_ref.json'
+json.dump(ref, open(dst2, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+print(f'OK: {n_ref} examples verified -> {dst2.relative_to(ROOT)}')

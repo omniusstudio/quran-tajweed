@@ -6,7 +6,6 @@ import { ContrastView } from '../viewer/ContrastView';
 import { Controls } from '../viewer/Controls';
 import { useClock } from '../viewer/useClock';
 import { Ayah, Figures, LinkedText } from './shared';
-import { LESSON_EXERCISE } from '../content/ruleViewer';
 
 export function LettersPage({ id, go }: { id: string; go: (hash: string) => void }) {
   const art = BY_ID[id];
@@ -86,46 +85,5 @@ export function ContrastPage({ id, go }: { id: string; go: (hash: string) => voi
         <ContrastView key={pair.id} pair={pair} />
       </div>
     </>
-  );
-}
-
-export function ChecklistPage() {
-  const ok = '✅';
-  const no = '❌';
-  return (
-    <div className="checklist">
-      <p className="ref">قائمة الجاهزية (مسار المطوّر): حركة، صوت المعلم، مثال، تمرين.</p>
-      <div style={{ overflowX: 'auto' }}>
-        <table>
-          <thead>
-            <tr>
-              <th>الحرف</th>
-              <th>الاسم</th>
-              <th>الحركة</th>
-              <th>صوت المعلم</th>
-              <th>مثال</th>
-              <th>تمرين</th>
-              <th>ملاحظة</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ARTICULATIONS.map((a) => {
-              const rule = a.ruleId ? RULES[a.ruleId] : undefined;
-              return (
-                <tr key={a.id}>
-                  <td className="q">{a.letters}</td>
-                  <td>{a.nameAr}</td>
-                  <td>{ok}</td>
-                  <td>{no}</td>
-                  <td>{rule && rule.examples.length > 0 ? ok : no}</td>
-                  <td>{a.ruleId && LESSON_EXERCISE[a.ruleId] ? ok : ['sin', 'sad', 'ta', 'tta', 'kaf', 'qaf', 'dhal', 'zha', 'dal', 'dad', 'jim', 'shin', 'hamza', 'ain', 'ha', 'hha', 'zay'].includes(a.id) ? ok : no}</td>
-                  <td>{a.needsReview ? `يُراجع: ${a.needsReview}` : ''}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }

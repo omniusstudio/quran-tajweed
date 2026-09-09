@@ -45,3 +45,18 @@ describe('dictionary terms', () => {
     expect(parts.find((p) => p.termRuleId === 's2r6')?.text).toBe('بغنة');
   });
 });
+
+describe('Dūrī reference and drills', async () => {
+  const { REF_SECTIONS, REF_RULES } = await import('./duriRef');
+  const { DRILLS } = await import('./drills');
+  it('loads the 10 reference sections with 75 verified examples', () => {
+    expect(REF_SECTIONS).toHaveLength(10);
+    expect(REF_SECTIONS.flatMap((s) => s.rules).flatMap((r) => r.examples)).toHaveLength(75);
+  });
+  it('every drill points at existing lesson and reference rules', () => {
+    for (const d of DRILLS) {
+      expect(RULES[d.lesson], `${d.id} lesson`).toBeDefined();
+      for (const r of d.ref) expect(REF_RULES[r], `${d.id} ref ${r}`).toBeDefined();
+    }
+  });
+});

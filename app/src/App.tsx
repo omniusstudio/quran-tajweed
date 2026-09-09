@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { RULES } from './content/lessons';
 import { DictionaryPage } from './pages/DictionaryPage';
 import { LessonScreen, LessonsIndex } from './pages/LessonsPage';
-import { ChecklistPage, ContrastPage, LettersPage } from './pages/LettersPage';
+import { ContrastPage, LettersPage } from './pages/LettersPage';
+import { ChecklistPage } from './pages/ChecklistPage';
+import { ReferencePage } from './pages/ReferencePage';
+import { DrillsPage } from './pages/DrillsPage';
 import { FollowPage } from './pages/FollowPage';
 import { AlignPage } from './pages/AlignPage';
 import { RecorderPage } from './pages/RecorderPage';
@@ -19,6 +22,8 @@ type Route =
   | { tab: 'align'; surah: number }
   | { tab: 'recorder' }
   | { tab: 'exercises'; kind?: ExerciseKind; param?: string }
+  | { tab: 'reference'; id?: string }
+  | { tab: 'drills'; id?: string }
   | { tab: 'checklist' };
 
 function parseHash(): Route {
@@ -31,6 +36,8 @@ function parseHash(): Route {
   if (tab === 'align') return { tab: 'align', surah: SURAH_BY_NUMBER[Number(id)] ? Number(id) : 1 };
   if (tab === 'recorder') return { tab: 'recorder' };
   if (tab === 'exercises') return { tab: 'exercises', kind: EXERCISES.some((e) => e.kind === id) ? (id as ExerciseKind) : undefined, param: extra };
+  if (tab === 'reference') return { tab: 'reference', id };
+  if (tab === 'drills') return { tab: 'drills', id };
   if (tab === 'checklist') return { tab: 'checklist' };
   return { tab: 'lessons', id: id && RULES[id] ? id : undefined };
 }
@@ -52,13 +59,17 @@ function useRoute(): [Route, (hash: string) => void] {
 const TABS: { tab: Route['tab']; label: string; hash: string }[] = [
   { tab: 'lessons', label: 'الدروس', hash: '#/lessons' },
   { tab: 'letters', label: 'الحروف', hash: '#/letters/qaf' },
-  { tab: 'contrast', label: 'هذا، لا ذاك', hash: '#/contrast' },
-  { tab: 'dictionary', label: 'القاموس', hash: '#/dictionary' },
   { tab: 'exercises', label: 'التمارين', hash: '#/exercises' },
   { tab: 'follow', label: 'المتابعة', hash: '#/follow/1' },
+  { tab: 'drills', label: 'تدريبات الدوري', hash: '#/drills' },
+  { tab: 'reference', label: 'المرجع', hash: '#/reference' },
+];
+const TOOLS: { tab: Route['tab']; label: string; hash: string }[] = [
+  { tab: 'contrast', label: 'هذا، لا ذاك', hash: '#/contrast' },
+  { tab: 'dictionary', label: 'القاموس', hash: '#/dictionary' },
   { tab: 'align', label: 'المحاذاة', hash: '#/align/1' },
   { tab: 'recorder', label: 'تسجيل المعلم', hash: '#/recorder' },
-  { tab: 'checklist', label: 'قائمة الجاهزية', hash: '#/checklist' },
+  { tab: 'checklist', label: 'الجاهزية', hash: '#/checklist' },
 ];
 
 export default function App() {
@@ -78,6 +89,13 @@ export default function App() {
           </button>
         ))}
       </nav>
+      <nav className="tabs tools">
+        {TOOLS.map((t) => (
+          <button key={t.tab} aria-pressed={route.tab === t.tab} onClick={() => go(t.hash)}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
       {route.tab === 'lessons' && (route.id ? <LessonScreen ruleId={route.id} go={go} /> : <LessonsIndex go={go} />)}
       {route.tab === 'letters' && <LettersPage id={route.id} go={go} />}
       {route.tab === 'contrast' && <ContrastPage id={route.id} go={go} />}
@@ -86,6 +104,8 @@ export default function App() {
       {route.tab === 'align' && <AlignPage key={route.surah} surah={route.surah} go={go} />}
       {route.tab === 'recorder' && <RecorderPage />}
       {route.tab === 'exercises' && <ExercisesPage key={`${route.kind}-${route.param}`} kind={route.kind} param={route.param} go={go} />}
+      {route.tab === 'reference' && <ReferencePage sectionId={route.id} go={go} />}
+      {route.tab === 'drills' && <DrillsPage drillId={route.id} go={go} />}
       {route.tab === 'checklist' && <ChecklistPage />}
     </div>
   );

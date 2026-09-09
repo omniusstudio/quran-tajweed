@@ -50,11 +50,14 @@ npm run build     # typecheck + production build in app/dist
 Fonts and reference images are imported from the repo's `fonts/` and `images/`
 folders directly; nothing is duplicated inside `app/`.
 
-Milestones 2–4 are in place as well: lesson screens for all 14 sections with
+All five milestones are in place: lesson screens for all 14 sections with
 local progress and a dictionary; follow-along recitation with word highlighting,
 echo mode and record-and-compare; the alignment editor and teacher recorder; the
 rule tagger over the muṣḥaf's own notation; seven exercises with Leitner
-repetition. See PROMPT.md §10 for the milestone definitions.
+repetition; the Dūrī polish drills (watch → hear slow → hear normal → record →
+compare); the Dūrī-vs-Ḥafṣ reference from `content_duri.py`; offline PWA
+(app shell, fonts, artwork and content precached, recordings cached on first
+play); and the release checklist at `#/checklist`. See PROMPT.md §10.
 
 ### Notation the tagger reads (data/duri.json)
 
