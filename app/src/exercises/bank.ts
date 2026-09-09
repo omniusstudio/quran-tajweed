@@ -1,7 +1,7 @@
 // Exercise items generated from the muṣḥaf text by the rule tagger (PROMPT.md §7.3), so every
 // answer key is the muṣḥaf's own notation, never a hand-typed list.
 
-import { SURAHS, type Surah, type Verse } from '../audio/quran';
+import { SURAHS, bare, type Surah, type Verse } from '../audio/quran';
 import { QUIZ_RULES, RULES, hasImalah, tagVerse, type RuleId, type Tag } from '../rules/tagger';
 import { CONTRAST_PAIRS } from '../viewer/articulations';
 
@@ -100,19 +100,59 @@ export function nunItems(): NunItem[] {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Listen and pick (needs the teacher's clips)
+// 3. Listen and pick: two real words from the reciter's recording, which one has the letter?
+// The answer key is the muṣḥaf text; the voice is the reciter's, so no teacher clips are needed.
 
-export interface ListenItem {
+/** The muṣḥaf characters that count as each side of a confusable pair (CONTRAST_PAIRS ids). */
+const PAIR_LETTERS: Record<string, [string, string]> = {
+  sin_sad: ['س', 'ص'],
+  ta_tta: ['ت', 'ط'],
+  dal_dad: ['د', 'ض'],
+  dhal_zha: ['ذ', 'ظ'],
+  kaf_qaf: ['ك', 'ق'],
+  ha_hha: ['ه', 'ح'],
+  hamza_ain: ['ءأإؤئآ', 'ع'],
+  zay_zha: ['ز', 'ظ'],
+  jim_shin: ['ج', 'ش'],
+};
+const TASHIL = '\u06EC';
+
+export interface ListenWord {
+  ref: VerseRef;
+  word: number;
+}
+export interface ListenPair {
   id: string;
-  a: string;
-  b: string;
   aLetters: string;
   bLetters: string;
-  title: string;
+  /** Words containing an `a` letter and no `b` letter, and the reverse. */
+  a: ListenWord[];
+  b: ListenWord[];
 }
 
-export function listenItems(): ListenItem[] {
-  return CONTRAST_PAIRS.filter((p) => !p.b.endsWith('_wrong') && !['heavy_light', 'alif_imalah', 'lam_allah', 'ra_light_heavy'].includes(p.id)).map((p) => ({ id: `listen:${p.id}`, a: p.a, b: p.b, aLetters: p.title.split(' / ')[0], bLetters: p.title.split(' / ')[1] ?? '', title: p.title }));
+const hasAny = (bareWord: string, letters: string) => [...letters].some((ch) => bareWord.includes(ch));
+
+/** For every confusable pair, the v1 words that carry exactly one side of it (all sūrahs; the page keeps the aligned ones). */
+export function listenPairs(): ListenPair[] {
+  const out: ListenPair[] = [];
+  for (const p of CONTRAST_PAIRS) {
+    const letters = PAIR_LETTERS[p.id];
+    if (!letters) continue;
+    const pair: ListenPair = { id: p.id, aLetters: p.title.split(' / ')[0], bLetters: p.title.split(' / ')[1] ?? '', a: [], b: [] };
+    for (const t of taggedVerses()) {
+      t.ref.words.forEach((w, i) => {
+        // ة is ت in waṣl and ه at a stop, so it is neither side; a hamzah softened by tas-hīl is not a clean hamzah.
+        if (w.includes('ة') || (p.id === 'hamza_ain' && w.includes(TASHIL))) return;
+        const b = bare(w);
+        const hasA = hasAny(b, letters[0]);
+        const hasB = hasAny(b, letters[1]);
+        if (hasA && !hasB) pair.a.push({ ref: t.ref, word: i });
+        else if (hasB && !hasA) pair.b.push({ ref: t.ref, word: i });
+      });
+    }
+    if (pair.a.length && pair.b.length) out.push(pair);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------

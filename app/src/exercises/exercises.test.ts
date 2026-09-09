@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { duriHafsItems, imalahItems, listenItems, maddItems, nunItems, spotItems, spotRulesAvailable } from './bank';
+import { bare } from '../audio/quran';
+import { duriHafsItems, imalahItems, listenPairs, maddItems, nunItems, spotItems, spotRulesAvailable } from './bank';
 import { answer, deckStats, pickNext } from './leitner';
 
 describe('exercise bank (generated from the muṣḥaf by the tagger)', () => {
@@ -43,8 +44,23 @@ describe('exercise bank (generated from the muṣḥaf by the tagger)', () => {
     expect(items.some((i) => i.duri === 'مَلِكِ')).toBe(true);
   });
 
-  it('listen items come from the contrast pairs', () => {
-    expect(listenItems().length).toBeGreaterThan(5);
+  it('listen-and-pick words carry exactly one side of their pair, straight from the muṣḥaf text', () => {
+    const pairs = listenPairs();
+    expect(pairs.map((p) => p.id)).toEqual(['sin_sad', 'ta_tta', 'dal_dad', 'dhal_zha', 'kaf_qaf', 'ha_hha', 'hamza_ain', 'zay_zha', 'jim_shin']);
+    for (const p of pairs) {
+      for (const w of p.a) expect(bare(w.ref.words[w.word]), `${p.id} a`).toMatch(new RegExp(`[${p.aLetters.replace('هـ', 'ه').replace('ء', 'ءأإؤئآ')}]`));
+      for (const w of p.b) expect(bare(w.ref.words[w.word]), `${p.id} b`).toContain(p.bLetters);
+      for (const w of p.b) expect(bare(w.ref.words[w.word]), `${p.id} b must not carry ${p.aLetters}`).not.toMatch(new RegExp(`[${p.aLetters.replace('هـ', 'ه').replace('ء', 'ءأإؤئآ')}]`));
+    }
+    const sinSad = pairs.find((p) => p.id === 'sin_sad')!;
+    expect(sinSad.b.some((w) => w.ref.surah === 1 && bare(w.ref.words[w.word]) === 'الصرط') /* dagger alif in the muṣḥaf */).toBe(true);
+    expect(sinSad.a.some((w) => w.ref.surah === 1 && bare(w.ref.words[w.word]) === 'نستعين')).toBe(true);
+    // al-Fātiḥah alone (the shipped alignment) already covers six pairs
+    const inFatiha = pairs.filter((p) => p.a.some((w) => w.ref.surah === 1) && p.b.some((w) => w.ref.surah === 1)).map((p) => p.id);
+    expect(inFatiha).toEqual(['sin_sad', 'ta_tta', 'dal_dad', 'kaf_qaf', 'ha_hha', 'hamza_ain']);
+    // أَنۡعَمۡتَ has both a hamzah and an ʿayn, so it sits on neither side
+    const hamzaAin = pairs.find((p) => p.id === 'hamza_ain')!;
+    expect([...hamzaAin.a, ...hamzaAin.b].some((w) => bare(w.ref.words[w.word]) === 'أنعمت')).toBe(false);
   });
 });
 

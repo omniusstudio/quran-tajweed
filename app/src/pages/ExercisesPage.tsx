@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { loadAlignment } from '../audio/alignment';
-import { DEFAULT_RECITER, audioUrl } from '../audio/quran';
-import { getClip } from '../audio/store';
+import { DEFAULT_RECITER, RECITERS, audioUrl } from '../audio/quran';
 import { usePlayer } from '../audio/usePlayer';
 import { RULES as LESSON_RULES } from '../content/lessons';
-import { NUN_OPTIONS, duriHafsItems, imalahItems, listenItems, maddItems, nunItems, spotItems, spotRulesAvailable, type DuriHafsItem, type ImalahItem, type ListenItem, type MaddItem, type NunItem, type SpotItem, type VerseRef } from '../exercises/bank';
+import { NUN_OPTIONS, duriHafsItems, imalahItems, listenPairs, maddItems, nunItems, spotItems, spotRulesAvailable, type DuriHafsItem, type ImalahItem, type ListenPair, type ListenWord, type MaddItem, type NunItem, type SpotItem, type VerseRef } from '../exercises/bank';
 import { answer, deckStats, loadDeck, pickNext, type Deck } from '../exercises/leitner';
 import { RULES, type RuleId } from '../rules/tagger';
 import { BY_ID } from '../viewer/articulations';
@@ -15,7 +14,7 @@ export type ExerciseKind = 'spot' | 'nun' | 'listen' | 'imalah' | 'madd' | 'duri
 export const EXERCISES: { kind: ExerciseKind; title: string; blurb: string }[] = [
   { kind: 'spot', title: 'أين القاعدة؟', blurb: 'آية من المصحف: اضغط الكلمة التي فيها القاعدة.' },
   { kind: 'nun', title: 'ماذا يحدث لهذه النون؟', blurb: 'نون ساكنة أو تنوين ثم حرف: واضحة، تذوب، ميم، أم خفية؟' },
-  { kind: 'listen', title: 'اسمع واختر', blurb: 'مقطعان من صوت المعلم: أيهما الحرف المطلوب؟' },
+  { kind: 'listen', title: 'اسمع واختر', blurb: 'كلمتان من تلاوة القارئ: في أيهما الحرف المطلوب؟' },
   { kind: 'imalah', title: 'إمالة أم لا؟', blurb: 'كلمة فيها الناس / النار / الكافرين: هل تُمال هنا؟' },
   { kind: 'madd', title: 'كم حركة؟', blurb: 'كلمة فيها مد: حركتان، أربع، أم ست؟' },
   { kind: 'duri', title: 'الدوري وحفص', blurb: 'كلمة كما يقرؤها حفص: كيف يقرؤها الدوري؟' },
@@ -197,68 +196,134 @@ function Nun({ deck, grade }: { deck: Deck; grade: Grade }) {
   );
 }
 
+/** One listen-and-pick word with its span in the reciter's recording. */
+interface ListenChoice extends ListenWord {
+  span: [number, number];
+}
+interface ListenItem {
+  id: string;
+  pair: ListenPair;
+  /** The word the item is keyed on (a `b`-side word); its partner is drawn from the other side each time. */
+  target: ListenChoice;
+  side: 'a' | 'b';
+}
+
+/** Words of a pair side that sit in an aligned sūrah, with their spans. */
+function alignedWords(reciter: string, words: ListenWord[]): ListenChoice[] {
+  const out: ListenChoice[] = [];
+  for (const w of words) {
+    const span = loadAlignment(reciter, w.ref.surah)?.verses.find((v) => v.basri === w.ref.basri)?.words[w.word];
+    if (span && span[1] > span[0]) out.push({ ...w, span });
+  }
+  return out;
+}
+
+/**
+ * Listen and pick (PROMPT.md §7.3 no. 3): two real words from the reciter's recording, one with each
+ * letter of a confusable pair. The muṣḥaf text is the answer key, so no teacher clips are needed.
+ */
 function Listen({ deck, grade, go }: { deck: Deck; grade: Grade; go: (h: string) => void }) {
-  const items = useMemo(listenItems, []);
-  const [available, setAvailable] = useState<ListenItem[] | null>(null);
-  useEffect(() => {
-    void (async () => {
-      const ok: ListenItem[] = [];
-      for (const it of items) if ((await getClip(`teacher/letters/${it.a}`)) && (await getClip(`teacher/letters/${it.b}`))) ok.push(it);
-      setAvailable(ok);
-    })();
-  }, [items]);
-  if (available === null) return <p className="ref">جارٍ البحث عن مقاطع المعلم…</p>;
-  if (!available.length)
+  const reciter = DEFAULT_RECITER;
+  const pools = useMemo(() => listenPairs().map((pair) => ({ pair, a: alignedWords(reciter, pair.a), b: alignedWords(reciter, pair.b) })).filter((p) => p.a.length && p.b.length), [reciter]);
+  const items = useMemo(() => {
+    const out: ListenItem[] = [];
+    for (const p of pools) {
+      for (const w of p.b) out.push({ id: `listen:${p.pair.id}:${w.ref.surah}:${w.ref.basri}:${w.word}`, pair: p.pair, target: w, side: 'b' });
+      for (const w of p.a) out.push({ id: `listen:${p.pair.id}:${w.ref.surah}:${w.ref.basri}:${w.word}`, pair: p.pair, target: w, side: 'a' });
+    }
+    return out;
+  }, [pools]);
+  if (!items.length)
     return (
       <div className="card">
-        <p>هذا التمرين يحتاج إلى مقاطع المعلم للحروف المنفردة (مثل ص و س).</p>
+        <p>هذا التمرين يشغّل كلمتين من تلاوة القارئ، فيحتاج إلى سورة محاذاة.</p>
         <p className="ref">
-          سجّلها من صفحة{' '}
-          <a href="#/recorder" onClick={(e) => { e.preventDefault(); go('#/recorder'); }}>
-            تسجيل المعلم
+          افتح{' '}
+          <a href="#/align/1" onClick={(e) => { e.preventDefault(); go('#/align/1'); }}>
+            محرر المحاذاة
           </a>{' '}
-          ثم عد إلى هنا. لا نستخدم أصواتاً مولّدة آلياً.
+          وحاذِ سورة واحدة على الأقل، ثم عد إلى هنا.
         </p>
       </div>
     );
-  return <ListenInner deck={deck} grade={grade} items={available} />;
+  return <ListenInner deck={deck} grade={grade} items={items} pools={pools} reciter={reciter} />;
 }
 
-function ListenInner({ deck, grade, items }: { deck: Deck; grade: Grade; items: ListenItem[] }) {
+function ListenInner({ deck, grade, items, pools, reciter }: { deck: Deck; grade: Grade; items: ListenItem[]; pools: { pair: ListenPair; a: ListenChoice[]; b: ListenChoice[] }[]; reciter: string }) {
   const { item, next, count } = useQueue<ListenItem>(deck, items);
-  const [order, setOrder] = useState<[string, string]>(['a', 'b']);
+  const [q, setQ] = useState<{ first: ListenChoice; second: ListenChoice; firstSide: 'a' | 'b'; asked: 'a' | 'b' } | null>(null);
   const [ok, setOk] = useState<boolean | null>(null);
-  const audio = useRef<HTMLAudioElement | null>(null);
-  useEffect(() => { setOk(null); setOrder(Math.random() < 0.5 ? ['a', 'b'] : ['b', 'a']); }, [item]);
-  if (!item) return <p>لا توجد أسئلة.</p>;
-  const play = async (which: 'a' | 'b') => {
-    const c = await getClip(`teacher/letters/${which === 'a' ? item.a : item.b}`);
-    if (!c) return;
-    if (!audio.current) audio.current = new Audio();
-    audio.current.src = URL.createObjectURL(c.blob);
-    void audio.current.play();
+  useEffect(() => {
+    setOk(null);
+    if (!item) return setQ(null);
+    const pool = pools.find((p) => p.pair.id === item.pair.id)!;
+    const others = item.side === 'b' ? pool.a : pool.b;
+    const same = others.filter((w) => w.ref.surah === item.target.ref.surah);
+    const from = same.length ? same : others;
+    const partner = from[Math.floor(Math.random() * from.length)];
+    const targetFirst = Math.random() < 0.5;
+    setQ({
+      first: targetFirst ? item.target : partner,
+      second: targetFirst ? partner : item.target,
+      firstSide: targetFirst ? item.side : item.side === 'a' ? 'b' : 'a',
+      asked: Math.random() < 0.5 ? 'a' : 'b',
+    });
+  }, [item, pools]);
+  const playerA = usePlayer(q ? audioUrl(reciter, q.first.ref.surah) : null);
+  const playerB = usePlayer(q ? audioUrl(reciter, q.second.ref.surah) : null);
+  if (!item || !q) return <p>لا توجد أسئلة.</p>;
+  const askedLetters = q.asked === 'a' ? item.pair.aLetters : item.pair.bLetters;
+  const answer: 'first' | 'second' = q.firstSide === q.asked ? 'first' : 'second';
+  const play = (which: 'first' | 'second') => {
+    const [me, other] = which === 'first' ? [playerA, playerB] : [playerB, playerA];
+    other.pause();
+    const w = which === 'first' ? q.first : q.second;
+    void me.playRange(w.span[0], w.span[1]);
   };
-  const target = item.bLetters;
+  const choose = (which: 'first' | 'second') => {
+    const r = which === answer;
+    setOk(r);
+    grade(item.id, r);
+  };
+  const ready = playerA.ready && playerB.ready;
+  const rec = RECITERS.find((r) => r.id === reciter);
   return (
     <div className="card">
       <p>
-        اسمع المقطعين ثم اختر: أيهما <strong className="ayah">{target}</strong>؟ <span className="ref">({arNum(count + 1)})</span>
+        اسمع الكلمتين ثم اختر: في أيهما <strong className="ayah">{askedLetters}</strong>؟ <span className="ref">({arNum(count + 1)})</span>
       </p>
       <div className="row wrap">
-        {order.map((w, i) => (
-          <button key={w} className="toggle" onClick={() => play(w as 'a' | 'b')}>
-            ▶ المقطع {i === 0 ? 'الأول' : 'الثاني'}
-          </button>
-        ))}
+        {(['first', 'second'] as const).map((w, i) => {
+          const p = w === 'first' ? playerA : playerB;
+          return (
+            <button key={w} className="toggle" aria-pressed={p.playing} onClick={() => play(w)} disabled={!ready}>
+              {p.playing ? '❚❚' : '▶'} الكلمة {i === 0 ? 'الأولى' : 'الثانية'}
+            </button>
+          );
+        })}
+        {!ready && <span className="ref">(جارٍ تحميل التلاوة…)</span>}
+        {(playerA.error || playerB.error) && <span className="todo">⚠ {playerA.error || playerB.error}</span>}
       </div>
       <div className="options">
-        {order.map((w, i) => (
-          <button key={w} className={`option${ok !== null && w === 'b' ? ' right' : ''}`} disabled={ok !== null} onClick={() => { const r = w === 'b'; setOk(r); grade(item.id, r); }}>
-            {i === 0 ? 'الأول' : 'الثاني'}
+        {(['first', 'second'] as const).map((w, i) => (
+          <button key={w} className={`option${ok !== null && w === answer ? ' right' : ''}`} disabled={ok !== null} onClick={() => choose(w)}>
+            {i === 0 ? 'الأولى' : 'الثانية'}
           </button>
         ))}
       </div>
-      <Feedback ok={ok} detail={`${item.aLetters} / ${item.bLetters}`} onNext={next} />
+      {ok !== null && (
+        <div className="row wrap" style={{ marginBlockStart: 8 }}>
+          {(['first', 'second'] as const).map((w, i) => {
+            const c = w === 'first' ? q.first : q.second;
+            return (
+              <span key={w} className="ref">
+                {i === 0 ? 'الأولى' : 'الثانية'}: <span className="ayah">{c.ref.words[c.word]}</span> ({c.ref.surahName} {arNum(c.ref.basri)})
+              </span>
+            );
+          })}
+        </div>
+      )}
+      <Feedback ok={ok} detail={`${item.pair.aLetters} / ${item.pair.bLetters}${rec ? ' — ' + rec.credit : ''}`} onNext={next} />
     </div>
   );
 }

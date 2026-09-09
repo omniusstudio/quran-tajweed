@@ -120,6 +120,11 @@ play); and the release checklist at `#/checklist`. See PROMPT.md §10.
 - **تسجيل المعلم** (`#/recorder`): walks the teacher through the clip manifest
   (letters alone and with each vowel, madd letters, minimal pairs, every lesson
   example) and exports all takes as a zip with the fixed file names.
+  Optional since the listen-and-pick exercise (اسمع واختر) plays two real words
+  from the reciter's recording (one with each letter of a confusable pair, chosen
+  from the muṣḥaf text of aligned sūrahs) and asks which one has the named
+  letter; only the bare letters and vowels for section 3 still want a teacher's
+  voice, and the viewer and drills cover those with the mouth and real words.
 
 ## Verifying the content
 
