@@ -59,6 +59,23 @@ compare); the Dūrī-vs-Ḥafṣ reference from `content_duri.py`; offline PWA
 (app shell, fonts, artwork and content precached, recordings cached on first
 play); and the release checklist at `#/checklist`. See PROMPT.md §10.
 
+### Interface (`app/src/ui/`)
+
+- `settings.ts`: local preferences (theme system/light/dark, interface sounds, haptics,
+  Qur'an text size, reduced motion, daily goal) applied through `data-theme`,
+  `data-motion` and `--quran-scale` on the root element. Settings page at `#/settings`.
+- `sound.ts`: interface cues synthesised with Web Audio (tap, toggle, right, wrong,
+  complete, fanfare). They never stand in for Qur'anic sounds.
+- `icons.tsx`: one SVG icon set (24 px, 2 px round strokes); no emoji or font glyphs as controls.
+- `celebrate.tsx` + `rewards.ts`: `content/progress.ts` keeps a per-day activity log
+  (lesson = 3 points, drill or recording = 2, answer = 1). Finishing a step, a
+  section, the daily goal, a streak milestone or a run of right answers shows a
+  short overlay (confetti only for the big ones and only when motion is not reduced).
+- `styles.css`: tokens (colour, radius, shadow, motion), light and dark palettes,
+  the shell (bottom navigation on phones, inline navigation on wide screens, a
+  "more" sheet for tools), and the components. The home page (`#/`) shows today's
+  goal ring, the streak, the last seven days and progress by section.
+
 ### Notation the tagger reads (data/duri.json)
 
 | Mark | Meaning in this text |

@@ -5,6 +5,7 @@ import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl } from '..
 import { usePlayer } from '../audio/usePlayer';
 import { downloadBlob } from '../audio/zip';
 import { arNum } from './shared';
+import { Icon } from '../ui/icons';
 
 const PER_SEC = 50;
 const fmt = (t: number) => t.toFixed(2);
@@ -236,7 +237,7 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
 
   const current = marks[cursor];
   return (
-    <div className="align">
+    <div className="page align">
       <div className="card">
         <div className="row wrap">
           <label>
@@ -267,7 +268,7 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
         <p className="ref">
           اختصارات: مسافة = تشغيل/إيقاف · Enter = علّم الحد الحالي عند مؤشر التشغيل · ← → = تحريك ٠٫١ ث (مع Shift: ثانية) · Backspace = ارجع خطوة · [ ] = الحد السابق/التالي · S = حفظ
         </p>
-        {player.error && <p className="todo">⚠ {player.error}</p>}
+        {player.error && <p className="todo"><Icon name="alert" size={18} /> {player.error}</p>}
         {msg && <p className="ref">{msg}</p>}
       </div>
 
@@ -275,8 +276,8 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
         <canvas ref={fullCanvas} width={1200} height={90} className="wave" onClick={(e) => seekFromCanvas(e, false)} />
         <canvas ref={zoomCanvas} width={1200} height={140} className="wave" onClick={(e) => seekFromCanvas(e, true)} />
         <div className="controls">
-          <button className="play" onClick={player.toggle} disabled={!player.ready}>
-            {player.playing ? '❚❚' : '▶'}
+          <button className="play" onClick={player.toggle} disabled={!player.ready} aria-label={player.playing ? 'إيقاف مؤقت' : 'تشغيل'}>
+            <Icon name={player.playing ? 'pause' : 'play'} size={24} />
           </button>
           <span className="mono">{fmt(player.time)} / {fmt(player.duration)} ث</span>
           <div className="speeds">
@@ -313,7 +314,7 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
           <div className="mark-row">
             <span className="small">الاستعاذة (قبل البسملة، لا تُضاء)</span>
             <span className="mono">{`${fmt(align.preamble[0])} – ${fmt(align.preamble[1])}`}</span>
-            <button className="mini" onClick={() => align.preamble && player.playRange(align.preamble[0], align.preamble[1])}>▶</button>
+            <button className="mini" onClick={() => align.preamble && player.playRange(align.preamble[0], align.preamble[1])} aria-label="اسمع الاستعاذة"><Icon name="play" size={14} /></button>
           </div>
         )}
         {s.header && (
@@ -330,7 +331,7 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
               <div className="mark-row head">
                 <span>الآية {arNum(v.basri)}</span>
                 <span className="mono">{va.end > va.start ? `${fmt(va.start)} – ${fmt(va.end)}` : '—'}</span>
-                <button className="mini" onClick={() => va.end > va.start && player.playRange(va.start, va.end)} disabled={!(va.end > va.start)}>▶ الآية</button>
+                <button className="mini" onClick={() => va.end > va.start && player.playRange(va.start, va.end)} disabled={!(va.end > va.start)}><Icon name="play" size={14} /> الآية</button>
               </div>
               <div className="mark-words" dir="rtl">
                 {v.words.map((w, wi) => {

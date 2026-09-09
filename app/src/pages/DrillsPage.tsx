@@ -12,6 +12,9 @@ import { RULES as TAG_RULES, readingForm } from '../rules/tagger';
 import { CONTRAST_PAIRS } from '../viewer/articulations';
 import { ContrastView } from '../viewer/ContrastView';
 import { LetterViewer, LinkedText, arNum } from './shared';
+import { Icon } from '../ui/icons';
+import { rewardRecording } from '../ui/rewards';
+import { sfx } from '../ui/sound';
 
 interface Instance {
   ref: VerseRef;
@@ -37,15 +40,18 @@ export function DrillsPage({ drillId, go }: { drillId?: string; go: (hash: strin
   const drill = DRILLS.find((d) => d.id === drillId);
   if (!drill) {
     return (
-      <div className="lessons">
+      <div className="page lessons stagger">
         <div className="card">
           <h2>تدريبات الدوري</h2>
           <p className="ref">ما يجعل قراءة الدوري تُسمع كما هي. كل تدريب: شاهد الفم → اسمع ببطء → اسمع عادياً → سجّل نفسك → قارن.</p>
         </div>
         {DRILLS.map((d) => (
-          <button key={d.id} className="card exercise-card" onClick={() => go(`#/drills/${d.id}`)}>
+          <button key={d.id} className="card exercise-card" onClick={() => { sfx('tap'); go(`#/drills/${d.id}`); }}>
             <span className="section-head">
-              <h3>{d.title}</h3>
+              <h3>
+                <Icon name="zap" size={20} />
+                {d.title}
+              </h3>
               <span className="badge">{arNum(instancesOf(d).length)} موضعاً في جزء عمّ والفاتحة</span>
             </span>
             <span className="ref">{LESSON_RULES[d.lesson]?.name}</span>
@@ -66,9 +72,9 @@ function DrillScreen({ drill, go }: { drill: Drill; go: (hash: string) => void }
   const pair = drill.contrast ? CONTRAST_PAIRS.find((p) => p.id === drill.contrast) : undefined;
   useEffect(() => { setIdx(0); scrollTo({ top: 0 }); }, [drill]);
   return (
-    <div className="lessons">
+    <div className="page lessons">
       <div className="lesson-head">
-        <a className="crumb" href="#/drills" onClick={(e) => { e.preventDefault(); go('#/drills'); }}>← كل التدريبات</a>
+        <a className="crumb" href="#/drills" onClick={(e) => { e.preventDefault(); go('#/drills'); }}><Icon name="chevronRight" size={18} /> كل التدريبات</a>
         <h2 style={{ margin: 0 }}>{drill.title}</h2>
       </div>
 
@@ -94,9 +100,9 @@ function DrillScreen({ drill, go }: { drill: Drill; go: (hash: string) => void }
         {inst && (
           <>
             <div className="row wrap">
-              <button className="toggle" onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0}>→ السابق</button>
+              <button className="toggle" onClick={() => { sfx('tap'); setIdx((i) => Math.max(0, i - 1)); }} disabled={idx === 0}><Icon name="chevronRight" size={18} /> السابق</button>
               <span className="ref">الموضع {arNum(idx + 1)} من {arNum(instances.length)}</span>
-              <button className="toggle" onClick={() => setIdx((i) => Math.min(instances.length - 1, i + 1))} disabled={idx >= instances.length - 1}>التالي ←</button>
+              <button className="toggle" onClick={() => { sfx('tap'); setIdx((i) => Math.min(instances.length - 1, i + 1)); }} disabled={idx >= instances.length - 1}>التالي <Icon name="chevronLeft" size={18} /></button>
             </div>
             <WordDrill key={`${inst.ref.surah}:${inst.ref.basri}:${inst.word}`} inst={inst} drill={drill} />
           </>
@@ -160,6 +166,7 @@ function WordDrill({ inst, drill }: { inst: Instance; drill: Drill }) {
       setRec(null);
       setMine(blob);
       await putClip(mineKey, blob);
+      rewardRecording();
     } else {
       try {
         setRec(await startRecording());
@@ -191,9 +198,9 @@ function WordDrill({ inst, drill }: { inst: Instance; drill: Drill }) {
       </div>
       <div className="ref">{inst.ref.surahName}، الآية {arNum(inst.ref.basri)}</div>
       <div className="row wrap" style={{ marginBlockStart: 8 }}>
-        <button className="toggle" onClick={() => hear(0.5)} disabled={!teacher && !canPlay}>🐢 اسمع ببطء</button>
-        <button className="toggle" onClick={() => hear(1)} disabled={!teacher && !canPlay}>▶ اسمع عادياً</button>
-        <button className={`toggle${rec ? ' rec' : ''}`} onClick={toggleRec}>{rec ? '■ أوقف' : mine ? '● سجّل من جديد' : '● سجّل نفسك'}</button>
+        <button className="toggle" onClick={() => hear(0.5)} disabled={!teacher && !canPlay}><Icon name="timer" size={18} /> اسمع ببطء</button>
+        <button className="toggle" onClick={() => hear(1)} disabled={!teacher && !canPlay}><Icon name="play" size={18} /> اسمع عادياً</button>
+        <button className={`toggle${rec ? ' rec' : ''}`} onClick={toggleRec}><Icon name={rec ? 'stop' : 'record'} size={14} /> {rec ? 'أوقف' : mine ? 'سجّل من جديد' : 'سجّل نفسك'}</button>
         {mine && <button className="ab-btn me" onClick={playMine}>أنا</button>}
         {mine && <canvas ref={mineCanvas} width={240} height={40} className="thumb" />}
         <span className="ref">{sourceNote}</span>

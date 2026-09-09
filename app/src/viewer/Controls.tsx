@@ -1,3 +1,4 @@
+import { Icon } from '../ui/icons';
 import type { Clock, Speed } from './useClock';
 
 const SPEEDS: { v: Speed; label: string }[] = [
@@ -10,7 +11,7 @@ export function Controls({ clock }: { clock: Clock }) {
   return (
     <div className="controls" role="group" aria-label="التحكم في الحركة">
       <button className="play" onClick={clock.toggle} aria-label={clock.playing ? 'إيقاف مؤقت' : 'تشغيل'}>
-        {clock.playing ? '❚❚' : '▶'}
+        <Icon name={clock.playing ? 'pause' : 'play'} size={24} />
       </button>
       <input
         type="range"
@@ -29,6 +30,7 @@ export function Controls({ clock }: { clock: Clock }) {
         ))}
       </div>
       <button className="toggle" aria-pressed={clock.loop} onClick={() => clock.setLoop(!clock.loop)}>
+        <Icon name="repeat" size={18} />
         تكرار
       </button>
     </div>

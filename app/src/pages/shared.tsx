@@ -8,6 +8,7 @@ import { BY_ID } from '../viewer/articulations';
 import { ArticulationViewer } from '../viewer/ArticulationViewer';
 import { Controls } from '../viewer/Controls';
 import { useClock } from '../viewer/useClock';
+import { Icon } from '../ui/icons';
 
 const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 export const arNum = (n: number | null | undefined) => (n == null ? '—' : String(n).replace(/\d/g, (d) => AR_DIGITS[Number(d)]));
@@ -69,7 +70,7 @@ export function PlayVerse({ surah, basri }: { surah: number; basri: number }) {
   };
   return (
     <button className="mini" onClick={play} title="اسمع الآية">
-      ▶ اسمع
+      <Icon name="play" size={14} /> اسمع
     </button>
   );
 }

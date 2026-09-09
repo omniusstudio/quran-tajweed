@@ -7,6 +7,9 @@ import { ContrastView } from '../viewer/ContrastView';
 import { Ayah, Figures, LetterViewer, LinkedText, arNum } from './shared';
 import { RULES as TAG_RULES, tagVerse, type RuleId } from '../rules/tagger';
 import { LESSON_EXERCISE } from '../content/ruleViewer';
+import { Icon } from '../ui/icons';
+import { rewardLesson } from '../ui/rewards';
+import { sfx } from '../ui/sound';
 
 const ORDER: string[] = SECTIONS.flatMap((s) => s.rules.map((r) => r.id));
 
@@ -21,13 +24,15 @@ export function LessonsIndex({ go }: { go: (hash: string) => void }) {
   const done = ORDER.filter((id) => progress.done[id]).length;
   const next = progress.last && ORDER.includes(progress.last) ? progress.last : ORDER[0];
   return (
-    <div className="lessons">
+    <div className="page lessons stagger">
       <div className="card hero">
-        <div>
+        <div style={{ flex: '1 1 240px' }}>
           <h2>الدروس</h2>
           <p className="ref">أتممت {arNum(done)} من {arNum(total)} خطوة.</p>
+          <span className="bar" aria-hidden><i style={{ transform: `scaleX(${total ? done / total : 0})` }} /></span>
         </div>
         <button className="primary" onClick={() => go(`#/lessons/${next}`)}>
+          <Icon name="play" size={18} />
           {progress.last ? 'أكمل من حيث توقفت' : 'ابدأ من البداية'}
         </button>
       </div>
@@ -44,7 +49,7 @@ export function LessonsIndex({ go }: { go: (hash: string) => void }) {
               {s.rules.map((r) => (
                 <li key={r.id}>
                   <a href={`#/lessons/${r.id}`} onClick={(e) => { e.preventDefault(); go(`#/lessons/${r.id}`); }} className={progress.done[r.id] ? 'done' : ''}>
-                    <span className="tick" aria-hidden>{progress.done[r.id] ? '✓' : ''}</span>
+                    <span className="tick" aria-hidden>{progress.done[r.id] ? <Icon name="check" size={14} /> : null}</span>
                     {r.name}
                   </a>
                 </li>
@@ -99,14 +104,28 @@ export function LessonScreen({ ruleId, go }: { ruleId: string; go: (hash: string
   const pos = section.rules.findIndex((r) => r.id === ruleId) + 1;
   const pair = viewer?.contrast ? CONTRAST_PAIRS.find((p) => p.id === viewer.contrast) : undefined;
   const isDone = !!progress.done[ruleId];
+  /** Mark done once: log it, cue it, celebrate a finished section or the daily goal. */
+  const complete = () => {
+    if (progress.done[ruleId]) return;
+    mark(ruleId, true);
+    rewardLesson(ruleId, { ...progress.done, [ruleId]: true });
+  };
 
   return (
-    <div className="lesson">
+    <div className="page lesson">
       <div className="lesson-head">
         <a href="#/lessons" onClick={(e) => { e.preventDefault(); go('#/lessons'); }} className="crumb">
+          <Icon name="chevronRight" size={18} />
           {section.title}
         </a>
-        <span className="ref">الخطوة {arNum(pos)} من {arNum(section.rules.length)}</span>
+        <span className="row">
+          <span className="step-dots" aria-hidden>
+            {section.rules.map((r, i) => (
+              <i key={r.id} className={r.id === ruleId ? 'now' : progress.done[r.id] ? 'done' : ''} style={{ order: i }} />
+            ))}
+          </span>
+          <span className="ref">الخطوة {arNum(pos)} من {arNum(section.rules.length)}</span>
+        </span>
       </div>
       <h2>{rule.name}</h2>
       <div className="card">
@@ -171,16 +190,18 @@ export function LessonScreen({ ruleId, go }: { ruleId: string; go: (hash: string
         <h3>جرّب</h3>
         <p>اقرأ القاعدة مرة أخرى، ثم انطق المثال بصوت مسموع ثلاث مرات ببطء. حين تشعر أنك فهمت الفكرة اضغط «أتممت».</p>
         <label className="check">
-          <input type="checkbox" checked={isDone} onChange={(e) => mark(ruleId, e.target.checked)} /> أتممت هذه الخطوة
+          <input type="checkbox" checked={isDone} onChange={(e) => (e.target.checked ? complete() : (mark(ruleId, false), sfx('toggle')))} /> أتممت هذه الخطوة
         </label>
       </div>
 
       <nav className="lesson-nav">
-        <button disabled={!prev} onClick={() => prev && go(`#/lessons/${prev}`)}>
-          → السابق
+        <button disabled={!prev} onClick={() => { sfx('tap'); prev && go(`#/lessons/${prev}`); }}>
+          <Icon name="chevronRight" size={18} />
+          السابق
         </button>
-        <button className="primary" disabled={!next} onClick={() => { mark(ruleId, true); next && go(`#/lessons/${next}`); }}>
-          {next ? 'أتممت، التالي ←' : 'انتهيت من الدروس'}
+        <button className="primary" disabled={!next && isDone} onClick={() => { complete(); next && go(`#/lessons/${next}`); }}>
+          {next ? 'أتممت، التالي' : 'أتممت الدروس'}
+          <Icon name="chevronLeft" size={18} />
         </button>
       </nav>
     </div>

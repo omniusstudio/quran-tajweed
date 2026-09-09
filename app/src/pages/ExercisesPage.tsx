@@ -8,17 +8,20 @@ import { answer, deckStats, loadDeck, pickNext, type Deck } from '../exercises/l
 import { RULES, type RuleId } from '../rules/tagger';
 import { BY_ID } from '../viewer/articulations';
 import { LetterViewer, arNum } from './shared';
+import { Icon, type IconName } from '../ui/icons';
+import { rewardAnswer } from '../ui/rewards';
+import { sfx } from '../ui/sound';
 
 export type ExerciseKind = 'spot' | 'nun' | 'listen' | 'imalah' | 'madd' | 'duri' | 'mirror';
 
-export const EXERCISES: { kind: ExerciseKind; title: string; blurb: string }[] = [
-  { kind: 'spot', title: 'أين القاعدة؟', blurb: 'آية من المصحف: اضغط الكلمة التي فيها القاعدة.' },
-  { kind: 'nun', title: 'ماذا يحدث لهذه النون؟', blurb: 'نون ساكنة أو تنوين ثم حرف: واضحة، تذوب، ميم، أم خفية؟' },
-  { kind: 'listen', title: 'اسمع واختر', blurb: 'كلمتان من تلاوة القارئ: في أيهما الحرف المطلوب؟' },
-  { kind: 'imalah', title: 'إمالة أم لا؟', blurb: 'كلمة فيها الناس / النار / الكافرين: هل تُمال هنا؟' },
-  { kind: 'madd', title: 'كم حركة؟', blurb: 'كلمة فيها مد: حركتان، أربع، أم ست؟' },
-  { kind: 'duri', title: 'الدوري وحفص', blurb: 'كلمة كما يقرؤها حفص: كيف يقرؤها الدوري؟' },
-  { kind: 'mirror', title: 'تمرين المرآة', blurb: 'الكاميرا الأمامية بجوار الرسم: قلّد حركة الفم ببطء.' },
+export const EXERCISES: { kind: ExerciseKind; title: string; blurb: string; icon: IconName }[] = [
+  { kind: 'spot', title: 'أين القاعدة؟', blurb: 'آية من المصحف: اضغط الكلمة التي فيها القاعدة.', icon: 'eye' },
+  { kind: 'nun', title: 'ماذا يحدث لهذه النون؟', blurb: 'نون ساكنة أو تنوين ثم حرف: واضحة، تذوب، ميم، أم خفية؟', icon: 'nose' },
+  { kind: 'listen', title: 'اسمع واختر', blurb: 'كلمتان من تلاوة القارئ: في أيهما الحرف المطلوب؟', icon: 'ear' },
+  { kind: 'imalah', title: 'إمالة أم لا؟', blurb: 'كلمة فيها الناس / النار / الكافرين: هل تُمال هنا؟', icon: 'sparkles' },
+  { kind: 'madd', title: 'كم حركة؟', blurb: 'كلمة فيها مد: حركتان، أربع، أم ست؟', icon: 'timer' },
+  { kind: 'duri', title: 'الدوري وحفص', blurb: 'كلمة كما يقرؤها حفص: كيف يقرؤها الدوري؟', icon: 'split' },
+  { kind: 'mirror', title: 'تمرين المرآة', blurb: 'الكاميرا الأمامية بجوار الرسم: قلّد حركة الفم ببطء.', icon: 'camera' },
 ];
 
 const shuffle = <T,>(a: T[]): T[] => {
@@ -59,17 +62,22 @@ function Feedback({ ok, rule, detail, onNext }: { ok: boolean | null; rule?: Rul
   return (
     <div className={`feedback ${ok ? 'ok' : 'bad'}`}>
       <div className="row wrap">
-        <strong>{ok ? '✓ صحيح' : '✗ ليس هذا'}</strong>
+        <strong>
+          <Icon name={ok ? 'check' : 'x'} size={20} />
+          {ok ? 'صحيح' : 'ليس هذا'}
+        </strong>
         {rule && <span className="badge">{RULES[rule].label}</span>}
         {detail && <span className="ref">{detail}</span>}
         {lesson && (
           <a className="crumb" href={`#/lessons/${lesson.id}`}>
-            الدرس: {lesson.name} ←
+            الدرس: {lesson.name}
+            <Icon name="chevronLeft" size={16} />
           </a>
         )}
       </div>
-      <button className="primary" onClick={onNext} autoFocus>
-        التالي ←
+      <button className="primary" onClick={() => { sfx('tap'); onNext(); }} autoFocus>
+        التالي
+        <Icon name="chevronLeft" size={18} />
       </button>
     </div>
   );
@@ -78,10 +86,16 @@ function Feedback({ ok, rule, detail, onNext }: { ok: boolean | null; rule?: Rul
 /** Menu + the chosen exercise. `param` preselects a rule for "spot the rule". */
 export function ExercisesPage({ kind, param, go }: { kind?: ExerciseKind; param?: string; go: (hash: string) => void }) {
   const [deck, setDeck] = useState<Deck>(loadDeck);
-  const grade = (id: string, ok: boolean) => setDeck((d) => answer(d, id, ok));
+  const [run, setRun] = useState(0);
+  const grade = (id: string, ok: boolean) => {
+    setDeck((d) => answer(d, id, ok));
+    const next = ok ? run + 1 : 0;
+    setRun(next);
+    rewardAnswer(ok, next);
+  };
   if (!kind) {
     return (
-      <div className="lessons">
+      <div className="page lessons stagger">
         <div className="card">
           <h2>التمارين</h2>
           <p className="ref">كل الأسئلة مولّدة من مصحف الدوري نفسه (سورة الفاتحة وجزء عمّ). ما تخطئ فيه يعود إليك أسرع.</p>
@@ -89,9 +103,12 @@ export function ExercisesPage({ kind, param, go }: { kind?: ExerciseKind; param?
         {EXERCISES.map((e) => {
           const st = deckStats(deck, `${e.kind === 'duri' ? 'dh' : e.kind}:`);
           return (
-            <button key={e.kind} className="card exercise-card" onClick={() => go(`#/exercises/${e.kind}`)}>
+            <button key={e.kind} className="card exercise-card" onClick={() => { sfx('tap'); go(`#/exercises/${e.kind}`); }}>
               <span className="section-head">
-                <h3>{e.title}</h3>
+                <h3>
+                  <Icon name={e.icon} size={20} />
+                  {e.title}
+                </h3>
                 {st.seen > 0 && (
                   <span className="badge">
                     {arNum(st.mastered)} متقن · {arNum(st.due)} للمراجعة
@@ -107,14 +124,22 @@ export function ExercisesPage({ kind, param, go }: { kind?: ExerciseKind; param?
   }
   const back = (
     <a className="crumb" href="#/exercises" onClick={(e) => { e.preventDefault(); go('#/exercises'); }}>
-      ← كل التمارين
+      <Icon name="chevronRight" size={18} />
+      كل التمارين
     </a>
   );
   return (
-    <div className="lessons">
+    <div className="page lessons">
       <div className="lesson-head">
         {back}
-        <h2 style={{ margin: 0 }}>{EXERCISES.find((e) => e.kind === kind)?.title}</h2>
+        <span className="row">
+          {run >= 2 && (
+            <span className="run">
+              <Icon name="sparkles" size={16} /> {arNum(run)} متتالية
+            </span>
+          )}
+          <h2 style={{ margin: 0 }}>{EXERCISES.find((e) => e.kind === kind)?.title}</h2>
+        </span>
       </div>
       {kind === 'spot' && <Spot deck={deck} grade={grade} rule={(param as RuleId) || undefined} go={go} />}
       {kind === 'nun' && <Nun deck={deck} grade={grade} />}
@@ -297,12 +322,12 @@ function ListenInner({ deck, grade, items, pools, reciter }: { deck: Deck; grade
           const p = w === 'first' ? playerA : playerB;
           return (
             <button key={w} className="toggle" aria-pressed={p.playing} onClick={() => play(w)} disabled={!ready}>
-              {p.playing ? '❚❚' : '▶'} الكلمة {i === 0 ? 'الأولى' : 'الثانية'}
+              <Icon name={p.playing ? 'pause' : 'play'} size={18} /> الكلمة {i === 0 ? 'الأولى' : 'الثانية'}
             </button>
           );
         })}
         {!ready && <span className="ref">(جارٍ تحميل التلاوة…)</span>}
-        {(playerA.error || playerB.error) && <span className="todo">⚠ {playerA.error || playerB.error}</span>}
+        {(playerA.error || playerB.error) && <span className="todo"><Icon name="alert" size={18} /> {playerA.error || playerB.error}</span>}
       </div>
       <div className="options">
         {(['first', 'second'] as const).map((w, i) => (
@@ -373,7 +398,7 @@ function Madd({ deck, grade }: { deck: Deck; grade: Grade }) {
       <div className="ayah huge" dir="rtl">{item.ref.words[item.word]}</div>
       <div className="row wrap">
         <button className="toggle" onClick={() => span && player.playRange(span[0], span[1])} disabled={!canPlay}>
-          ▶ اسمع الكلمة
+          <Icon name="play" size={18} /> اسمع الكلمة
         </button>
         {!canPlay && <span className="ref">(الصوت يتوفر بعد جلب التسجيل ومحاذاة السورة)</span>}
       </div>
@@ -456,7 +481,7 @@ function Mirror() {
       </div>
       <div className="mirror">
         <div className="card mirror-cam">
-          {err ? <p className="todo">⚠ تعذر فتح الكاميرا: {err}</p> : <video ref={video} autoPlay playsInline muted />}
+          {err ? <p className="todo"><Icon name="alert" size={18} /> تعذر فتح الكاميرا: {err}</p> : <video ref={video} autoPlay playsInline muted />}
         </div>
         <LetterViewer id={letter} />
       </div>

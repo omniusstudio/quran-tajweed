@@ -1,3 +1,4 @@
+import { Icon } from '../ui/icons';
 import { useMemo } from 'react';
 import { sampleState } from './engine';
 import { LipsView } from './LipsView';
@@ -28,7 +29,7 @@ export function ArticulationViewer({ art, t, compact = false }: { art: Articulat
         <span className="letters">{art.letters}</span>
         <span className="name">{art.nameAr}</span>
         {state.heavy > 0.5 && <span className="badge heavy">مفخم</span>}
-        {art.wrong && <span className="badge warn">✗ هكذا لا</span>}
+        {art.wrong && <span className="badge warn"><Icon name="x" size={14} /> هكذا لا</span>}
         {art.needsReview && !compact && (
           <span className="badge review" title={art.needsReview}>
             يُراجع
@@ -62,7 +63,7 @@ export function ArticulationViewer({ art, t, compact = false }: { art: Articulat
           </span>
         )}
         <span className={`nose${nasal > 0.5 ? ' on' : ''}`} aria-label="الغنة من الأنف">
-          <span aria-hidden>👃</span> {nasal > 0.5 ? 'الصوت من الأنف' : 'الأنف'}
+          <Icon name="nose" size={18} /> {nasal > 0.5 ? 'الصوت من الأنف' : 'الأنف'}
         </span>
         <span className="phase">اللهاة: {state.velum > 0.5 ? 'مرفوعة (الأنف مغلق)' : 'منخفضة (الأنف مفتوح)'}</span>
       </div>

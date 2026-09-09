@@ -1,3 +1,4 @@
+import { Icon } from '../ui/icons';
 import { useEffect, useRef, useState } from 'react';
 import { deleteClip, extensionFor, getClip, listKeys, putClip, startRecording } from '../audio/store';
 import { downloadBlob, makeZip } from '../audio/zip';
@@ -79,7 +80,7 @@ export function RecorderPage() {
 
   const total = CLIP_MANIFEST.length;
   return (
-    <div className="recorder">
+    <div className="page recorder">
       <div className="card">
         <h2>تسجيل صوت المعلم</h2>
         <p className="ref">
@@ -111,12 +112,12 @@ export function RecorderPage() {
           <div className="ayah huge" dir="rtl">{clip.prompt}</div>
           <div className="row wrap">
             <button className={`primary${rec ? ' rec' : ''}`} onClick={toggle}>
-              {rec ? '■ أوقف وحفظ' : have.has(clip.id) ? '● أعد التسجيل' : '● سجّل'}
+              <Icon name={rec ? 'stop' : 'record'} size={14} /> {rec ? 'أوقف وحفظ' : have.has(clip.id) ? 'أعد التسجيل' : 'سجّل'}
             </button>
-            <button className="toggle" onClick={play} disabled={!have.has(clip.id)}>▶ استمع</button>
+            <button className="toggle" onClick={play} disabled={!have.has(clip.id)}><Icon name="play" size={18} /> استمع</button>
             <button className="toggle" onClick={remove} disabled={!have.has(clip.id)}>حذف</button>
-            <button className="toggle" onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0}>→ السابق</button>
-            <button className="toggle" onClick={() => setIdx((i) => Math.min(clips.length - 1, i + 1))} disabled={idx >= clips.length - 1}>التالي ←</button>
+            <button className="toggle" onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0}><Icon name="chevronRight" size={18} /> السابق</button>
+            <button className="toggle" onClick={() => setIdx((i) => Math.min(clips.length - 1, i + 1))} disabled={idx >= clips.length - 1}>التالي <Icon name="chevronLeft" size={18} /></button>
           </div>
           <div className="ref mono">{clip.id}</div>
         </div>
@@ -126,7 +127,7 @@ export function RecorderPage() {
         <div className="chips">
           {clips.map((c, i) => (
             <button key={c.id} className={`chip small${have.has(c.id) ? ' done' : ''}`} aria-pressed={i === idx} onClick={() => setIdx(i)} title={c.note}>
-              {have.has(c.id) ? '✓ ' : ''}
+              {have.has(c.id) ? <Icon name="check" size={14} /> : null}{have.has(c.id) ? ' ' : ''}
               {c.prompt}
             </button>
           ))}

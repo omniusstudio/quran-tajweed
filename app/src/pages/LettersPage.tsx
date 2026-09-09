@@ -6,6 +6,7 @@ import { ContrastView } from '../viewer/ContrastView';
 import { Controls } from '../viewer/Controls';
 import { useClock } from '../viewer/useClock';
 import { Ayah, Figures, LinkedText } from './shared';
+import { Icon } from '../ui/icons';
 
 export function LettersPage({ id, go }: { id: string; go: (hash: string) => void }) {
   const art = BY_ID[id];
@@ -13,7 +14,7 @@ export function LettersPage({ id, go }: { id: string; go: (hash: string) => void
   useEffect(() => clock.restart(), [id]); // eslint-disable-line react-hooks/exhaustive-deps
   const rule = art.ruleId ? RULES[art.ruleId] : undefined;
   return (
-    <>
+    <div className="page">
       <div className="viewer-layout">
         <div>
           <ArticulationViewer art={art} t={clock.t} />
@@ -23,7 +24,7 @@ export function LettersPage({ id, go }: { id: string; go: (hash: string) => void
           <aside className="info">
             <h2>{rule.name}</h2>
             <LinkedText text={rule.text} onTerm={(tid) => go(`#/dictionary/${tid}`)} />
-            {art.needsReview && <p className="todo">⚠ يُراجع: {art.needsReview}</p>}
+            {art.needsReview && <p className="todo"><Icon name="alert" size={18} /> يُراجع: {art.needsReview}</p>}
             <Figures figures={rule.figures} />
             {rule.examples.length > 0 && (
               <div className="examples">
@@ -34,13 +35,13 @@ export function LettersPage({ id, go }: { id: string; go: (hash: string) => void
             )}
             <p className="ref" style={{ marginBlockStart: 8 }}>
               <a href={`#/lessons/${rule.id}`} onClick={(e) => { e.preventDefault(); go(`#/lessons/${rule.id}`); }}>
-                افتح هذا الدرس ←
+                افتح هذا الدرس <Icon name="chevronLeft" size={14} />
               </a>
             </p>
           </aside>
         )}
       </div>
-      <div className="groups" style={{ marginBlockStart: 12 }}>
+      <div className="groups stagger" style={{ marginBlockStart: 12 }}>
         {GROUPS.map((g) => (
           <div className="group" key={g.id}>
             <h3>{g.title}</h3>
@@ -63,14 +64,14 @@ export function LettersPage({ id, go }: { id: string; go: (hash: string) => void
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }
 
 export function ContrastPage({ id, go }: { id: string; go: (hash: string) => void }) {
   const pair = CONTRAST_PAIRS.find((p) => p.id === id) ?? CONTRAST_PAIRS[0];
   return (
-    <>
+    <div className="page">
       <div className="group">
         <h3>هذا، لا ذاك</h3>
         <div className="chips">
@@ -84,6 +85,6 @@ export function ContrastPage({ id, go }: { id: string; go: (hash: string) => voi
       <div style={{ marginBlockStart: 12 }}>
         <ContrastView key={pair.id} pair={pair} />
       </div>
-    </>
+    </div>
   );
 }

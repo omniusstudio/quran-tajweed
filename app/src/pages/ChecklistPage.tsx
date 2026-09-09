@@ -1,3 +1,4 @@
+import { Icon } from '../ui/icons';
 import { useEffect, useState } from 'react';
 import { listKeys } from '../audio/store';
 import { DRILLS } from '../content/drills';
@@ -8,8 +9,8 @@ import { RULES as TAG_RULES, type RuleId } from '../rules/tagger';
 import { ARTICULATIONS, CONTRAST_PAIRS } from '../viewer/articulations';
 import { arNum } from './shared';
 
-const OK = '✅';
-const NO = '❌';
+const OK = <Icon name="check" size={18} className="yes" aria-label="نعم" />;
+const NO = <Icon name="x" size={18} className="no" aria-label="لا" />;
 
 /**
  * Release checklist (PROMPT.md §9): every letter, every rule, every Dūrī feature with ✅/❌ for
@@ -73,10 +74,10 @@ export function ChecklistPage() {
   );
 
   return (
-    <div className="checklist">
+    <div className="page checklist">
       <div className="card">
         <h2>قائمة الجاهزية</h2>
-        <p className="ref">مسار المطوّر قبل الإصدار: كل حرف وكل قاعدة وكل خاصية للدوري، مع ✅/❌ للحركة وصوت المعلم والمثال والتمرين. عمود صوت المعلم يُقرأ مباشرة من المقاطع المسجّلة في هذا المتصفح.</p>
+        <p className="ref">مسار المطوّر قبل الإصدار: كل حرف وكل قاعدة وكل خاصية للدوري، مع علامة صح أو خطأ للحركة وصوت المعلم والمثال والتمرين. عمود صوت المعلم يُقرأ مباشرة من المقاطع المسجّلة في هذا المتصفح.</p>
         <div className="row wrap">
           <span className="badge">الحركة {arNum(count('anim'))}/{arNum(total)}</span>
           <span className="badge">صوت المعلم {arNum(count('audio'))}/{arNum(total)}</span>

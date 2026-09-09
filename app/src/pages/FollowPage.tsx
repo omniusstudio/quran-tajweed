@@ -9,6 +9,9 @@ import { getClip, putClip, startRecording } from '../audio/store';
 import { beep, usePlayer, type PlaySpeed } from '../audio/usePlayer';
 import { BY_ID } from '../viewer/articulations';
 import { arNum } from './shared';
+import { Icon } from '../ui/icons';
+import { rewardRecording } from '../ui/rewards';
+import { sfx } from '../ui/sound';
 
 const SPEEDS: { v: PlaySpeed; label: string }[] = [
   { v: 0.5, label: '٠٫٥×' },
@@ -119,7 +122,7 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
   const cues = { madd: maddLen, imalah: curTags.some((t) => t.rule === 'imalah'), tashil: curTags.some((t) => t.rule === 'tashil') };
 
   return (
-    <div className="follow">
+    <div className="page follow">
       <div className="card">
         <div className="row wrap">
           <label>
@@ -143,21 +146,21 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
             </select>
           </label>
         </div>
-        {player.error && <p className="todo">⚠ {player.error}</p>}
+        {player.error && <p className="todo"><Icon name="alert" size={18} /> {player.error}</p>}
         {!align && (
           <p className="todo">
-            ⚠ لم تُحاذَ هذه السورة لهذا القارئ بعد، فلن تُضاء الكلمات مع الصوت.{' '}
+            <Icon name="alert" size={18} /> لم تُحاذَ هذه السورة لهذا القارئ بعد، فلن تُضاء الكلمات مع الصوت.{' '}
             <a href={`#/align/${s.number}`} onClick={(e) => { e.preventDefault(); go(`#/align/${s.number}`); }}>
               افتح محرر المحاذاة
             </a>
           </p>
         )}
-        {align?.auto && <p className="todo">⚠ محاذاة لم تُراجَع بالسماع بعد (يُراجع): قد تسبق إضاءة الكلمة صوتها أو تتأخر عنه قليلاً.</p>}
+        {align?.auto && <p className="todo"><Icon name="alert" size={18} /> محاذاة لم تُراجَع بالسماع بعد (يُراجع): قد تسبق إضاءة الكلمة صوتها أو تتأخر عنه قليلاً.</p>}
       </div>
 
       <div className="controls sticky">
         <button className="play" onClick={player.toggle} aria-label={player.playing ? 'إيقاف مؤقت' : 'تشغيل'} disabled={!player.ready}>
-          {player.playing ? '❚❚' : '▶'}
+          <Icon name={player.playing ? 'pause' : 'play'} size={24} />
         </button>
         <input type="range" min={0} max={Math.max(1, Math.round(player.duration * 100))} value={Math.round(player.time * 100)} onChange={(e) => player.seek(Number(e.target.value) / 100)} aria-label="موضع التشغيل" />
         <div className="speeds">
@@ -167,7 +170,8 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
             </button>
           ))}
         </div>
-        <button className="toggle" aria-pressed={echo} onClick={toggleEcho} disabled={!align || !player.ready} title="اسمع الكلمة، ثم صفارة، ثم كرّرها">
+        <button className="toggle" aria-pressed={echo} onClick={() => { sfx('toggle'); toggleEcho(); }} disabled={!align || !player.ready} title="اسمع الكلمة، ثم صفارة، ثم كرّرها">
+          <Icon name="repeat" size={18} />
           وضع الصدى
         </button>
       </div>
@@ -182,7 +186,7 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
           ))}
         </span>
         <span className={`nose${ghunnahOn ? ' on' : ''}`}>
-          <span aria-hidden>👃</span> {ghunnahOn ? 'غنة' : 'الأنف'}
+          <Icon name="nose" size={18} /> {ghunnahOn ? 'غنة' : 'الأنف'}
         </span>
         {align?.preamble && player.time >= align.preamble[0] && player.time < align.preamble[1] && <span className="badge">الاستعاذة</span>}
         {cues?.imalah && <span className="badge">إمالة</span>}
@@ -302,6 +306,7 @@ function RecordCompare({ reciter, surah, basri, span, player }: { reciter: strin
       setMine(blob);
       await putClip(key, blob);
       setOpen(true);
+      rewardRecording();
     } else {
       player.pause();
       try {
@@ -331,7 +336,7 @@ function RecordCompare({ reciter, surah, basri, span, player }: { reciter: strin
   return (
     <span className="compare">
       <button className={`mini${recording ? ' rec' : ''}`} onClick={toggleRec} disabled={!span && !recording}>
-        {recording ? '■ أوقف التسجيل' : mine ? '● سجّل من جديد' : '● سجّل نفسك'}
+        <Icon name={recording ? 'stop' : 'record'} size={14} /> {recording ? 'أوقف التسجيل' : mine ? 'سجّل من جديد' : 'سجّل نفسك'}
       </button>
       {mine && (
         <button className="mini" onClick={() => setOpen((o) => !o)} aria-pressed={open}>

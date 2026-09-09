@@ -12,7 +12,7 @@ export function DictionaryPage({ termId, go }: { termId?: string; go: (hash: str
   }, [termId]);
   const section = SECTIONS[1];
   return (
-    <div className="lessons">
+    <div className="page lessons stagger">
       <div className="card">
         <h2>{section.title}</h2>
         {section.intro && <p className="ref">{section.intro}</p>}

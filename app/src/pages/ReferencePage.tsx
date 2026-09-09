@@ -1,3 +1,4 @@
+import { Icon } from '../ui/icons';
 import { useEffect } from 'react';
 import { REF_SECTIONS } from '../content/duriRef';
 import type { Example } from '../content/lessons';
@@ -41,7 +42,7 @@ export function ReferencePage({ sectionId, go }: { sectionId?: string; go: (hash
   const section = REF_SECTIONS.find((s) => s.id === sectionId) ?? REF_SECTIONS[0];
   useEffect(() => scrollTo({ top: 0 }), [section.id]);
   return (
-    <div className="lessons">
+    <div className="page lessons">
       <div className="card">
         <h2>المرجع: الدوري وحفص</h2>
         <p className="ref">البيان الكامل لما يختلف فيه الدوري عن حفص (أصول وفرش)، وكل الأمثلة من مصحف الدوري نفسه.</p>
@@ -77,8 +78,8 @@ export function ReferencePage({ sectionId, go }: { sectionId?: string; go: (hash
           const next = REF_SECTIONS[i + 1];
           return (
             <>
-              <button disabled={!prev} onClick={() => prev && go(`#/reference/${prev.id}`)}>→ {prev ? prev.title.slice(0, 24) : 'السابق'}</button>
-              <button className="primary" disabled={!next} onClick={() => next && go(`#/reference/${next.id}`)}>{next ? `${next.title.slice(0, 24)} ←` : `الفصل ${arNum(i + 1)} من ${arNum(REF_SECTIONS.length)}`}</button>
+              <button disabled={!prev} onClick={() => prev && go(`#/reference/${prev.id}`)}><Icon name="chevronRight" size={18} /> {prev ? prev.title.slice(0, 24) : 'السابق'}</button>
+              <button className="primary" disabled={!next} onClick={() => next && go(`#/reference/${next.id}`)}>{next ? next.title.slice(0, 24) : `الفصل ${arNum(i + 1)} من ${arNum(REF_SECTIONS.length)}`} <Icon name="chevronLeft" size={18} /></button>
             </>
           );
         })()}
