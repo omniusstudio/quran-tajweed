@@ -25,6 +25,8 @@ export interface Settings {
   playMode: 'continuous' | 'verse';
   /** Follow-along: where each sūrah was left (seconds), keyed by sūrah number. */
   positions: Record<string, number>;
+  /** The ribbon: the verse to pick up from. Set on every stop unless pinned by hand. */
+  bookmark?: { surah: number; basri: number; pinned: boolean; at: number };
   /** Last local change, for merging between devices. */
   updatedAt?: number;
 }

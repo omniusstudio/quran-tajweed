@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { SURAHS } from '../audio/quran';
+import { SURAHS, SURAH_BY_NUMBER } from '../audio/quran';
 import { SECTIONS } from '../content/lessons';
 import { dayKey, readProgress, recentDays, streak, useProgress } from '../content/progress';
 import { loadDeck } from '../exercises/leitner';
@@ -183,10 +183,10 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
             <strong>التمارين</strong>
             <small>{due > 0 ? `${arNum(due)} سؤالاً حان وقت مراجعته` : 'أسئلة من المصحف نفسه'}</small>
           </button>
-          <button className="tile" onClick={() => go(`#/follow/${settings.lastSurah || 1}`)}>
-            <Icon name="headphones" />
+          <button className="tile" onClick={() => go(settings.bookmark ? `#/follow/${settings.bookmark.surah}/${settings.bookmark.basri}` : `#/follow/${settings.lastSurah || 1}`)}>
+            <Icon name={settings.bookmark ? 'bookmark' : 'headphones'} />
             <strong>المتابعة</strong>
-            <small>اقرأ مع القارئ كلمة كلمة</small>
+            <small>{settings.bookmark ? `علامتك: ${SURAH_BY_NUMBER[settings.bookmark.surah]?.name ?? ''}، الآية ${arNum(settings.bookmark.basri)}` : 'اقرأ مع القارئ كلمة كلمة'}</small>
           </button>
           <button className="tile" onClick={() => go('#/letters/qaf')}>
             <Icon name="face" />

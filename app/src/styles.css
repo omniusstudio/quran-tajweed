@@ -712,3 +712,10 @@ button.word { position: relative; }
   .indicators.in-bar .phase { font-size: .8rem; }
   .indicators.in-bar .ticker .cell { width: 20px; height: 20px; font-size: .72rem; border-radius: 6px; }
 }
+
+/* follow-along bookmark ribbon */
+.mushaf .verse { position: relative; }
+.mushaf .verse .ribbon { position: absolute; inset-block-start: -1px; inset-inline-end: 12px; width: 26px; height: 32px; display: grid; place-items: start center; padding-block-start: 6px; color: var(--on-primary); background: var(--accent); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%); box-shadow: var(--shadow-1); }
+.mushaf .verse.pinned .ribbon { background: var(--primary); }
+.mushaf .verse.marked { background: color-mix(in srgb, var(--accent-soft) 60%, transparent); }
+.mushaf .verse.marked.active { background: var(--primary-soft); }

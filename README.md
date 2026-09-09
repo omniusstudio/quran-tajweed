@@ -197,8 +197,11 @@ launcher, `cd app && npm start` builds and serves the same thing from the repo.
   muṣḥaf's own marks (approximate until the M4 rule tagger), and per-verse
   record-and-compare (teacher / me, waveform thumbnails, loop) stored in
   IndexedDB.
-- Follow-along remembers where each sūrah was left (per device, synced) and the
-  big play button continues from that verse; every verse has its own play button;
+- Follow-along keeps a bookmark (a ribbon on the verse): it moves to wherever
+  you stop, or stays put once pinned by hand from the verse's "علامة" button.
+  The home page's المتابعة tile reopens that exact verse (`#/follow/<sūrah>/<verse>`),
+  synced across devices. Each sūrah's position is remembered too, and the big
+  play button continues from that verse; every verse has its own play button;
   a switch at the top chooses continuous play or stopping at the end of each
   verse (the next tap plays the next verse). Both live in the settings.
 - **المحاذاة** (`#/align/1`): the alignment editor. Waveform + zoom strip, Enter

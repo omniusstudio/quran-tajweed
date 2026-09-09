@@ -23,7 +23,7 @@ const SPEEDS: { v: PlaySpeed; label: string }[] = [
 const AR = ['٠', '١', '٢', '٣', '٤', '٥', '٦'];
 
 /** Follow-along recitation mode (PROMPT.md §7.2). */
-export function FollowPage({ surah, go }: { surah: number; go: (hash: string) => void }) {
+export function FollowPage({ surah, verse, go }: { surah: number; verse?: number; go: (hash: string) => void }) {
   const [settings, updateSettings] = useSettings();
   const reciter = RECITERS.some((r) => r.id === settings.reciter) ? settings.reciter : DEFAULT_RECITER;
   const setReciter = (id: string) => updateSettings({ reciter: id });
@@ -39,7 +39,22 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
   /** Verse to play next (verse-by-verse mode), and where to resume (continuous mode). */
   const savedAt = settings.positions?.[String(s.number)] ?? 0;
   const savedVerse = align && savedAt > 0 ? Math.max(0, align.verses.findIndex((v) => savedAt < v.end)) : 0;
-  const [cursor, setCursor] = useState<number>(savedVerse);
+  const linkedVerse = verse ? s.verses.findIndex((v) => v.basri === verse) : -1;
+  const [cursor, setCursor] = useState<number>(linkedVerse >= 0 ? linkedVerse : savedVerse);
+  const bookmark = settings.bookmark;
+  const hereMarked = (vi: number) => !!bookmark && bookmark.surah === s.number && bookmark.basri === s.verses[vi]?.basri;
+  /** Pin the ribbon on a verse by hand (tap again to unpin). */
+  const toggleBookmark = (vi: number) => {
+    sfx('toggle');
+    if (hereMarked(vi) && bookmark?.pinned) return updateSettings({ bookmark: { ...bookmark, pinned: false } });
+    updateSettings({ bookmark: { surah: s.number, basri: s.verses[vi].basri, pinned: true, at: Date.now() } });
+  };
+  // a verse reached through a link (the home card, the bookmark) scrolls into view, ready to play
+  useEffect(() => {
+    if (linkedVerse < 0) return;
+    const t = setTimeout(() => verseRefs.current[linkedVerse]?.scrollIntoView({ block: 'center' }), 250);
+    return () => clearTimeout(t);
+  }, [linkedVerse]);
   const lastVerseRef = useRef<number | null>(null);
   // remember where the learner is: on pause, and whenever the verse changes
   useEffect(() => {
@@ -51,7 +66,9 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
   useEffect(() => {
     if (player.playing || player.time <= 0) return;
     const positions = { ...(settings.positions ?? {}), [String(s.number)]: Number(player.time.toFixed(2)) };
-    if ((settings.positions ?? {})[String(s.number)] !== positions[String(s.number)]) updateSettings({ positions });
+    const here = align ? Math.max(0, align.verses.findIndex((v) => player.time < v.end)) : cursor;
+    const ribbon = bookmark?.pinned ? bookmark : { surah: s.number, basri: s.verses[here]?.basri ?? s.verses[0].basri, pinned: false, at: Date.now() };
+    if ((settings.positions ?? {})[String(s.number)] !== positions[String(s.number)] || ribbon !== bookmark) updateSettings({ positions, bookmark: ribbon });
   }, [player.playing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Play one verse and stop (verse-by-verse mode); the cursor moves on when it finishes. */
@@ -279,7 +296,8 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
           const active = pos?.verse === vi;
           const looping = !!(va && player.loop && player.loop[0] === va.start && player.loop[1] === va.end);
           return (
-            <div key={v.basri} ref={(el) => { verseRefs.current[vi] = el; }} className={`verse${active ? ' active' : ''}`} dir="rtl">
+            <div key={v.basri} ref={(el) => { verseRefs.current[vi] = el; }} className={`verse${active ? ' active' : ''}${hereMarked(vi) ? (bookmark?.pinned ? ' marked pinned' : ' marked') : ''}`} dir="rtl">
+              {hereMarked(vi) && <span className="ribbon" title={bookmark?.pinned ? 'علامة مثبّتة' : 'هنا توقفت'}><Icon name="bookmark" size={16} /></span>}
               <span className="ayah">
                 {va && (
                   <button className={`verse-play${cursor === vi && !player.playing ? ' next' : ''}`} onClick={() => playFrom(vi)} aria-label={`شغّل من الآية ${arNum(v.basri)}`} title={`من الآية ${arNum(v.basri)}`}>
@@ -308,6 +326,9 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
                 <span className="num">﴿{arNum(v.basri)}﴾</span>
               </span>
               <span className="verse-tools">
+                <button className="mini" onClick={() => toggleBookmark(vi)} aria-pressed={hereMarked(vi) && bookmark?.pinned} title="ثبّت العلامة هنا">
+                  <Icon name="bookmark" size={14} /> {hereMarked(vi) && bookmark?.pinned ? 'مثبّتة' : 'علامة'}
+                </button>
                 <button className="mini" onClick={() => loopVerse(vi)} aria-pressed={looping} disabled={!va}>
                   {looping ? 'أوقف التكرار' : 'كرر الآية'}
                 </button>

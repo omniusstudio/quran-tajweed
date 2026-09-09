@@ -33,7 +33,7 @@ type Route =
   | { tab: 'letters'; id: string }
   | { tab: 'contrast'; id: string }
   | { tab: 'dictionary'; id?: string }
-  | { tab: 'follow'; surah: number }
+  | { tab: 'follow'; surah: number; verse?: number }
   | { tab: 'align'; surah: number }
   | { tab: 'recorder' }
   | { tab: 'exercises'; kind?: ExerciseKind; param?: string }
@@ -51,7 +51,7 @@ function parseHash(): Route {
   if (tab === 'letters') return { tab: 'letters', id: id && BY_ID[id] ? id : 'qaf' };
   if (tab === 'contrast') return { tab: 'contrast', id: id && CONTRAST_PAIRS.some((p) => p.id === id) ? id : CONTRAST_PAIRS[0].id };
   if (tab === 'dictionary') return { tab: 'dictionary', id: id && RULES[id] ? id : undefined };
-  if (tab === 'follow') return { tab: 'follow', surah: SURAH_BY_NUMBER[Number(id)] ? Number(id) : 1 };
+  if (tab === 'follow') return { tab: 'follow', surah: SURAH_BY_NUMBER[Number(id)] ? Number(id) : 1, verse: extra ? Number(extra) : undefined };
   if (tab === 'align') return { tab: 'align', surah: SURAH_BY_NUMBER[Number(id)] ? Number(id) : 1 };
   if (tab === 'recorder') return { tab: 'recorder' };
   if (tab === 'exercises') return { tab: 'exercises', kind: EXERCISES.some((e) => e.kind === id) ? (id as ExerciseKind) : undefined, param: extra };
@@ -243,7 +243,7 @@ export default function App() {
         {route.tab === 'letters' && <LettersPage id={route.id} go={go} />}
         {route.tab === 'contrast' && <ContrastPage id={route.id} go={go} />}
         {route.tab === 'dictionary' && <DictionaryPage termId={route.id} go={go} />}
-        {route.tab === 'follow' && <FollowPage key={route.surah} surah={route.surah} go={go} />}
+        {route.tab === 'follow' && <FollowPage key={route.surah} surah={route.surah} verse={route.verse} go={go} />}
         {route.tab === 'align' && <AlignPage key={route.surah} surah={route.surah} go={go} />}
         {route.tab === 'recorder' && <RecorderPage />}
         {route.tab === 'exercises' && <ExercisesPage key={`${route.kind}-${route.param}`} kind={route.kind} param={route.param} go={go} />}
