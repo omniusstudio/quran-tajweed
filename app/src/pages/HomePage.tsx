@@ -5,7 +5,9 @@ import { dayKey, readProgress, recentDays, streak, useProgress } from '../conten
 import { loadDeck } from '../exercises/leitner';
 import { useSettings } from '../ui/settings';
 import { Icon } from '../ui/icons';
-import { PlayVerse, arNum } from './shared';
+import { arNum } from './shared';
+import { VerseDrill } from './VerseDrill';
+import { challenges, currentChallenge, dueReviews, hifzState, versesMemorized } from '../content/hifz';
 
 const ORDER: string[] = SECTIONS.flatMap((s) => s.rules.map((r) => r.id));
 const DAY_NAMES = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
@@ -64,6 +66,9 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
     return Object.values(loadDeck()).filter((c) => c.due <= now).length;
   }, []);
   const verse = useMemo(verseOfDay, []);
+  const hifz = hifzState(p);
+  const challenge = currentChallenge(hifz);
+  const reviewsDue = dueReviews(hifz).length;
   const allDone = done === ORDER.length;
   const wide = typeof matchMedia === 'function' && matchMedia('(min-width: 1024px)').matches;
   const rows = [SECTIONS.slice(0, 7), SECTIONS.slice(7)];
@@ -147,14 +152,27 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
         </section>
 
         <div>
+          <section className="card challenge-card">
+            <div className="section-head">
+              <h3><Icon name="star" size={20} /> تحدي الحفظ اليومي</h3>
+              {reviewsDue > 0 && <span className="badge heavy">{arNum(reviewsDue)} للمراجعة</span>}
+            </div>
+            {challenge ? (
+              <>
+                <p className="ref">{arNum(challenge.index)} من {arNum(challenges().length)} · {arNum(versesMemorized(hifz))} آية محفوظة</p>
+                <p className="challenge-title">{challenge.surahName}، {challenge.verses.length === 1 ? `الآية ${arNum(challenge.verses[0])}` : `الآيات ${arNum(challenge.verses[0])}–${arNum(challenge.verses[challenge.verses.length - 1])}`}</p>
+              </>
+            ) : (
+              <p className="ref">أتممت المسار كله.</p>
+            )}
+            <button className="primary" onClick={() => go('#/hifz')}><Icon name="play" size={18} /> {reviewsDue > 0 && !challenge ? 'راجع' : 'ابدأ تحدي اليوم'}</button>
+          </section>
           <section className="verse-card">
             <span className="eyebrow">آية اليوم</span>
-            <div className="ayah" dir="rtl">
-              {verse.words.join(' ')} <span className="num">﴿{arNum(verse.basri)}﴾</span>
-            </div>
-            <div className="ref">
-              {verse.surahName}، الآية {arNum(verse.basri)} <PlayVerse surah={verse.surah} basri={verse.basri} />
-              <a href={`#/follow/${verse.surah}`} onClick={(e) => { e.preventDefault(); go(`#/follow/${verse.surah}`); }}>افتح في المتابعة</a>
+            <p className="ref" style={{ textAlign: 'center', margin: 0 }}>{verse.surahName}، الآية {arNum(verse.basri)}</p>
+            <VerseDrill surah={verse.surah} verses={[verse.basri]} reciter={settings.reciter} clipKey={`me/verse/${verse.surah}/${verse.basri}`} />
+            <div className="ref" style={{ justifyContent: 'center', display: 'flex' }}>
+              <a href={`#/follow/${verse.surah}`} onClick={(e) => { e.preventDefault(); go(`#/follow/${verse.surah}`); }}>افتح السورة في المتابعة</a>
             </div>
           </section>
         </div>

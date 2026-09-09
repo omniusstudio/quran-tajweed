@@ -19,6 +19,11 @@ export function PracticePage({ go }: { go: (hash: string) => void }) {
         <p className="ref">ثلاث طرق للتمرّن: أسئلة من المصحف، تدريبات ما يميز الدوري، والقراءة مع القارئ كلمة كلمة.</p>
       </div>
       <div className="quick">
+        <button className="quick-card" onClick={() => go('#/hifz')}>
+          <Icon name="star" />
+          <strong>تحدي الحفظ</strong>
+          <small>خمس آيات كاملة كل يوم، بترتيب الخلوة</small>
+        </button>
         <button className="quick-card" onClick={() => go('#/exercises')}>
           <Icon name="target" />
           <strong>التمارين</strong>

@@ -11,6 +11,7 @@ export interface DayStats {
   answers: number;
   correct: number;
   drills: number;
+  challenges?: number;
 }
 export interface Progress {
   done: Record<string, true>;
@@ -19,11 +20,13 @@ export interface Progress {
   days: Record<string, DayStats>;
   /** Last local write, for merging between devices. */
   updatedAt?: number;
+  /** Memorization challenges (see content/hifz.ts). */
+  hifz?: { done: Record<string, { at: number; reviews: number; due: number }>; updatedAt?: number };
 }
 
-export type Activity = 'lesson' | 'correct' | 'wrong' | 'drill';
+export type Activity = 'lesson' | 'correct' | 'wrong' | 'drill' | 'challenge';
 /** Practice points per activity; the daily goal is measured in these. */
-export const POINTS: Record<Activity, number> = { lesson: 3, correct: 1, wrong: 1, drill: 2 };
+export const POINTS: Record<Activity, number> = { lesson: 3, correct: 1, wrong: 1, drill: 2, challenge: 5 };
 
 export function dayKey(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -72,7 +75,7 @@ export function readProgress(): Progress {
 
 export function points(d: DayStats | undefined): number {
   if (!d) return 0;
-  return d.lessons * POINTS.lesson + d.answers * POINTS.correct + d.drills * POINTS.drill;
+  return d.lessons * POINTS.lesson + d.answers * POINTS.correct + d.drills * POINTS.drill + (d.challenges ?? 0) * POINTS.challenge;
 }
 
 /** Consecutive days with activity ending today (or yesterday, so a streak survives until tonight). */
@@ -107,6 +110,7 @@ export function logActivity(kind: Activity): { before: number; after: number; da
   const before = points(day);
   if (kind === 'lesson') day.lessons++;
   else if (kind === 'drill') day.drills++;
+  else if (kind === 'challenge') day.challenges = (day.challenges ?? 0) + 1;
   else {
     day.answers++;
     if (kind === 'correct') day.correct++;

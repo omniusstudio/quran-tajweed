@@ -637,3 +637,44 @@ select:focus-visible { outline: none; border-color: var(--primary); box-shadow: 
 .reciter[aria-pressed="true"] strong { color: var(--primary); }
 .row.wrap > label > select { width: auto; }
 .app-header .brand { flex: none; min-width: 0; }
+
+/* ---------- verse drill, memorization challenge ---------- */
+.drill { display: flex; flex-direction: column; gap: 10px; }
+.drill-text { position: relative; }
+.drill-text .ayah { display: flex; flex-direction: column; gap: 6px; text-align: center; }
+.verse-run { font: inherit; color: inherit; background: none; border: none; border-radius: 10px; padding: 4px 8px; line-height: 1.9; transition: background var(--dur) var(--ease); }
+.verse-run:not(:disabled):hover { background: var(--surface-2); }
+.verse-run.on { background: var(--hl); box-shadow: 0 0 0 2px var(--hl-ring); color: var(--ink); }
+.verse-run:disabled { cursor: default; }
+.hidden-text .ayah { filter: blur(9px); opacity: .35; user-select: none; pointer-events: none; }
+.hidden-text .reveal { position: absolute; inset: 0; margin: auto; width: max-content; height: max-content; }
+.reveal { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--pill); padding: 8px 16px; min-height: 44px; }
+.drill-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.verse-card .drill { margin-block-start: 6px; }
+.verse-card .drill-text .ayah { font-size: calc(2.1rem * var(--quran-scale)); }
+.challenge-card { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: linear-gradient(160deg, var(--accent-soft), var(--surface) 60%); }
+.challenge-card h3 { display: flex; align-items: center; gap: 8px; }
+.challenge-card h3 .icon { color: var(--accent-strong); }
+.challenge-title { font-family: var(--display); font-size: 1.35rem; margin: 2px 0 12px; }
+.hifz-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-block-end: 14px; }
+.challenge .ayah { font-size: calc(2.2rem * var(--quran-scale)); }
+.stepper { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0 0 8px; overflow-x: auto; scrollbar-width: none; }
+.stepper li { flex: 1 0 auto; }
+.stepper button { display: inline-flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 6px 12px; border-radius: var(--pill); border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: .9rem; white-space: nowrap; }
+.stepper .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); font-size: .8rem; font-weight: 700; }
+.stepper li.now button { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); font-weight: 700; }
+.stepper li.now .n { background: var(--primary); color: var(--on-primary); }
+.stepper li.done button { color: var(--ink-2); }
+.stepper li.done .n { background: var(--primary-soft); color: var(--primary); }
+.step-hint { color: var(--ink-2); margin: 4px 0 12px; }
+.review-list { display: flex; flex-direction: column; gap: 6px; }
+.review-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 52px; padding: 8px 14px; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); text-align: start; }
+.review-item:hover { background: var(--surface-2); }
+.path { display: flex; gap: 8px; flex-wrap: wrap; }
+.path-item { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: var(--pill); border: 1px solid var(--line); background: var(--surface); font-size: .85rem; color: var(--muted); }
+[dir="rtl"] .path-item { padding: 6px 6px 6px 12px; }
+.path-item .n { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); font-weight: 700; font-size: .8rem; }
+.path-item.done { color: var(--ink-2); }
+.path-item.done .n { background: var(--primary); color: var(--on-primary); }
+.path-item.now { border-color: var(--accent); color: var(--ink); font-weight: 700; }
+.path-item.now .n { background: var(--accent-soft); color: var(--accent-strong); }

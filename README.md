@@ -104,6 +104,24 @@ On the phone, "Add to Home Screen" gives it an icon and a full-screen window.
 Logs: `~/Library/Logs/nutq.log` (server) and `nutq-launcher.log`. Without the
 launcher, `cd app && npm start` builds and serves the same thing from the repo.
 
+### Verse of the day and the memorization challenge
+
+- **آية اليوم** on the home page is a drill: hear the verse, echo it (verse → beep →
+  you), hide the text and record yourself, then switch between the reciter and you.
+- **تحدي الحفظ اليومي** (`#/hifz`, `app/src/content/hifz.ts`): five whole verses a
+  day, never split across sūrahs, in the khalwa's order (al-Fātiḥah, then an-Nās
+  backwards through the muṣḥaf). Steps: listen, echo, recite from memory with
+  the text hidden (recorded), compare, then the learner decides "حفظتها" (the app
+  never grades). Memorized runs come back for a recall after 1, 3, 7, 14 and 30
+  days. State lives in the progress store and syncs between devices.
+- Both need verse boundaries in the recording. `scripts/segment_verses.py`
+  writes them for every cached sūrah of a reciter: the istiʿādhah and basmalah
+  are found by matching against al-Fātiḥah's hand-aligned ones, verse ends are
+  placed by letter proportion within each breath group and snapped to a nearby
+  pause; words are spread proportionally. Files are flagged `auto` and
+  `source: auto-verses` (يُراجع in the app) and never overwrite one placed by
+  hand (`source: hand`). Word alignment stays manual, as the brief asks.
+
 ### Interface (`app/src/ui/`)
 
 - `settings.ts`: local preferences (theme system/light/dark, interface sounds, haptics,
