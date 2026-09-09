@@ -35,7 +35,7 @@ interface LanInfo {
   /** https on the name: needed for the phone's microphone; one-time certificate warning. */
   secure: string | null;
   qr: string;
-  tailscale?: { installed: boolean; online?: boolean; dnsName?: string; ip?: string; http?: string | null; serve?: string | null };
+  tailscale?: { installed: boolean; online?: boolean; dnsName?: string; ip?: string; http?: string | null; serve?: string | null; qr?: string };
 }
 
 /** Reaching the app away from home: Tailscale keeps it private and gives a real https address. */
@@ -45,10 +45,13 @@ function AwayAccess({ ts }: { ts?: LanInfo['tailscale'] }) {
       <h3>خارج شبكة البيت</h3>
       {ts?.installed && ts.online ? (
         <>
-          <p>
-            هذا الجهاز على شبكة Tailscale الخاصة بك. من أي مكان، على هاتف فيه Tailscale مسجّل بحسابك نفسه، افتح:
-          </p>
-          <p className="mono" style={{ fontSize: '1rem', color: 'var(--ink)' }}>{ts.serve ?? ts.http}</p>
+          <div className="phone-access">
+            {ts.qr && <div className="qr" dangerouslySetInnerHTML={{ __html: ts.qr }} role="img" aria-label={`رمز الاستجابة السريعة: ${ts.serve ?? ts.http}`} />}
+            <div>
+              <p>هذا الجهاز على شبكة Tailscale الخاصة بك. من أي مكان، على هاتف فيه Tailscale مسجّل بحسابك نفسه، وجّه الكاميرا إلى الرمز أو افتح:</p>
+              <p className="mono" style={{ fontSize: '1rem', color: 'var(--ink)' }}>{ts.serve ?? ts.http}</p>
+            </div>
+          </div>
           {ts.serve ? (
             <p className="ref">عنوان https حقيقي: الميكروفون يعمل ولا تحذير من الشهادة.</p>
           ) : (

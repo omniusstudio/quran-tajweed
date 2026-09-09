@@ -283,8 +283,12 @@ async function lanInfo(req) {
   const fallback = online ? `http://${addresses[0]}:${PORT}/` : null;
   const plain = online ? `http://${host}:${PORT}/` : null;
   const secure = tls && online ? `https://${host}:${TLS_PORT}/` : null;
-  const qr = await QRCode.toString(preferred, { type: 'svg', margin: 1, color: { dark: '#1f2622', light: '#0000' } });
-  return { hostname: host, http, https, preferred, fallback, plain, secure, qr, tailscale: tailscaleInfo() };
+  const svg = (text) => QRCode.toString(text, { type: 'svg', margin: 1, color: { dark: '#1f2622', light: '#0000' } });
+  const qr = await svg(preferred);
+  const tailscale = tailscaleInfo();
+  const away = tailscale.serve || tailscale.http;
+  if (away) tailscale.qr = await svg(away);
+  return { hostname: host, http, https, preferred, fallback, plain, secure, qr, tailscale };
 }
 
 function handler(req, res) {
