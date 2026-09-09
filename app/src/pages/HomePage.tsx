@@ -165,7 +165,7 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
             <strong>التمارين</strong>
             <small>{due > 0 ? `${arNum(due)} سؤالاً حان وقت مراجعته` : 'أسئلة من المصحف نفسه'}</small>
           </button>
-          <button className="tile" onClick={() => go('#/follow/1')}>
+          <button className="tile" onClick={() => go(`#/follow/${settings.lastSurah || 1}`)}>
             <Icon name="headphones" />
             <strong>المتابعة</strong>
             <small>اقرأ مع القارئ كلمة كلمة</small>

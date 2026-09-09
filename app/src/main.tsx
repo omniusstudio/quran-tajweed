@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import './styles.css';
+import { startSync } from './ui/sync';
 
 // Offline shell (PROMPT.md §8). The service worker would otherwise keep serving the previous
 // build until two reloads later; with `immediate` + auto-update the page reloads itself as soon
@@ -17,6 +18,8 @@ registerSW({
     document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && check());
   },
 });
+
+startSync();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

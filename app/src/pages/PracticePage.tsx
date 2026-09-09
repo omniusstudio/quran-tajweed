@@ -3,6 +3,7 @@ import { SURAHS } from '../audio/quran';
 import { loadDeck } from '../exercises/leitner';
 import { DRILLS } from '../content/drills';
 import { Icon } from '../ui/icons';
+import { getSettings } from '../ui/settings';
 import { arNum } from './shared';
 
 /** Practice hub: exercises, Dūrī drills, follow-along, contrast pairs. */
@@ -28,7 +29,7 @@ export function PracticePage({ go }: { go: (hash: string) => void }) {
           <strong>تدريبات الدوري</strong>
           <small>{arNum(DRILLS.length)} تدريبات: شاهد، اسمع ببطء، سجّل، قارن</small>
         </button>
-        <button className="quick-card" onClick={() => go('#/follow/1')}>
+        <button className="quick-card" onClick={() => go(`#/follow/${getSettings().lastSurah || 1}`)}>
           <Icon name="headphones" />
           <strong>المتابعة</strong>
           <small>{arNum(SURAHS.length)} سورة مع القارئ</small>

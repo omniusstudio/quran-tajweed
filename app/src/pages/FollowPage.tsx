@@ -12,6 +12,7 @@ import { arNum } from './shared';
 import { Icon } from '../ui/icons';
 import { rewardRecording } from '../ui/rewards';
 import { sfx } from '../ui/sound';
+import { useSettings } from '../ui/settings';
 
 const SPEEDS: { v: PlaySpeed; label: string }[] = [
   { v: 0.5, label: '٠٫٥×' },
@@ -22,8 +23,13 @@ const AR = ['٠', '١', '٢', '٣', '٤', '٥', '٦'];
 
 /** Follow-along recitation mode (PROMPT.md §7.2). */
 export function FollowPage({ surah, go }: { surah: number; go: (hash: string) => void }) {
-  const [reciter, setReciter] = useState(DEFAULT_RECITER);
+  const [settings, updateSettings] = useSettings();
+  const reciter = RECITERS.some((r) => r.id === settings.reciter) ? settings.reciter : DEFAULT_RECITER;
+  const setReciter = (id: string) => updateSettings({ reciter: id });
   const s = SURAH_BY_NUMBER[surah] ?? SURAHS[0];
+  useEffect(() => {
+    if (settings.lastSurah !== s.number) updateSettings({ lastSurah: s.number });
+  }, [s.number]); // eslint-disable-line react-hooks/exhaustive-deps
   const align: SurahAlign | undefined = useMemo(() => loadAlignment(reciter, s.number), [reciter, s.number]);
   const player = usePlayer(audioUrl(reciter, s.number));
   const pos = align ? locate(align, player.time) : null;
@@ -123,28 +129,35 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
 
   return (
     <div className="page follow">
-      <div className="card">
-        <div className="row wrap">
-          <label>
-            السورة{' '}
-            <select value={s.number} onChange={(e) => go(`#/follow/${e.target.value}`)}>
+      <div className="card follow-head">
+        <div className="field">
+          <label htmlFor="follow-surah">السورة</label>
+          <div className="select">
+            <select id="follow-surah" value={s.number} onChange={(e) => go(`#/follow/${e.target.value}`)}>
               {SURAHS.map((x) => (
                 <option key={x.number} value={x.number}>
                   {arNum(x.number)} — {x.name}
                 </option>
               ))}
             </select>
-          </label>
-          <label>
-            القارئ{' '}
-            <select value={reciter} onChange={(e) => setReciter(e.target.value)}>
-              {RECITERS.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.nameAr} — {r.note}
-                </option>
-              ))}
-            </select>
-          </label>
+            <Icon name="chevronLeft" size={18} className="select-arrow" />
+          </div>
+          <div className="surah-nav">
+            <button className="mini" disabled={s.number <= 1} onClick={() => go(`#/follow/${s.number - 1}`)}><Icon name="chevronRight" size={16} /> السابقة</button>
+            <span className="ref">{arNum(s.verses.length)} آية</span>
+            <button className="mini" disabled={s.number >= 114} onClick={() => go(`#/follow/${s.number + 1}`)}>التالية <Icon name="chevronLeft" size={16} /></button>
+          </div>
+        </div>
+        <div className="field">
+          <span className="label-text">القارئ</span>
+          <div className="reciters" role="group" aria-label="القارئ">
+            {RECITERS.map((r) => (
+              <button key={r.id} className="reciter" aria-pressed={r.id === reciter} onClick={() => { setReciter(r.id); sfx('toggle'); }}>
+                <strong>{r.nameAr}</strong>
+                <small>{r.note}</small>
+              </button>
+            ))}
+          </div>
         </div>
         {player.error && <p className="todo"><Icon name="alert" size={18} /> {player.error}</p>}
         {!player.ready && !player.error && <p className="ref">جارٍ تحميل التلاوة… (في المرة الأولى تُجلب من الإنترنت وتُحفظ على هذا الجهاز)</p>}

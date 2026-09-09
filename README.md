@@ -90,6 +90,16 @@ fallback for a phone that cannot resolve `.local` names. Two ports are served:
 | 7373 (http) | What the QR code opens: Mac and phone, no warnings; the phone's microphone stays off (browsers only allow it on https) |
 | 7374 (https, self-signed certificate made on first run) | Optional, for record-and-compare on the phone; accept the certificate warning once |
 
+Progress, the exercise deck, settings and saved alignments are shared between
+every device that opens the app through this server: the server keeps
+`state.json` in the app folder, each device pulls it on open and when the window
+comes back, and pushes after every change; both sides merge with
+`app/server/merge.mjs` (done steps are a union, daily points take the higher
+count, a card keeps the copy answered more often, settings and alignments follow
+the latest change). Recordings (record-and-compare takes and teacher clips) are
+shared the same way through `/__clips`, and the chosen reciter and the last sūrah
+opened travel with the settings.
+
 On the phone, "Add to Home Screen" gives it an icon and a full-screen window.
 Logs: `~/Library/Logs/nutq.log` (server) and `nutq-launcher.log`. Without the
 launcher, `cd app && npm start` builds and serves the same thing from the repo.

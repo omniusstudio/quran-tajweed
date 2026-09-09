@@ -1,6 +1,7 @@
 // Local preferences (PROMPT.md §3: no accounts): theme, sounds, haptics, Qur'an text size, motion.
 
 import { useCallback, useEffect, useState } from 'react';
+import { changed } from './bus';
 
 const KEY = 'nutq.settings.v1';
 
@@ -16,9 +17,15 @@ export interface Settings {
   motion: Motion;
   /** Daily goal in practice points (lesson = 3, drill = 2, answer = 1). */
   dailyGoal: number;
+  /** Reciter for follow-along and the alignment editor. */
+  reciter: string;
+  /** Sūrah last opened in follow-along. */
+  lastSurah: number;
+  /** Last local change, for merging between devices. */
+  updatedAt?: number;
 }
 
-export const DEFAULTS: Settings = { theme: 'system', sound: true, haptics: true, quranScale: 1, motion: 'system', dailyGoal: 10 };
+export const DEFAULTS: Settings = { theme: 'system', sound: true, haptics: true, quranScale: 1, motion: 'system', dailyGoal: 10, reciter: 'nourin_siddig', lastSurah: 1 };
 
 function read(): Settings {
   try {
@@ -46,7 +53,16 @@ export function getSettings(): Settings {
 }
 
 export function updateSettings(patch: Partial<Settings>) {
-  current = { ...current, ...patch };
+  current = { ...current, ...patch, updatedAt: Date.now() };
+  write(current);
+  applySettings(current);
+  listeners.forEach((l) => l());
+  changed();
+}
+
+/** Adopt settings merged from another device (no change event). */
+export function replaceSettings(s: Settings) {
+  current = { ...DEFAULTS, ...s };
   write(current);
   applySettings(current);
   listeners.forEach((l) => l());

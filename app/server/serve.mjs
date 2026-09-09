@@ -9,7 +9,7 @@
 // GET /__lan answers with the addresses to type on the phone and a QR code for the settings page.
 
 import { execFileSync } from 'node:child_process';
-import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import http from 'node:http';
@@ -18,6 +18,7 @@ import { networkInterfaces, hostname } from 'node:os';
 import { dirname, extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
+import { mergeState } from './merge.mjs';
 
 const APP = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(APP, 'dist');
@@ -25,6 +26,107 @@ const PUBLIC = join(APP, 'public');
 const LOCAL = join(APP, '.local');
 const PORT = Number(process.env.PORT || 7373);
 const TLS_PORT = Number(process.env.TLS_PORT || PORT + 1);
+
+// The learner's state, shared between devices through this server (GET/PUT /__state).
+const STATE_FILE = join(LOCAL, 'state.json');
+function readState() {
+  try {
+    return JSON.parse(readFileSync(STATE_FILE, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+function writeStateSync(state) {
+  mkdirSync(LOCAL, { recursive: true });
+  const tmp = `${STATE_FILE}.tmp`;
+  writeFileSync(tmp, JSON.stringify(state));
+  renameSync(tmp, STATE_FILE);
+}
+function readBody(req, limit = 8 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > limit) reject(new Error('body too large'));
+      else chunks.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+}
+
+// The learner's recordings (record-and-compare, teacher clips), shared between devices:
+// GET /__clips (index), GET/PUT/DELETE /__clips/<key>. Files live in .local/clips/.
+const CLIPS_DIR = join(LOCAL, 'clips');
+const CLIPS_INDEX = join(CLIPS_DIR, 'index.json');
+function readClipsIndex() {
+  try {
+    return JSON.parse(readFileSync(CLIPS_INDEX, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+function writeClipsIndex(idx) {
+  mkdirSync(CLIPS_DIR, { recursive: true });
+  writeFileSync(`${CLIPS_INDEX}.tmp`, JSON.stringify(idx));
+  renameSync(`${CLIPS_INDEX}.tmp`, CLIPS_INDEX);
+}
+const clipFile = (key) => join(CLIPS_DIR, encodeURIComponent(key));
+function readBinary(req, limit = 64 * 1024 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > limit) reject(new Error('body too large'));
+      else chunks.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+function clipsHandler(req, res, url) {
+  const json = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
+  const rest = url.slice('/__clips'.length).replace(/^\//, '').split('?')[0];
+  if (!rest) {
+    if (req.method !== 'GET') { res.writeHead(405, json); return res.end('{}'); }
+    res.writeHead(200, json);
+    return res.end(JSON.stringify(readClipsIndex()));
+  }
+  const key = decodeURIComponent(rest);
+  if (!/^[\w./-]+$/.test(key) || key.includes('..')) { res.writeHead(400, json); return res.end('{"error":"bad key"}'); }
+  const idx = readClipsIndex();
+  if (req.method === 'GET') {
+    const meta = idx[key];
+    const f = clipFile(key);
+    if (!meta || !existsSync(f)) return notFound(res);
+    res.writeHead(200, { 'content-type': meta.mime || 'application/octet-stream', 'content-length': statSync(f).size, 'x-clip-at': String(meta.at || 0), 'cache-control': 'no-store' });
+    return createReadStream(f).pipe(res);
+  }
+  if (req.method === 'PUT') {
+    return readBinary(req)
+      .then((buf) => {
+        mkdirSync(CLIPS_DIR, { recursive: true });
+        const at = Number(req.headers['x-clip-at']) || Date.now();
+        writeFileSync(clipFile(key), buf);
+        idx[key] = { mime: req.headers['content-type'] || 'application/octet-stream', at, size: buf.length };
+        writeClipsIndex(idx);
+        res.writeHead(200, json);
+        res.end(JSON.stringify(idx[key]));
+      })
+      .catch((e) => { res.writeHead(400, json); res.end(JSON.stringify({ error: String(e) })); });
+  }
+  if (req.method === 'DELETE') {
+    try { unlinkSync(clipFile(key)); } catch { /* ignore */ }
+    delete idx[key];
+    writeClipsIndex(idx);
+    res.writeHead(200, json);
+    return res.end('{}');
+  }
+  res.writeHead(405, json);
+  res.end('{}');
+}
 
 // Reciter servers (copied next to this file by the installer; falls back to the source tree).
 const RECITERS_FILE = [join(APP, 'server', 'reciters.json'), join(APP, 'src', 'content', 'reciters.json')].find((f) => existsSync(f));
@@ -165,6 +267,33 @@ function handler(req, res) {
       res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
       res.end(JSON.stringify(info));
     });
+    return;
+  }
+  if (url.startsWith('/__clips')) return clipsHandler(req, res, url);
+  if (url.startsWith('/__state')) {
+    const headers = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
+    if (req.method === 'GET') {
+      res.writeHead(200, headers);
+      res.end(JSON.stringify(readState()));
+      return;
+    }
+    if (req.method === 'PUT' || req.method === 'POST') {
+      readBody(req)
+        .then((txt) => {
+          const incoming = txt ? JSON.parse(txt) : null;
+          const merged = mergeState(readState(), incoming);
+          if (merged) writeStateSync(merged);
+          res.writeHead(200, headers);
+          res.end(JSON.stringify(merged));
+        })
+        .catch((e) => {
+          res.writeHead(400, headers);
+          res.end(JSON.stringify({ error: String(e) }));
+        });
+      return;
+    }
+    res.writeHead(405, headers);
+    res.end('{}');
     return;
   }
   let file = locate(url);

@@ -26,13 +26,15 @@ async function tx(mode: IDBTransactionMode) {
   return db.transaction(STORE, mode).objectStore(STORE);
 }
 
-export async function putClip(key: string, blob: Blob): Promise<void> {
+export async function putClip(key: string, blob: Blob, at?: number): Promise<void> {
   const st = await tx('readwrite');
   await new Promise<void>((res, rej) => {
-    const r = st.put({ blob, mime: blob.type, at: Date.now() } as StoredClip, key);
+    const r = st.put({ blob, mime: blob.type, at: at ?? Date.now() } as StoredClip, key);
     r.onsuccess = () => res();
     r.onerror = () => rej(r.error);
   });
+  // `at` is passed only by the sync when a recording arrives from another device
+  if (at === undefined && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('nutq:clip', { detail: { key } }));
 }
 
 export async function getClip(key: string): Promise<StoredClip | undefined> {
@@ -44,13 +46,14 @@ export async function getClip(key: string): Promise<StoredClip | undefined> {
   });
 }
 
-export async function deleteClip(key: string): Promise<void> {
+export async function deleteClip(key: string, announce = true): Promise<void> {
   const st = await tx('readwrite');
   await new Promise<void>((res, rej) => {
     const r = st.delete(key);
     r.onsuccess = () => res();
     r.onerror = () => rej(r.error);
   });
+  if (announce && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('nutq:clip-deleted', { detail: { key } }));
 }
 
 export async function listKeys(prefix: string): Promise<string[]> {

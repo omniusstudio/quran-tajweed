@@ -6,6 +6,7 @@ import { usePlayer } from '../audio/usePlayer';
 import { downloadBlob } from '../audio/zip';
 import { arNum } from './shared';
 import { Icon } from '../ui/icons';
+import { useSettings } from '../ui/settings';
 
 const PER_SEC = 50;
 const fmt = (t: number) => t.toFixed(2);
@@ -51,7 +52,9 @@ function buildMarks(s: { header: string | null; verses: { basri: number; words: 
 
 /** The alignment editor (PROMPT.md §6): waveform, tap to set verse and word boundaries, export JSON. */
 export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => void }) {
-  const [reciter, setReciter] = useState(DEFAULT_RECITER);
+  const [settings, updateSettings] = useSettings();
+  const reciter = RECITERS.some((r) => r.id === settings.reciter) ? settings.reciter : DEFAULT_RECITER;
+  const setReciter = (id: string) => updateSettings({ reciter: id });
   const s = SURAH_BY_NUMBER[surah] ?? SURAHS[0];
   const player = usePlayer(audioUrl(reciter, s.number));
   const [env, setEnv] = useState<Float32Array | null>(null);

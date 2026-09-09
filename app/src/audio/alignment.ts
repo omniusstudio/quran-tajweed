@@ -2,6 +2,8 @@
 // editor; shipped alignments live in src/content/alignments/<reciter>/<NNN>.json and the
 // editor's own saves override them in localStorage.
 
+import { changed } from '../ui/bus';
+
 export type Span = [number, number]; // seconds
 
 export interface VerseAlign {
@@ -45,10 +47,11 @@ export function loadAlignment(reciter: string, surah: number): SurahAlign | unde
 
 export function saveAlignment(a: SurahAlign) {
   try {
-    localStorage.setItem(key(a.reciter, a.surah), JSON.stringify(a));
+    localStorage.setItem(key(a.reciter, a.surah), JSON.stringify({ ...a, savedAt: Date.now() }));
   } catch {
     /* ignore */
   }
+  changed();
 }
 
 export function clearLocalAlignment(reciter: string, surah: number) {

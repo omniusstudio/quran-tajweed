@@ -1,6 +1,8 @@
 // Simple Leitner spaced repetition in localStorage (PROMPT.md §7.3): items answered wrong come
 // back sooner. Boxes 0..4 with growing intervals; a wrong answer drops the item to box 0.
 
+import { changed } from '../ui/bus';
+
 const KEY = 'nutq.leitner.v1';
 const INTERVALS_MS = [0, 10 * 60 * 1000, 24 * 3600 * 1000, 3 * 24 * 3600 * 1000, 7 * 24 * 3600 * 1000];
 
@@ -23,12 +25,13 @@ export function loadDeck(): Deck {
   return {};
 }
 
-export function saveDeck(d: Deck) {
+export function saveDeck(d: Deck, announce = true) {
   try {
     localStorage.setItem(KEY, JSON.stringify(d));
   } catch {
     /* ignore */
   }
+  if (announce) changed();
 }
 
 /** Record an answer for an item id; returns the updated deck. */

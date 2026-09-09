@@ -2,6 +2,7 @@
 // where the learner left off, and a per-day activity log for the streak and the daily goal.
 
 import { useCallback, useEffect, useState } from 'react';
+import { changed } from '../ui/bus';
 
 const KEY = 'nutq.progress.v1';
 
@@ -16,6 +17,8 @@ export interface Progress {
   last?: string;
   /** Activity per local calendar day, keyed YYYY-MM-DD. */
   days: Record<string, DayStats>;
+  /** Last local write, for merging between devices. */
+  updatedAt?: number;
 }
 
 export type Activity = 'lesson' | 'correct' | 'wrong' | 'drill';
@@ -40,12 +43,24 @@ function read(): Progress {
   return { done: {}, days: {} };
 }
 
-function write(p: Progress) {
+function write(p: Progress, announce = true) {
+  p.updatedAt = Date.now();
   try {
     localStorage.setItem(KEY, JSON.stringify(p));
   } catch {
     /* ignore */
   }
+  if (announce) changed();
+}
+
+/** Store a merged copy coming from another device (no change event: it came from the sync). */
+export function replaceProgress(p: Progress) {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(p));
+  } catch {
+    /* ignore */
+  }
+  notify();
 }
 
 const listeners = new Set<() => void>();

@@ -3,6 +3,7 @@ import { resetProgress } from '../content/progress';
 import { Icon, type IconName } from '../ui/icons';
 import { useSettings, type Settings, type Theme, type Motion } from '../ui/settings';
 import { sfx } from '../ui/sound';
+import { onSyncStatus, syncNow, syncStatus } from '../ui/sync';
 import { arNum } from './shared';
 
 function Segment<T extends string | number>({ value, options, onChange }: { value: T; options: { v: T; label: string; icon?: IconName }[]; onChange: (v: T) => void }) {
@@ -76,6 +77,38 @@ function PhoneAccess() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ago(t: number) {
+  const m = Math.round((Date.now() - t) / 60000);
+  return m < 1 ? 'الآن' : m < 60 ? `قبل ${arNum(m)} ${m === 1 ? 'دقيقة' : m === 2 ? 'دقيقتين' : m <= 10 ? 'دقائق' : 'دقيقة'}` : `قبل ${arNum(Math.round(m / 60))} ساعة`;
+}
+
+/** Progress shared between devices through the local server (Settings → البيانات). */
+function SyncRow() {
+  const [st, setSt] = useState(syncStatus());
+  useEffect(() => onSyncStatus(() => setSt(syncStatus())), []);
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="setting">
+      <span className="label">
+        <Icon name="refresh" />
+        <span>
+          المزامنة بين أجهزتك
+          <small>
+            {st.available === false
+              ? 'غير متاحة هنا (تعمل عند فتح التطبيق عبر الخادم المحلي على الجهاز أو الهاتف).'
+              : st.lastSync
+                ? `تقدمك وإعداداتك مشتركة بين كل جهاز يفتح التطبيق من هذا الجهاز. آخر مزامنة: ${ago(st.lastSync)}.`
+                : 'جارٍ الاتصال…'}
+          </small>
+        </span>
+      </span>
+      <button className="toggle" disabled={busy || st.available === false} onClick={async () => { setBusy(true); await syncNow(); setBusy(false); sfx('toggle'); }}>
+        <Icon name="refresh" size={18} /> زامن الآن
+      </button>
     </div>
   );
 }
@@ -161,6 +194,7 @@ export function SettingsPage({ go }: { go: (hash: string) => void }) {
 
       <div className="card">
         <h3>البيانات</h3>
+        <SyncRow />
         <div className="setting">
           <span className="label">
             <Icon name="trash" />
