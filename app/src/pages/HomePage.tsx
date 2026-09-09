@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
+import { SURAHS } from '../audio/quran';
 import { SECTIONS } from '../content/lessons';
-import { readProgress, recentDays, streak, useProgress } from '../content/progress';
+import { dayKey, readProgress, recentDays, streak, useProgress } from '../content/progress';
 import { loadDeck } from '../exercises/leitner';
 import { useSettings } from '../ui/settings';
 import { Icon } from '../ui/icons';
-import { arNum } from './shared';
+import { PlayVerse, arNum } from './shared';
 
 const ORDER: string[] = SECTIONS.flatMap((s) => s.rules.map((r) => r.id));
 const DAY_NAMES = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
@@ -14,16 +15,20 @@ export function GoalRing({ value, goal, size = 112 }: { value: number; goal: num
   const r = (size - 10) / 2;
   const c = 2 * Math.PI * r;
   const frac = Math.min(1, goal ? value / goal : 0);
+  const small = size < 80;
   return (
     <div className={`ring${frac >= 1 ? ' done' : ''}${frac <= 0 ? ' empty' : ''}`} style={{ width: size, height: size }} role="img" aria-label={`اليوم ${arNum(value)} من ${arNum(goal)} نقاط`}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <circle className="track" cx={size / 2} cy={size / 2} r={r} />
         <circle className="fill" cx={size / 2} cy={size / 2} r={r} strokeDasharray={c} strokeDashoffset={c * (1 - frac)} />
       </svg>
-      <div className="center">
-        <strong>{arNum(value)}</strong>
-        <small>من {arNum(goal)}</small>
-      </div>
+      {!small && (
+        <div className="center">
+          <strong>{arNum(value)}</strong>
+          <small>من {arNum(goal)}</small>
+        </div>
+      )}
+      {small && <div className="center" style={{ fontSize: '.8rem', fontWeight: 700 }}>{arNum(value)}</div>}
     </div>
   );
 }
@@ -33,7 +38,16 @@ function greeting() {
   return h < 12 ? 'صباح الخير' : h < 18 ? 'مساء الخير' : 'مساء النور';
 }
 
-/** Landing screen: today's goal, the streak, where to continue, and progress by section. */
+/** A short verse from the v1 text, changing daily; the muṣḥaf itself as the centrepiece. */
+function verseOfDay() {
+  const pool = SURAHS.flatMap((s) => s.verses.filter((v) => v.words.length >= 3 && v.words.length <= 9).map((v) => ({ surah: s.number, surahName: s.name, ...v })));
+  const key = dayKey();
+  let h = 0;
+  for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return pool[h % pool.length];
+}
+
+/** Landing screen: today's goal and streak, a verse to hear, the lessons as a journey, four doors. */
 export function HomePage({ go }: { go: (hash: string) => void }) {
   const [progress] = useProgress();
   const [settings] = useSettings();
@@ -44,20 +58,23 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
   const done = ORDER.filter((id) => progress.done[id]).length;
   const next = progress.last && ORDER.includes(progress.last) ? progress.last : ORDER[0];
   const nextRule = SECTIONS.flatMap((s) => s.rules).find((r) => r.id === next);
+  const nextSection = SECTIONS.find((s) => s.rules.some((r) => r.id === next));
   const due = useMemo(() => {
-    const deck = loadDeck();
     const now = Date.now();
-    return Object.values(deck).filter((c) => c.due <= now).length;
+    return Object.values(loadDeck()).filter((c) => c.due <= now).length;
   }, []);
+  const verse = useMemo(verseOfDay, []);
   const allDone = done === ORDER.length;
+  const wide = typeof matchMedia === 'function' && matchMedia('(min-width: 1024px)').matches;
+  const rows = [SECTIONS.slice(0, 7), SECTIONS.slice(7)];
 
   return (
-    <div className="page home stagger">
-      <div className="card hero home-card">
-        <div className="home-hero">
+    <div className="page home">
+      <section className="today-panel">
+        <div className="today-grid">
           <div>
-            <h2>{greeting()}</h2>
-            <p className="ref">
+            <h2 className="greet">{greeting()}</h2>
+            <p className="lead">
               {today >= settings.dailyGoal ? 'أنجزت هدف اليوم. ما تزيده الآن يثبّت ما تعلمته.' : today > 0 ? 'بدأت اليوم، فأكمل حتى الهدف.' : 'خطوة صغيرة كل يوم أفضل من جلسة طويلة كل أسبوع.'}
             </p>
             <div className="home-stats">
@@ -74,14 +91,19 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
               )}
             </div>
           </div>
-          <GoalRing value={today} goal={settings.dailyGoal} size={typeof matchMedia === 'function' && matchMedia('(min-width: 1024px)').matches ? 156 : 112} />
+          <GoalRing value={today} goal={settings.dailyGoal} size={wide ? 168 : 100} />
         </div>
-        <div className="home-cta">
+        <div className="next-up">
           <button className="primary" onClick={() => go(allDone ? '#/practice' : `#/lessons/${next}`)}>
             <Icon name="play" size={18} />
             {allDone ? 'إلى التدريب' : progress.last ? 'أكمل من حيث توقفت' : 'ابدأ الدرس الأول'}
           </button>
-          {nextRule && !allDone && <span className="ref">{nextRule.name}</span>}
+          {nextRule && !allDone && (
+            <span className="what">
+              <small>{nextSection?.title}</small>
+              <strong>{nextRule.name}</strong>
+            </span>
+          )}
         </div>
         <div className="week" aria-label="الأسبوع الأخير">
           {days.map((d) => {
@@ -96,54 +118,68 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
             );
           })}
         </div>
-      </div>
+      </section>
 
-      <div className="card home-quick">
-        <h3>ابدأ من هنا</h3>
-        <div className="quick">
-          <button className="quick-card" onClick={() => go('#/exercises')}>
+      <div className="home-grid">
+        <section className="journey-card span">
+          <div className="section-head">
+            <h3>رحلة الدروس</h3>
+            <span className="badge neutral">{arNum(done)} / {arNum(ORDER.length)}</span>
+          </div>
+          {rows.map((row, ri) => (
+            <div key={ri} className="journey-row">
+              {row.map((s) => {
+                const i = SECTIONS.indexOf(s);
+                const d = s.rules.filter((r) => progress.done[r.id]).length;
+                const first = s.rules.find((r) => !progress.done[r.id]) ?? s.rules[0];
+                const isDone = d === s.rules.length;
+                const isNow = !isDone && s.id === nextSection?.id;
+                return (
+                  <a key={s.id} className={`station${isDone ? ' done' : ''}${isNow ? ' now' : ''}`} href={`#/lessons/${first.id}`} onClick={(e) => { e.preventDefault(); go(`#/lessons/${first.id}`); }} title={s.title}>
+                    <span className="pin">{isDone ? <Icon name="check" size={20} /> : arNum(i + 1)}</span>
+                    <span className="name">{s.title.replace(/^[٠-٩0-9]+[.،]\s*/, '')}</span>
+                    <span className="cnt">{arNum(d)}/{arNum(s.rules.length)}</span>
+                  </a>
+                );
+              })}
+            </div>
+          ))}
+        </section>
+
+        <div>
+          <section className="verse-card">
+            <span className="eyebrow">آية اليوم</span>
+            <div className="ayah" dir="rtl">
+              {verse.words.join(' ')} <span className="num">﴿{arNum(verse.basri)}﴾</span>
+            </div>
+            <div className="ref">
+              {verse.surahName}، الآية {arNum(verse.basri)} <PlayVerse surah={verse.surah} basri={verse.basri} />
+              <a href={`#/follow/${verse.surah}`} onClick={(e) => { e.preventDefault(); go(`#/follow/${verse.surah}`); }}>افتح في المتابعة</a>
+            </div>
+          </section>
+        </div>
+
+        <div className="tiles">
+          <button className="tile" onClick={() => go('#/exercises')}>
             <Icon name="target" />
             <strong>التمارين</strong>
             <small>{due > 0 ? `${arNum(due)} سؤالاً حان وقت مراجعته` : 'أسئلة من المصحف نفسه'}</small>
           </button>
-          <button className="quick-card" onClick={() => go('#/follow/1')}>
+          <button className="tile" onClick={() => go('#/follow/1')}>
             <Icon name="headphones" />
             <strong>المتابعة</strong>
             <small>اقرأ مع القارئ كلمة كلمة</small>
           </button>
-          <button className="quick-card" onClick={() => go('#/letters/qaf')}>
+          <button className="tile" onClick={() => go('#/letters/qaf')}>
             <Icon name="face" />
             <strong>الحروف</strong>
             <small>شاهد الفم من ثلاث جهات</small>
           </button>
-          <button className="quick-card" onClick={() => go('#/drills')}>
+          <button className="tile" onClick={() => go('#/drills')}>
             <Icon name="zap" />
             <strong>تدريبات الدوري</strong>
             <small>الإمالة والتسهيل وما يميز الرواية</small>
           </button>
-        </div>
-      </div>
-
-      <div className="card home-lessons">
-        <div className="section-head">
-          <h3>الدروس</h3>
-          <span className="badge neutral">{arNum(done)} / {arNum(ORDER.length)}</span>
-        </div>
-        <div className="section-progress">
-          {SECTIONS.map((s, i) => {
-            const d = s.rules.filter((r) => progress.done[r.id]).length;
-            const first = s.rules.find((r) => !progress.done[r.id]) ?? s.rules[0];
-            return (
-              <a key={s.id} href={`#/lessons/${first.id}`} onClick={(e) => { e.preventDefault(); go(`#/lessons/${first.id}`); }}>
-                <span className={`num${d === s.rules.length ? ' done' : ''}`}>{d === s.rules.length ? <Icon name="check" size={16} /> : arNum(i + 1)}</span>
-                <span>
-                  {s.title}
-                  <span className="bar" aria-hidden><i style={{ transform: `scaleX(${s.rules.length ? d / s.rules.length : 0})` }} /></span>
-                </span>
-                <span className="ref">{arNum(d)}/{arNum(s.rules.length)}</span>
-              </a>
-            );
-          })}
         </div>
       </div>
     </div>

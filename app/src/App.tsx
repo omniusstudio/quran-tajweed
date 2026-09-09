@@ -10,7 +10,9 @@ import { FollowPage } from './pages/FollowPage';
 import { AlignPage } from './pages/AlignPage';
 import { RecorderPage } from './pages/RecorderPage';
 import { ExercisesPage, EXERCISES, type ExerciseKind } from './pages/ExercisesPage';
-import { HomePage } from './pages/HomePage';
+import { GoalRing, HomePage } from './pages/HomePage';
+import { readProgress, recentDays, streak, useProgress } from './content/progress';
+import { arNum } from './pages/shared';
 import { PracticePage } from './pages/PracticePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SURAH_BY_NUMBER } from './audio/quran';
@@ -120,6 +122,11 @@ export default function App() {
   }, [more]);
 
   const isCurrent = (n: NavItem) => (n.covers ?? [n.tab]).includes(route.tab);
+  const [progress] = useProgress();
+  void progress; // re-render the sidebar widget when progress changes
+  const p = readProgress();
+  const todayPts = recentDays(p, 1)[0].points;
+  const st = streak(p);
   const nav = (hash: string) => {
     sfx('tap');
     go(hash);
@@ -131,6 +138,47 @@ export default function App() {
 
   return (
     <div className="app">
+      <aside className="sidebar" aria-label="التنقل">
+        <a className="brand" href="#/" onClick={(e) => { e.preventDefault(); nav('#/'); }}>
+          <span className="logo" aria-hidden>ن</span>
+          <h1>
+            نُطق
+            <small>رواية الدوري عن أبي عمرو</small>
+          </h1>
+        </a>
+        <nav className="side-nav">
+          {NAV.map((n) => (
+            <button key={n.tab} aria-current={isCurrent(n) ? 'page' : undefined} onClick={() => nav(n.hash)}>
+              <Icon name={n.icon} />
+              <span>{n.label}</span>
+            </button>
+          ))}
+          <span className="group-title">المزيد</span>
+          {MORE.filter((n) => n.tab !== 'settings').map((n) => (
+            <button key={n.tab} aria-current={route.tab === n.tab ? 'page' : undefined} onClick={() => nav(n.hash)}>
+              <Icon name={n.icon} />
+              <span>{n.label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="side-foot">
+          <button className="side-goal" onClick={() => nav('#/')} aria-label="هدف اليوم">
+            <GoalRing value={todayPts} goal={settings.dailyGoal} size={56} />
+            <span>
+              <strong>{todayPts >= settings.dailyGoal ? 'أنجزت هدف اليوم' : `${arNum(todayPts)} من ${arNum(settings.dailyGoal)} اليوم`}</strong>
+              <small>{st > 0 ? `${arNum(st)} ${st === 1 ? 'يوم' : st === 2 ? 'يومان' : st <= 10 ? 'أيام' : 'يوماً'} متتالية` : 'ابدأ سلسلتك اليوم'}</small>
+            </span>
+          </button>
+          <div className="side-actions">
+            <button className="icon-btn" onClick={toggleTheme} aria-label={dark ? 'الوضع الفاتح' : 'الوضع الداكن'} title={dark ? 'الوضع الفاتح' : 'الوضع الداكن'}>
+              <Icon name={dark ? 'sun' : 'moon'} />
+            </button>
+            <button className="icon-btn" aria-pressed={route.tab === 'settings'} onClick={() => nav('#/settings')} aria-label="الإعدادات" title="الإعدادات">
+              <Icon name="sliders" />
+            </button>
+          </div>
+        </div>
+      </aside>
       <header className="app-header">
         <a className="brand" href="#/" onClick={(e) => { e.preventDefault(); nav('#/'); }}>
           <span className="logo" aria-hidden>ن</span>

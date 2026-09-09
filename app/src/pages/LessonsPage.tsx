@@ -134,7 +134,7 @@ export function LessonScreen({ ruleId, go }: { ruleId: string; go: (hash: string
         {rule.examples.length > 0 && (
           <div className="examples">
             {rule.examples.map((ex, i) => (
-              <div key={i}>
+              <div key={i} className="mushaf-panel">
                 <Ayah ex={ex} />
                 <ExampleTags ex={ex} />
               </div>
