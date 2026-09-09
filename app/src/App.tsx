@@ -6,6 +6,7 @@ import { ChecklistPage, ContrastPage, LettersPage } from './pages/LettersPage';
 import { FollowPage } from './pages/FollowPage';
 import { AlignPage } from './pages/AlignPage';
 import { RecorderPage } from './pages/RecorderPage';
+import { ExercisesPage, EXERCISES, type ExerciseKind } from './pages/ExercisesPage';
 import { SURAH_BY_NUMBER } from './audio/quran';
 import { BY_ID, CONTRAST_PAIRS } from './viewer/articulations';
 
@@ -17,17 +18,19 @@ type Route =
   | { tab: 'follow'; surah: number }
   | { tab: 'align'; surah: number }
   | { tab: 'recorder' }
+  | { tab: 'exercises'; kind?: ExerciseKind; param?: string }
   | { tab: 'checklist' };
 
 function parseHash(): Route {
   const h = location.hash.replace(/^#\/?/, '');
-  const [tab, id] = h.split('/');
+  const [tab, id, extra] = h.split('/');
   if (tab === 'letters') return { tab: 'letters', id: id && BY_ID[id] ? id : 'qaf' };
   if (tab === 'contrast') return { tab: 'contrast', id: id && CONTRAST_PAIRS.some((p) => p.id === id) ? id : CONTRAST_PAIRS[0].id };
   if (tab === 'dictionary') return { tab: 'dictionary', id: id && RULES[id] ? id : undefined };
   if (tab === 'follow') return { tab: 'follow', surah: SURAH_BY_NUMBER[Number(id)] ? Number(id) : 1 };
   if (tab === 'align') return { tab: 'align', surah: SURAH_BY_NUMBER[Number(id)] ? Number(id) : 1 };
   if (tab === 'recorder') return { tab: 'recorder' };
+  if (tab === 'exercises') return { tab: 'exercises', kind: EXERCISES.some((e) => e.kind === id) ? (id as ExerciseKind) : undefined, param: extra };
   if (tab === 'checklist') return { tab: 'checklist' };
   return { tab: 'lessons', id: id && RULES[id] ? id : undefined };
 }
@@ -51,6 +54,7 @@ const TABS: { tab: Route['tab']; label: string; hash: string }[] = [
   { tab: 'letters', label: 'الحروف', hash: '#/letters/qaf' },
   { tab: 'contrast', label: 'هذا، لا ذاك', hash: '#/contrast' },
   { tab: 'dictionary', label: 'القاموس', hash: '#/dictionary' },
+  { tab: 'exercises', label: 'التمارين', hash: '#/exercises' },
   { tab: 'follow', label: 'المتابعة', hash: '#/follow/1' },
   { tab: 'align', label: 'المحاذاة', hash: '#/align/1' },
   { tab: 'recorder', label: 'تسجيل المعلم', hash: '#/recorder' },
@@ -81,6 +85,7 @@ export default function App() {
       {route.tab === 'follow' && <FollowPage key={route.surah} surah={route.surah} go={go} />}
       {route.tab === 'align' && <AlignPage key={route.surah} surah={route.surah} go={go} />}
       {route.tab === 'recorder' && <RecorderPage />}
+      {route.tab === 'exercises' && <ExercisesPage key={`${route.kind}-${route.param}`} kind={route.kind} param={route.param} go={go} />}
       {route.tab === 'checklist' && <ChecklistPage />}
     </div>
   );

@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { loadAlignment, locate, type SurahAlign } from '../audio/alignment';
 import { lettersOf } from '../audio/letters';
 import { audioContext, decode, drawWave, envelope, normalise } from '../audio/peaks';
-import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl, wordCues } from '../audio/quran';
+import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl } from '../audio/quran';
+import { RULES as LESSON_RULES } from '../content/lessons';
+import { RULES, tagVerse, tagsByWord, type Tag } from '../rules/tagger';
 import { getClip, putClip, startRecording } from '../audio/store';
 import { beep, usePlayer, type PlaySpeed } from '../audio/usePlayer';
 import { BY_ID } from '../viewer/articulations';
@@ -27,6 +29,8 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
   const echoRef = useRef(false);
   const verseRefs = useRef<(HTMLDivElement | null)[]>([]);
   const rec = RECITERS.find((r) => r.id === reciter)!;
+  /** Rule tags per verse, per word (the tagger is pure; computed once per sūrah). */
+  const verseTags = useMemo(() => s.verses.map((v, i) => tagsByWord(tagVerse({ words: v.words, hafs: v.hafs, nextWord: s.verses[i + 1]?.words[0] ?? null }), v.words.length)), [s]);
 
   useEffect(() => {
     if (pos && player.playing) verseRefs.current[pos.verse]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -97,18 +101,22 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
     }
   };
 
-  // ---- indicators for the word being sounded ----
+  // ---- indicators for the word being sounded, from the rule tagger ----
   const cur = pos ?? picked;
-  const curWord = cur ? s.verses[cur.verse]?.words[cur.word] : undefined;
-  const cues = curWord ? wordCues(curWord) : null;
+  const curTags: Tag[] = cur ? verseTags[cur.verse]?.[cur.word] ?? [] : [];
+  const maddTag = curTags.filter((t) => t.length).sort((a, b) => (b.length ?? 0) - (a.length ?? 0))[0];
+  const maddLen = maddTag?.length ?? 0;
   let maddCount = 0;
-  if (align && pos && cues?.madd) {
+  if (align && pos && maddLen) {
     const [a, b] = align.verses[pos.verse].words[pos.word];
     const p = b > a ? (player.time - a) / (b - a) : 0;
-    maddCount = Math.min(cues.madd, Math.ceil(Math.max(0, p - 0.3) / 0.7 * cues.madd));
+    maddCount = Math.min(maddLen, Math.ceil((Math.max(0, p - 0.3) / 0.7) * maddLen));
   }
-  const ghunnahOn = !!(cues?.ghunnah && player.playing && pos);
+  const ghunnahRules = new Set(['ghunnah', 'idgham_ghunnah', 'ikhfa', 'iqlab', 'mim_ikhfa', 'mim_idgham']);
+  const ghunnahOn = !!(player.playing && pos && curTags.some((t) => ghunnahRules.has(t.rule)));
   const pickedWord = picked ? s.verses[picked.verse]?.words[picked.word] : undefined;
+  const pickedTags: Tag[] = picked ? verseTags[picked.verse]?.[picked.word] ?? [] : [];
+  const cues = { madd: maddLen, imalah: curTags.some((t) => t.rule === 'imalah'), tashil: curTags.some((t) => t.rule === 'tashil') };
 
   return (
     <div className="follow">
@@ -234,7 +242,19 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
               </button>
             ))}
           </div>
-          <p className="ref">القواعد التي تنطبق على هذه الكلمة تُحسب في المرحلة الرابعة (مُعلِّم القواعد).</p>
+          <p className="ref" style={{ marginBlockStart: 8 }}>القواعد في هذه الكلمة (من علامات المصحف):</p>
+          {pickedTags.length === 0 && <p className="ref">لا قاعدة خاصة هنا.</p>}
+          <div className="tagline">
+            {pickedTags.map((t, i) => {
+              const lesson = LESSON_RULES[RULES[t.rule].lesson];
+              return (
+                <a key={i} className={`tag ${RULES[t.rule].group}`} href={`#/lessons/${lesson.id}`} onClick={(e) => { e.preventDefault(); go(`#/lessons/${lesson.id}`); }} title={lesson.name}>
+                  {RULES[t.rule].label}
+                  {t.detail ? ` — ${t.detail}` : ''}
+                </a>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

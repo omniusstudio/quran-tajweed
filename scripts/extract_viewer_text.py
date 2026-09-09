@@ -13,6 +13,8 @@ DATA = ROOT / 'data'
 sys.path.insert(0, str(DATA))
 
 from content_beginner import SECTIONS  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from hafs_align import align_words, hafs_words  # noqa: E402
 
 Q = json.load(open(DATA / 'quran.json', encoding='utf-8'))['data']
 SUR = {s['number']: s for s in Q['surahs']}
@@ -57,10 +59,15 @@ def resolve(s, num, targets):
         return None
     _, vn, words, nw = sorted(cands)[0]
     hit = [i for i, w in enumerate(nw) if w in tn]
+    kufi = kufi_number(s, ' '.join(words))
+    # the next verse's first word matters for rules that cross the verse boundary when continuing
+    nxt = next((t for n2, t in DURI[s] if n2 == vn + 1), None)
     return {
         'surah': s, 'surahName': SUR[s]['name'], 'basri': vn,
-        'kufi': kufi_number(s, ' '.join(words)),
+        'kufi': kufi,
         'words': words, 'hit': hit, 'targets': targets,
+        'hafs': align_words(words, hafs_words(s, kufi) if kufi else []),
+        'nextWord': nxt.split()[0] if nxt else None,
     }
 
 IMG_RE = re.compile(r"<img src='[^']*/([^/']+)\.png'/>")

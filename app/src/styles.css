@@ -193,3 +193,23 @@ button.mini.rec, button.primary.rec { background: var(--red); color: #fff; borde
 .chip.done { border-color: var(--green); }
 label.toggle { cursor: pointer; }
 a.toggle { text-decoration: none; color: inherit; }
+
+/* ---- exercises ---- */
+.exercise-card { display: flex; flex-direction: column; gap: 4px; text-align: start; width: 100%; cursor: pointer; }
+.exercise-card h3 { margin: 0; }
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; margin-block: 10px; }
+.option { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); font-weight: 700; }
+.option.ayah { font-weight: 400; font-size: 1.7rem; }
+.option.right { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+.option:disabled:not(.right) { opacity: .6; }
+.feedback { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border-radius: 12px; margin-block-start: 8px; }
+.feedback.ok { background: var(--green-soft); }
+.feedback.bad { background: #fdecec; }
+.mirror { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 900px) { .mirror { grid-template-columns: 1fr 1fr; } }
+.mirror-cam video { width: 100%; border-radius: 10px; transform: scaleX(-1); background: #000; aspect-ratio: 4/3; }
+.tagline { display: flex; gap: 6px; flex-wrap: wrap; margin-block-start: 4px; }
+.tag { font-size: .78rem; padding: 1px 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); text-decoration: none; }
+.tag.duri { border-color: #c98c2a; color: #8a5a10; background: #fff7e6; }
+.tag.madd { border-color: var(--blue); color: var(--blue); }
+.tag.nun, .tag.mim, .tag.ghunnah { border-color: var(--green); color: var(--green); }

@@ -8,6 +8,10 @@ export interface Example {
   words: string[];
   hit: number[];
   targets: string[];
+  /** Ḥafṣ counterpart per word (null when unaligned). */
+  hafs: (string | null)[];
+  /** First word of the next verse, for rules that cross the verse boundary. */
+  nextWord: string | null;
 }
 export interface Figure {
   img: string | null;

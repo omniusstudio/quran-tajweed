@@ -6,6 +6,7 @@ import { ContrastView } from '../viewer/ContrastView';
 import { Controls } from '../viewer/Controls';
 import { useClock } from '../viewer/useClock';
 import { Ayah, Figures, LinkedText } from './shared';
+import { LESSON_EXERCISE } from '../content/ruleViewer';
 
 export function LettersPage({ id, go }: { id: string; go: (hash: string) => void }) {
   const art = BY_ID[id];
@@ -117,7 +118,7 @@ export function ChecklistPage() {
                   <td>{ok}</td>
                   <td>{no}</td>
                   <td>{rule && rule.examples.length > 0 ? ok : no}</td>
-                  <td>{no}</td>
+                  <td>{a.ruleId && LESSON_EXERCISE[a.ruleId] ? ok : ['sin', 'sad', 'ta', 'tta', 'kaf', 'qaf', 'dhal', 'zha', 'dal', 'dad', 'jim', 'shin', 'hamza', 'ain', 'ha', 'hha', 'zay'].includes(a.id) ? ok : no}</td>
                   <td>{a.needsReview ? `يُراجع: ${a.needsReview}` : ''}</td>
                 </tr>
               );

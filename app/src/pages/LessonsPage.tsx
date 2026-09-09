@@ -5,6 +5,8 @@ import { RULE_VIEWER } from '../content/ruleViewer';
 import { BY_ID, CONTRAST_PAIRS } from '../viewer/articulations';
 import { ContrastView } from '../viewer/ContrastView';
 import { Ayah, Figures, LetterViewer, LinkedText, arNum } from './shared';
+import { RULES as TAG_RULES, tagVerse, type RuleId } from '../rules/tagger';
+import { LESSON_EXERCISE } from '../content/ruleViewer';
 
 const ORDER: string[] = SECTIONS.flatMap((s) => s.rules.map((r) => r.id));
 
@@ -55,6 +57,29 @@ export function LessonsIndex({ go }: { go: (hash: string) => void }) {
   );
 }
 
+/** What the tagger finds on the highlighted words of an example (sections 6–13 only). */
+function ExampleTags({ ex }: { ex: Rule['examples'][number] }) {
+  const tags = tagVerse({ words: ex.words, hafs: ex.hafs, nextWord: ex.nextWord }).filter((t) => ex.hit.includes(t.word) && t.rule !== 'waqf_end' && t.rule !== 'madd_tabii');
+  if (!tags.length) return null;
+  const seen = new Set<string>();
+  return (
+    <div className="tagline">
+      {tags
+        .filter((t) => {
+          const k = `${t.word}:${t.rule}`;
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        })
+        .map((t, i) => (
+          <span key={i} className={`tag ${TAG_RULES[t.rule as RuleId].group}`} title={ex.words[t.word]}>
+            {ex.words[t.word]}: {TAG_RULES[t.rule as RuleId].label}
+          </span>
+        ))}
+    </div>
+  );
+}
+
 /** One rule = one screen: text → figures/animation → examples → try it. */
 export function LessonScreen({ ruleId, go }: { ruleId: string; go: (hash: string) => void }) {
   const rule: Rule | undefined = RULES[ruleId];
@@ -90,7 +115,10 @@ export function LessonScreen({ ruleId, go }: { ruleId: string; go: (hash: string
         {rule.examples.length > 0 && (
           <div className="examples">
             {rule.examples.map((ex, i) => (
-              <Ayah key={i} ex={ex} />
+              <div key={i}>
+                <Ayah ex={ex} />
+                <ExampleTags ex={ex} />
+              </div>
             ))}
           </div>
         )}
@@ -123,6 +151,19 @@ export function LessonScreen({ ruleId, go }: { ruleId: string; go: (hash: string
               <ContrastView key={pair.id} pair={pair} />
             </div>
           )}
+        </div>
+      )}
+
+      {LESSON_EXERCISE[ruleId] && (
+        <div className="card">
+          <h3>تمرين</h3>
+          <div className="row wrap">
+            {LESSON_EXERCISE[ruleId].map((ex) => (
+              <button key={ex.hash} className="primary" onClick={() => go(ex.hash)}>
+                {ex.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
