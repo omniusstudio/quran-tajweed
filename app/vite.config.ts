@@ -5,6 +5,8 @@ import { VitePWA } from 'vite-plugin-pwa';
 // Fonts and reference images live at the repo root (../fonts, ../images) and are
 // imported from there so nothing is duplicated inside app/.
 export default defineConfig({
+  // GitHub Pages serves the site under /<repo>/; the deploy workflow sets BASE_PATH accordingly.
+  base: process.env.BASE_PATH ?? '/',
   plugins: [
     react(),
     // Offline after first load (PROMPT.md §1, §8): the app shell, fonts, artwork and content are
