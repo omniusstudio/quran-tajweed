@@ -80,7 +80,10 @@ grant, so the served files live in the home folder (the app then also works with
 the drive unplugged).
 
 A phone on the same Wi-Fi can open it too: **Settings → على هاتفك** shows the
-address and a QR code. Two ports are served:
+address and a QR code. The address is the Mac's Bonjour name
+(`<computer-name>.local`, read at run time, so the same installer works on any
+Mac and the link survives a new DHCP lease); the numeric address is shown as a
+fallback for a phone that cannot resolve `.local` names. Two ports are served:
 
 | Port | Use |
 |---|---|

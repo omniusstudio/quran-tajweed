@@ -37,6 +37,18 @@ if (!existsSync(join(DIST, 'index.html'))) {
   process.exit(1);
 }
 
+/** The Bonjour name phones resolve on the same network: <LocalHostName>.local (read at run time, so any Mac works). */
+function bonjourName() {
+  let name = '';
+  try {
+    name = execFileSync('scutil', ['--get', 'LocalHostName'], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    /* not macOS or scutil missing */
+  }
+  if (!name) name = hostname().replace(/\.local$/i, '');
+  return `${name}.local`;
+}
+
 /** IPv4 addresses of this Mac on the local network (no loopback, no link-local). */
 function lanAddresses() {
   const out = [];
@@ -51,7 +63,7 @@ function certificate() {
   mkdirSync(LOCAL, { recursive: true });
   const key = join(LOCAL, 'key.pem');
   const cert = join(LOCAL, 'cert.pem');
-  const sans = [...lanAddresses().map((a) => `IP:${a}`), `DNS:${hostname().replace(/\.local$/, '')}.local`, 'DNS:localhost', 'IP:127.0.0.1'];
+  const sans = [`DNS:${bonjourName()}`, ...lanAddresses().map((a) => `IP:${a}`), 'DNS:localhost', 'IP:127.0.0.1'];
   const stamp = join(LOCAL, 'cert.sans');
   const wanted = sans.join(',');
   const fresh = existsSync(key) && existsSync(cert) && existsSync(stamp) && readFileSync(stamp, 'utf8') === wanted;
@@ -88,12 +100,17 @@ function locate(urlPath) {
 
 async function lanInfo(req) {
   const proto = req.socket.encrypted ? 'https' : 'http';
+  const host = bonjourName();
   const addresses = lanAddresses();
-  const http = addresses.map((a) => `http://${a}:${PORT}/`);
-  const https = tls ? addresses.map((a) => `https://${a}:${TLS_PORT}/`) : [];
+  const online = addresses.length > 0;
+  // The Bonjour name first (stable across DHCP leases, same on every install), the numeric addresses as a fallback.
+  const http = online ? [`http://${host}:${PORT}/`, ...addresses.map((a) => `http://${a}:${PORT}/`)] : [];
+  const https = tls && online ? [`https://${host}:${TLS_PORT}/`, ...addresses.map((a) => `https://${a}:${TLS_PORT}/`)] : [];
   const preferred = (tls ? https : http)[0] || `${proto}://localhost:${PORT}/`;
+  const fallback = online ? (tls ? `https://${addresses[0]}:${TLS_PORT}/` : `http://${addresses[0]}:${PORT}/`) : null;
+  const plain = online ? `http://${host}:${PORT}/` : null;
   const qr = await QRCode.toString(preferred, { type: 'svg', margin: 1, color: { dark: '#1f2622', light: '#0000' } });
-  return { hostname: `${hostname().replace(/\.local$/, '')}.local`, http, https, preferred, qr };
+  return { hostname: host, http, https, preferred, fallback, plain, qr };
 }
 
 function handler(req, res) {
@@ -145,8 +162,9 @@ const tls = certificate();
 http.createServer(handler).listen(PORT, '0.0.0.0', async () => {
   const info = await lanInfo({ socket: {} });
   console.log(`نُطق  http://localhost:${PORT}/`);
-  for (const u of info.http) console.log(`      ${u}   (phone, same Wi-Fi)`);
-  if (tls) for (const u of info.https) console.log(`      ${u}   (phone, microphone works; accept the certificate once)`);
+  if (info.plain) console.log(`      ${info.plain}   (phone, same Wi-Fi)`);
+  if (tls && info.https[0]) console.log(`      ${info.https[0]}   (phone, microphone works; accept the certificate once)`);
+  if (info.fallback) console.log(`      ${info.fallback}   (if the name does not resolve)`);
   if (process.stdout.isTTY) {
     try {
       console.log(await QRCode.toString(info.preferred, { type: 'terminal', small: true }));

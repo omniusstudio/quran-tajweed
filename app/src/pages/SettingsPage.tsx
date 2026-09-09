@@ -27,6 +27,10 @@ interface LanInfo {
   http: string[];
   https: string[];
   preferred: string;
+  /** Numeric-address form of `preferred`, for a phone that cannot resolve the .local name. */
+  fallback: string | null;
+  /** Plain http on the name: no certificate warning, no microphone. */
+  plain: string | null;
   qr: string;
 }
 
@@ -53,9 +57,17 @@ function PhoneAccess() {
           <div>
             <p>افتح الكاميرا على الهاتف ووجّهها إلى الرمز، أو اكتب العنوان في المتصفح. يجب أن يكون الهاتف على شبكة Wi-Fi نفسها.</p>
             <p className="mono" style={{ fontSize: '1rem', color: 'var(--ink)' }}>{info.preferred}</p>
-            {info.https.length > 0 && (
+            <p className="ref">
+              العنوان هو اسم هذا الجهاز على الشبكة ({info.hostname})، فلا يتغير مع تغيّر الشبكة.
+              {info.fallback && (
+                <>
+                  {' '}إن لم يفتح على هاتفك، جرّب العنوان الرقمي: <span className="mono">{info.fallback}</span>
+                </>
+              )}
+            </p>
+            {info.https.length > 0 && info.plain && (
               <p className="ref">
-                العنوان المؤمّن (https) يسمح بالميكروفون على الهاتف؛ سيحذّرك المتصفح من الشهادة في المرة الأولى لأنها صادرة من هذا الجهاز، فاختر المتابعة. البديل بلا تحذير ولا ميكروفون: <span className="mono">{info.http[0]}</span>
+                العنوان المؤمّن (https) يسمح بالميكروفون على الهاتف؛ سيحذّرك المتصفح من الشهادة في المرة الأولى لأنها صادرة من هذا الجهاز، فاختر المتابعة. البديل بلا تحذير ولا ميكروفون: <span className="mono">{info.plain}</span>
               </p>
             )}
             <p className="ref">ثم من قائمة المشاركة اختر «إضافة إلى الشاشة الرئيسية» ليفتح كتطبيق.</p>
