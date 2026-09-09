@@ -31,6 +31,8 @@ interface LanInfo {
   fallback: string | null;
   /** Plain http on the name: no certificate warning, no microphone. */
   plain: string | null;
+  /** https on the name: needed for the phone's microphone; one-time certificate warning. */
+  secure: string | null;
   qr: string;
 }
 
@@ -65,9 +67,9 @@ function PhoneAccess() {
                 </>
               )}
             </p>
-            {info.https.length > 0 && info.plain && (
+            {info.secure && (
               <p className="ref">
-                العنوان المؤمّن (https) يسمح بالميكروفون على الهاتف؛ سيحذّرك المتصفح من الشهادة في المرة الأولى لأنها صادرة من هذا الجهاز، فاختر المتابعة. البديل بلا تحذير ولا ميكروفون: <span className="mono">{info.plain}</span>
+                لتسجيل صوتك على الهاتف (الميكروفون) افتح العنوان المؤمّن بدلاً منه: <span className="mono">{info.secure}</span> — سيحذّرك المتصفح من الشهادة في المرة الأولى لأنها صادرة من هذا الجهاز، فاختر المتابعة.
               </p>
             )}
             <p className="ref">ثم من قائمة المشاركة اختر «إضافة إلى الشاشة الرئيسية» ليفتح كتطبيق.</p>

@@ -61,7 +61,7 @@ export function usePlayer(src: string | null): Player {
       setDuration(audio.duration || 0);
       setReady(true);
     };
-    const onErr = () => setError('تعذر تحميل الملف الصوتي. شغّل scripts/fetch_audio.py أولاً.');
+    const onErr = () => setError('تعذر تحميل التلاوة. تأكد من الاتصال بالإنترنت في المرة الأولى، أو شغّل scripts/fetch_audio.py.');
     const onPlay = () => setPlaying(true);
     const onPause = () => {
       setPlaying(false);

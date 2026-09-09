@@ -7,6 +7,7 @@ Files land in app/public/audio/<reciter>/<NNN>.mp3 (git-ignored; the app serves 
     python3 scripts/fetch_audio.py                 # default reciter, v1 sūrahs
     python3 scripts/fetch_audio.py --all-reciters  # every reciter in reciters.json
     python3 scripts/fetch_audio.py --surahs 1 112 114
+    python3 scripts/fetch_audio.py --surahs all       # the whole muṣḥaf (about 1.1 GB per reciter)
 """
 import argparse, json, sys, urllib.request
 from pathlib import Path
@@ -42,13 +43,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--all-reciters', action='store_true')
     ap.add_argument('--reciter', action='append')
-    ap.add_argument('--surahs', type=int, nargs='*')
+    ap.add_argument('--surahs', nargs='*', help='sūrah numbers, or "all"')
     a = ap.parse_args()
     reciters = CFG['reciters']
     if not a.all_reciters:
         wanted = set(a.reciter or [CFG['default']])
         reciters = [r for r in reciters if r['id'] in wanted]
-    surahs = a.surahs or CFG['v1Surahs']
+    surahs = list(range(1, 115)) if a.surahs and a.surahs[0] == 'all' else [int(x) for x in a.surahs] if a.surahs else CFG['v1Surahs']
     failed = 0
     for r in reciters:
         print(f'{r["nameEn"]} ({r["id"]})')

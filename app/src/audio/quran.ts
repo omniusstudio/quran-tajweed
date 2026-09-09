@@ -1,10 +1,9 @@
-import duri from '../content/duri_v1.json';
+import duri from '../content/mushaf.json';
 import recitersJson from '../content/reciters.json';
 
 export interface Verse {
   basri: number;
   kufi: number | null;
-  text: string;
   words: string[];
   /** Ḥafṣ counterpart per word (null when unaligned). */
   hafs: (string | null)[];

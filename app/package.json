@@ -12,7 +12,8 @@
     "audio": "python3 ../scripts/fetch_audio.py",
     "serve": "node server/serve.mjs",
     "start": "npm run build && node server/serve.mjs",
-    "install-app": "bash ../scripts/install_app.sh"
+    "install-app": "bash ../scripts/install_app.sh",
+    "mushaf": "python3 ../scripts/extract_mushaf.py"
   },
   "dependencies": {
     "qrcode": "^1.5.4",

@@ -9,7 +9,9 @@
 // GET /__lan answers with the addresses to type on the phone and a QR code for the settings page.
 
 import { execFileSync } from 'node:child_process';
-import { createReadStream, existsSync, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
+import { Readable } from 'node:stream';
 import http from 'node:http';
 import https from 'node:https';
 import { networkInterfaces, hostname } from 'node:os';
@@ -23,6 +25,46 @@ const PUBLIC = join(APP, 'public');
 const LOCAL = join(APP, '.local');
 const PORT = Number(process.env.PORT || 7373);
 const TLS_PORT = Number(process.env.TLS_PORT || PORT + 1);
+
+// Reciter servers (copied next to this file by the installer; falls back to the source tree).
+const RECITERS_FILE = [join(APP, 'server', 'reciters.json'), join(APP, 'src', 'content', 'reciters.json')].find((f) => existsSync(f));
+const RECITERS = RECITERS_FILE ? JSON.parse(readFileSync(RECITERS_FILE, 'utf8')).reciters : [];
+/** In-flight downloads keyed by relative path, so parallel requests share one fetch. */
+const downloads = new Map();
+
+/**
+ * A recording that is not cached yet is fetched once from the reciter's server into public/audio
+ * (never hot-linked by the app itself), so any of the 114 sūrahs plays without a full pre-fetch.
+ */
+async function ensureAudio(rel) {
+  const m = /^audio\/([\w-]+)\/(\d{3})\.mp3$/.exec(rel.split(sep).join('/'));
+  if (!m) return null;
+  const reciter = RECITERS.find((r) => r.id === m[1]);
+  if (!reciter) return null;
+  const dst = join(PUBLIC, 'audio', m[1], `${m[2]}.mp3`);
+  if (existsSync(dst) && statSync(dst).size > 10_000) return dst;
+  if (downloads.has(rel)) return downloads.get(rel);
+  const job = (async () => {
+    mkdirSync(dirname(dst), { recursive: true });
+    const url = `${reciter.server}${m[2]}.mp3`;
+    const res = await fetch(url, { headers: { 'user-agent': 'nutq-tajweed/1.0 (local cache)' } });
+    if (!res.ok || !res.body) throw new Error(`${url}: HTTP ${res.status}`);
+    const tmp = `${dst}.part`;
+    try {
+      await pipeline(Readable.fromWeb(res.body), createWriteStream(tmp));
+      renameSync(tmp, dst);
+      console.log(`fetched ${rel} (${Math.round(statSync(dst).size / 1024)} KB)`);
+      return dst;
+    } catch (e) {
+      try { unlinkSync(tmp); } catch { /* ignore */ }
+      throw e;
+    } finally {
+      downloads.delete(rel);
+    }
+  })();
+  downloads.set(rel, job);
+  return job;
+}
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
@@ -106,11 +148,14 @@ async function lanInfo(req) {
   // The Bonjour name first (stable across DHCP leases, same on every install), the numeric addresses as a fallback.
   const http = online ? [`http://${host}:${PORT}/`, ...addresses.map((a) => `http://${a}:${PORT}/`)] : [];
   const https = tls && online ? [`https://${host}:${TLS_PORT}/`, ...addresses.map((a) => `https://${a}:${TLS_PORT}/`)] : [];
-  const preferred = (tls ? https : http)[0] || `${proto}://localhost:${PORT}/`;
-  const fallback = online ? (tls ? `https://${addresses[0]}:${TLS_PORT}/` : `http://${addresses[0]}:${PORT}/`) : null;
+  // Plain http by name is what the QR encodes: no certificate warning. The https address is
+  // offered alongside for the phone's microphone (browsers allow it only on https).
+  const preferred = http[0] || `${proto}://localhost:${PORT}/`;
+  const fallback = online ? `http://${addresses[0]}:${PORT}/` : null;
   const plain = online ? `http://${host}:${PORT}/` : null;
+  const secure = tls && online ? `https://${host}:${TLS_PORT}/` : null;
   const qr = await QRCode.toString(preferred, { type: 'svg', margin: 1, color: { dark: '#1f2622', light: '#0000' } });
-  return { hostname: host, http, https, preferred, fallback, plain, qr };
+  return { hostname: host, http, https, preferred, fallback, plain, secure, qr };
 }
 
 function handler(req, res) {
@@ -122,12 +167,27 @@ function handler(req, res) {
     });
     return;
   }
-  const file = locate(url);
-  if (!file) {
-    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('not found');
+  let file = locate(url);
+  if (!file && /^\/audio\//.test(url.split('?')[0])) {
+    ensureAudio(safePath(url).replace(/^[/\\]/, ''))
+      .then((f) => (f ? serveFile(req, res, f) : notFound(res)))
+      .catch((e) => {
+        console.warn(String(e));
+        res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end('could not fetch the recording');
+      });
     return;
   }
+  if (!file) return notFound(res);
+  serveFile(req, res, file);
+}
+
+function notFound(res) {
+  res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+  res.end('not found');
+}
+
+function serveFile(req, res, file) {
   const st = statSync(file);
   const type = MIME[extname(file).toLowerCase()] || 'application/octet-stream';
   const isAsset = file.includes(`${sep}assets${sep}`) || /\.(mp3|ttf|png|webp)$/i.test(file);

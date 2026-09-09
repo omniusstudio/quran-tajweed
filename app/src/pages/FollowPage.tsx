@@ -147,6 +147,7 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
           </label>
         </div>
         {player.error && <p className="todo"><Icon name="alert" size={18} /> {player.error}</p>}
+        {!player.ready && !player.error && <p className="ref">جارٍ تحميل التلاوة… (في المرة الأولى تُجلب من الإنترنت وتُحفظ على هذا الجهاز)</p>}
         {!align && (
           <p className="todo">
             <Icon name="alert" size={18} /> لم تُحاذَ هذه السورة لهذا القارئ بعد، فلن تُضاء الكلمات مع الصوت.{' '}

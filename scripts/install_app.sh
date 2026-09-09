@@ -28,10 +28,15 @@ echo "▸ copying to $DEST"
 mkdir -p "$DEST/public" "$DEST/.local"
 rsync -a --delete "$ROOT/app/dist/" "$DEST/dist/"
 rsync -a --delete "$ROOT/app/server/" "$DEST/server/"
+cp "$ROOT/app/src/content/reciters.json" "$DEST/server/reciters.json"
+if [ "${1:-}" = "--all-audio" ]; then
+  echo "▸ fetching every sūrah for the default reciter (about 1.1 GB, once)"
+  python3 "$ROOT/scripts/fetch_audio.py" --surahs all || true
+fi
 if [ -d "$ROOT/app/public/audio" ]; then
   rsync -a "$ROOT/app/public/audio/" "$DEST/public/audio/"
 else
-  echo "  (no recordings yet: run \`npm run audio\` in app/ and install again)"
+  echo "  (no recordings copied; the server fetches each sūrah on first play)"
 fi
 if [ ! -d "$DEST/node_modules/qrcode" ]; then
   printf '{ "name": "nutq-runtime", "private": true, "type": "module", "dependencies": { "qrcode": "^1.5.4" } }\n' > "$DEST/package.json"
