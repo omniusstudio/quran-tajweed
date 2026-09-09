@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { resetProgress } from '../content/progress';
 import { Icon, type IconName } from '../ui/icons';
 import { useSettings, type Settings, type Theme, type Motion } from '../ui/settings';
@@ -19,6 +20,50 @@ function Segment<T extends string | number>({ value, options, onChange }: { valu
 
 function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return <button className="switch" role="switch" aria-checked={checked} aria-label={label} onClick={() => { onChange(!checked); sfx('toggle'); }} />;
+}
+
+interface LanInfo {
+  hostname: string;
+  http: string[];
+  https: string[];
+  preferred: string;
+  qr: string;
+}
+
+/** Addresses for a phone on the same Wi-Fi, answered by server/serve.mjs (absent under the dev server). */
+function PhoneAccess() {
+  const [info, setInfo] = useState<LanInfo | null | 'none'>(null);
+  useEffect(() => {
+    fetch('/__lan', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((j: LanInfo) => setInfo(j))
+      .catch(() => setInfo('none'));
+  }, []);
+  if (info === 'none') return null;
+  return (
+    <div className="card">
+      <h3>على هاتفك</h3>
+      {info === null ? (
+        <p className="ref">جارٍ القراءة…</p>
+      ) : info.http.length === 0 ? (
+        <p className="ref">هذا الجهاز غير متصل بشبكة محلية الآن.</p>
+      ) : (
+        <div className="phone-access">
+          <div className="qr" dangerouslySetInnerHTML={{ __html: info.qr }} aria-label={`رمز الاستجابة السريعة: ${info.preferred}`} role="img" />
+          <div>
+            <p>افتح الكاميرا على الهاتف ووجّهها إلى الرمز، أو اكتب العنوان في المتصفح. يجب أن يكون الهاتف على شبكة Wi-Fi نفسها.</p>
+            <p className="mono" style={{ fontSize: '1rem', color: 'var(--ink)' }}>{info.preferred}</p>
+            {info.https.length > 0 && (
+              <p className="ref">
+                العنوان المؤمّن (https) يسمح بالميكروفون على الهاتف؛ سيحذّرك المتصفح من الشهادة في المرة الأولى لأنها صادرة من هذا الجهاز، فاختر المتابعة. البديل بلا تحذير ولا ميكروفون: <span className="mono">{info.http[0]}</span>
+              </p>
+            )}
+            <p className="ref">ثم من قائمة المشاركة اختر «إضافة إلى الشاشة الرئيسية» ليفتح كتطبيق.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function SettingsPage({ go }: { go: (hash: string) => void }) {
@@ -97,6 +142,8 @@ export function SettingsPage({ go }: { go: (hash: string) => void }) {
           <Segment<number> value={s.dailyGoal} onChange={(v) => set('dailyGoal', v)} options={[{ v: 5, label: arNum(5) }, { v: 10, label: arNum(10) }, { v: 20, label: arNum(20) }]} />
         </div>
       </div>
+
+      <PhoneAccess />
 
       <div className="card">
         <h3>البيانات</h3>

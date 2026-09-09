@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# نُطق launcher (Dock). The server runs as the launchd agent com.omniusstudio.nutq installed by
+# scripts/install_app.sh; this only makes sure it is up and opens the app in its own Chrome window
+# (or brings the open one to the front). Nothing here reads the repo: a Dock-launched app is not
+# allowed to touch an external drive unless the user grants it. Log: ~/Library/Logs/nutq-launcher.log
+PORT=7373
+URL="http://localhost:$PORT/"
+LABEL="com.omniusstudio.nutq"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+mkdir -p "$HOME/Library/Logs"
+exec >>"$HOME/Library/Logs/nutq-launcher.log" 2>&1
+echo "--- $(date) launch"
+
+if [ ! -f "$PLIST" ]; then
+  osascript -e 'display alert "نُطق" message "التطبيق غير مثبّت بعد. من الطرفية شغّل: bash scripts/install_app.sh داخل مجلد المشروع."'
+  exit 1
+fi
+if ! lsof -nP -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1; then
+  launchctl kickstart "gui/$(id -u)/$LABEL" 2>/dev/null || launchctl bootstrap "gui/$(id -u)" "$PLIST"
+  for i in $(seq 1 60); do lsof -nP -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1 && break; sleep 0.25; done
+fi
+
+CHROME="/Applications/Google Chrome.app"
+[ -d "$HOME/Applications/Google Chrome.app" ] && CHROME="$HOME/Applications/Google Chrome.app"
+# An open نُطق window is brought to the front instead of opening a second one.
+if [ -d "$CHROME" ] && pgrep -xq "Google Chrome"; then
+  FOUND=$(osascript <<APPLESCRIPT 2>/dev/null
+tell application "Google Chrome"
+  repeat with w in windows
+    set i to 0
+    repeat with t in tabs of w
+      set i to i + 1
+      if URL of t starts with "$URL" then
+        set active tab index of w to i
+        set minimized of w to false
+        set visible of w to true
+        set index of w to 1
+        activate
+        tell application "System Events" to tell process "Google Chrome"
+          set frontmost to true
+          try
+            perform action "AXRaise" of window 1
+          end try
+        end tell
+        return "found"
+      end if
+    end repeat
+  end repeat
+end tell
+return "none"
+APPLESCRIPT
+)
+  [ "$FOUND" = "found" ] && exit 0
+fi
+if [ -d "$CHROME" ]; then
+  open -na "$CHROME" --args --app="$URL" --window-size=1180,900 --window-position=100,60
+else
+  open "$URL"
+fi

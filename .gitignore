@@ -6,3 +6,4 @@ dist/
 
 app/public/audio/*/
 .claude/
+app/.local/

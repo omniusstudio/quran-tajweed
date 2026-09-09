@@ -59,6 +59,38 @@ compare); the Dūrī-vs-Ḥafṣ reference from `content_duri.py`; offline PWA
 (app shell, fonts, artwork and content precached, recordings cached on first
 play); and the release checklist at `#/checklist`. See PROMPT.md §10.
 
+### Running it as an app (Mac Dock + phone)
+
+From the Terminal, once (and again after changing the code):
+
+```sh
+bash scripts/install_app.sh      # or: cd app && npm run install-app
+```
+
+It builds the app and copies `app/dist`, `app/server` and the recordings to
+`~/Library/Application Support/nutq`, installs a launchd agent
+`com.omniusstudio.nutq` that runs `server/serve.mjs` from there whenever you are
+logged in, and puts the launcher `نُطق.app` in `~/Applications`. Drag that to the
+Dock: opening it makes sure the server is up and opens http://localhost:7373/ in
+its own Chrome window (or brings the open one to the front).
+
+Why the copy: the repo lives on an external drive, and macOS does not let a
+Dock-launched app or a launchd agent read a removable volume without a per-app
+grant, so the served files live in the home folder (the app then also works with
+the drive unplugged).
+
+A phone on the same Wi-Fi can open it too: **Settings → على هاتفك** shows the
+address and a QR code. Two ports are served:
+
+| Port | Use |
+|---|---|
+| 7373 (http) | Mac and phone; no warnings; the phone's microphone stays off (browsers only allow it on https) |
+| 7374 (https, self-signed certificate made on first run) | Phone with microphone; accept the certificate warning once |
+
+On the phone, "Add to Home Screen" gives it an icon and a full-screen window.
+Logs: `~/Library/Logs/nutq.log` (server) and `nutq-launcher.log`. Without the
+launcher, `cd app && npm start` builds and serves the same thing from the repo.
+
 ### Interface (`app/src/ui/`)
 
 - `settings.ts`: local preferences (theme system/light/dark, interface sounds, haptics,

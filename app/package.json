@@ -9,9 +9,13 @@
     "preview": "vite preview",
     "test": "vitest run",
     "content": "python3 ../scripts/extract_viewer_text.py",
-    "audio": "python3 ../scripts/fetch_audio.py"
+    "audio": "python3 ../scripts/fetch_audio.py",
+    "serve": "node server/serve.mjs",
+    "start": "npm run build && node server/serve.mjs",
+    "install-app": "bash ../scripts/install_app.sh"
   },
   "dependencies": {
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
