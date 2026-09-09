@@ -59,7 +59,13 @@ cat > "$PLIST" <<PL
 </dict></plist>
 PL
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-launchctl bootstrap "gui/$(id -u)" "$PLIST"
+# bootout returns before the service is gone; bootstrap right after fails with "Input/output error"
+for i in $(seq 1 40); do launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1 || break; sleep 0.25; done
+for i in 1 2 3 4 5; do
+  if launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null; then break; fi
+  [ "$i" = 5 ] && { echo "  could not load the agent; try: launchctl bootstrap gui/$(id -u) $PLIST"; exit 1; }
+  sleep 1
+done
 for i in $(seq 1 40); do lsof -nP -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1 && break; sleep 0.25; done
 lsof -nP -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1 && echo "  serving http://localhost:$PORT/" || echo "  server did not start; see ~/Library/Logs/nutq.log"
 
