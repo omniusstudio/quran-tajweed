@@ -1,4 +1,6 @@
 import { Icon } from '../ui/icons';
+import { verseSpan } from '../audio/alignment';
+import { DEFAULT_RECITER } from '../audio/quran';
 import { useEffect, useState } from 'react';
 import { listKeys } from '../audio/store';
 import { DRILLS } from '../content/drills';
@@ -37,7 +39,7 @@ export function ChecklistPage() {
     const info = TAG_RULES[r];
     const lesson = LESSON_RULES[info.lesson];
     const anim = ['ghunnah', 'idgham_ghunnah', 'ikhfa', 'iqlab', 'mim_ikhfa', 'mim_idgham', 'imalah', 'madd_tabii', 'madd_muttasil', 'madd_munfasil', 'madd_lazim', 'madd_arid', 'qalqalah', 'tashil'].includes(r);
-    const audio = !!lesson && lesson.examples.some((_, i) => has(`examples/${lesson.id}_${i + 1}`));
+    const audio = !!lesson && lesson.examples.some((ex, i) => has(`examples/${lesson.id}_${i + 1}`) || !!verseSpan(DEFAULT_RECITER, ex.surah, ex.basri));
     const exercise = exerciseRules.has(r) || ['izhar', 'idgham_ghunnah', 'idgham_no_ghunnah', 'iqlab', 'ikhfa'].includes(r) || (info.group === 'madd' && r !== 'madd_silah') || ['farsh', 'isqat', 'tashil', 'idgham_duri', 'ya_fath', 'iskan', 'no_sakt', 'imalah'].includes(r) || DRILLS.some((d) => d.rules.includes(r));
     return { key: r, item: info.label, name: lesson?.name ?? info.lesson, anim, audio, example: !!lesson && lesson.examples.length > 0 && inText.has(r), exercise, note: r === 'taqlil' ? 'يُراجع: علامة التقليل في المصحف' : inText.has(r) ? '' : 'لا موضع له في سور المرحلة الأولى' };
   });
@@ -51,7 +53,7 @@ export function ChecklistPage() {
           <th>{head}</th>
           <th>الاسم</th>
           <th>الحركة</th>
-          <th>صوت المعلم</th>
+          <th>صوت</th>
           <th>مثال</th>
           <th>تمرين</th>
           <th>ملاحظة</th>

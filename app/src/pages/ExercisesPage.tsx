@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { loadAlignment } from '../audio/alignment';
+import { loadAlignment, verseSpan, wordSpan } from '../audio/alignment';
 import { DEFAULT_RECITER, RECITERS, audioUrl } from '../audio/quran';
 import { usePlayer } from '../audio/usePlayer';
 import { RULES as LESSON_RULES } from '../content/lessons';
@@ -233,12 +233,12 @@ interface ListenItem {
   side: 'a' | 'b';
 }
 
-/** Words of a pair side that sit in an aligned sūrah, with their spans. */
+/** Words of a pair side whose sound is known (hand-placed word boundaries only), with their spans. */
 function alignedWords(reciter: string, words: ListenWord[]): ListenChoice[] {
   const out: ListenChoice[] = [];
   for (const w of words) {
-    const span = loadAlignment(reciter, w.ref.surah)?.verses.find((v) => v.basri === w.ref.basri)?.words[w.word];
-    if (span && span[1] > span[0]) out.push({ ...w, span });
+    const span = wordSpan(reciter, w.ref.surah, w.ref.basri, w.word);
+    if (span) out.push({ ...w, span });
   }
   return out;
 }
@@ -384,12 +384,12 @@ function Madd({ deck, grade }: { deck: Deck; grade: Grade }) {
   const hasAudio = (i: MaddItem) => !!loadAlignment(DEFAULT_RECITER, i.ref.surah);
   const { item, next, count } = useQueue<MaddItem>(deck, items, hasAudio);
   const [ok, setOk] = useState<boolean | null>(null);
-  const align = item ? loadAlignment(DEFAULT_RECITER, item.ref.surah) : undefined;
   const player = usePlayer(item ? audioUrl(DEFAULT_RECITER, item.ref.surah) : null);
   useEffect(() => setOk(null), [item]);
   if (!item) return <p>لا توجد أسئلة.</p>;
-  const span = align?.verses.find((v) => v.basri === item.ref.basri)?.words[item.word];
-  const canPlay = !!span && player.ready && span[1] > span[0];
+  const word = wordSpan(DEFAULT_RECITER, item.ref.surah, item.ref.basri, item.word);
+  const span = word ?? verseSpan(DEFAULT_RECITER, item.ref.surah, item.ref.basri);
+  const canPlay = !!span && player.ready;
   return (
     <div className="card">
       <p>
@@ -398,9 +398,9 @@ function Madd({ deck, grade }: { deck: Deck; grade: Grade }) {
       <div className="ayah huge" dir="rtl">{item.ref.words[item.word]}</div>
       <div className="row wrap">
         <button className="toggle" onClick={() => span && player.playRange(span[0], span[1])} disabled={!canPlay}>
-          <Icon name="play" size={18} /> اسمع الكلمة
+          <Icon name="play" size={18} /> {word ? 'اسمع الكلمة' : 'اسمع الآية'}
         </button>
-        {!canPlay && <span className="ref">(الصوت يتوفر بعد جلب التسجيل ومحاذاة السورة)</span>}
+        {!canPlay && <span className="ref">(لا صوت لهذه السورة بعد)</span>}
       </div>
       <div className="options">
         {([2, 4, 6] as const).map((n) => (

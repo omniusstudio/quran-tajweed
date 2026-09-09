@@ -201,6 +201,10 @@ launcher, `cd app && npm start` builds and serves the same thing from the repo.
   Shipped so far: `nourin_siddig/001.json` (al-Fātiḥah; verse boundaries from
   the recording's pauses, word boundaries placed from its energy/frication
   profile — still to be confirmed by ear, hence flagged).
+- Every example verse in the lessons, the reference and the drills is played by
+  the reciter (the whole verse; the learner finds the word in it), so no teacher
+  recording is needed for examples. Word-level playback (listen-and-pick, the
+  madd word) uses only hand-placed word boundaries; elsewhere the verse is played.
 - **تسجيل المعلم** (`#/recorder`): walks the teacher through the clip manifest
   (letters alone and with each vowel, madd letters, minimal pairs, every lesson
   example) and exports all takes as a zip with the fixed file names.

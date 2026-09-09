@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { loadAlignment } from '../audio/alignment';
+import { verseSpan } from '../audio/alignment';
 import { decode, drawWave, envelope, normalise } from '../audio/peaks';
 import { DEFAULT_RECITER, audioUrl } from '../audio/quran';
 import { getClip, putClip, startRecording } from '../audio/store';
@@ -114,10 +114,8 @@ function DrillScreen({ drill, go }: { drill: Drill; go: (hash: string) => void }
 }
 
 function WordDrill({ inst, drill }: { inst: Instance; drill: Drill }) {
-  const align = loadAlignment(DEFAULT_RECITER, inst.ref.surah);
   const player = usePlayer(audioUrl(DEFAULT_RECITER, inst.ref.surah));
-  const verse = align?.verses.find((v) => v.basri === inst.ref.basri);
-  const span = verse?.words[inst.word];
+  const span = verseSpan(DEFAULT_RECITER, inst.ref.surah, inst.ref.basri);
   const word = inst.ref.words[inst.word];
   const hafs = inst.ref.hafs[inst.word];
   const teacherKey = `teacher/examples/${drill.lesson}`;
@@ -149,17 +147,19 @@ function WordDrill({ inst, drill }: { inst: Instance; drill: Drill }) {
   }, [mine]);
 
   const canPlay = !!span && player.ready && span[1] > span[0];
+  // The reciter reading the whole verse is the reference (the learner finds the word in it);
+  // a teacher clip is used only when the verse has no boundaries in the recording yet.
   const hear = (rate: 0.5 | 1) => {
-    if (teacher) {
+    if (span) {
+      player.setSpeed(rate === 0.5 ? 0.5 : 1);
+      void player.playRange(span[0], span[1]);
+    } else if (teacher) {
       if (!teacherAudio.current) teacherAudio.current = new Audio();
       const a = teacherAudio.current as HTMLAudioElement & { preservesPitch: boolean };
       a.preservesPitch = true;
       a.src = URL.createObjectURL(teacher);
       a.playbackRate = rate;
       void a.play();
-    } else if (span) {
-      player.setSpeed(rate === 0.5 ? 0.5 : 1);
-      void player.playRange(Math.max(0, span[0] - 0.15), span[1] + 0.15);
     }
   };
   const toggleRec = async () => {
@@ -184,7 +184,7 @@ function WordDrill({ inst, drill }: { inst: Instance; drill: Drill }) {
     mineAudio.current.src = URL.createObjectURL(mine);
     void mineAudio.current.play();
   };
-  const sourceNote = teacher ? 'صوت المعلم' : canPlay ? 'من تسجيل السورة' : 'لا صوت بعد: سجّل صوت المعلم أو اجلب التسجيل وحاذِ السورة';
+  const sourceNote = canPlay ? 'الآية كاملة بصوت القارئ' : teacher ? 'صوت المعلم' : 'لا صوت بعد لهذه السورة';
 
   return (
     <div className="drill-word">
@@ -201,8 +201,8 @@ function WordDrill({ inst, drill }: { inst: Instance; drill: Drill }) {
       </div>
       <div className="ref">{inst.ref.surahName}، الآية {arNum(inst.ref.basri)}</div>
       <div className="row wrap" style={{ marginBlockStart: 8 }}>
-        <button className="toggle" onClick={() => hear(0.5)} disabled={!teacher && !canPlay}><Icon name="timer" size={18} /> اسمع ببطء</button>
-        <button className="toggle" onClick={() => hear(1)} disabled={!teacher && !canPlay}><Icon name="play" size={18} /> اسمع عادياً</button>
+        <button className="toggle" onClick={() => hear(0.5)} disabled={!teacher && !canPlay}><Icon name="timer" size={18} /> اسمع الآية ببطء</button>
+        <button className="toggle" onClick={() => hear(1)} disabled={!teacher && !canPlay}><Icon name="play" size={18} /> اسمع الآية</button>
         <button className={`toggle${rec ? ' rec' : ''}`} onClick={toggleRec}><Icon name={rec ? 'stop' : 'record'} size={14} /> {rec ? 'أوقف' : mine ? 'سجّل من جديد' : 'سجّل نفسك'}</button>
         {mine && <button className="ab-btn me" onClick={playMine}>أنا</button>}
         {mine && <canvas ref={mineCanvas} width={240} height={40} className="thumb" />}

@@ -25,6 +25,22 @@ export interface SurahAlign {
   verses: VerseAlign[];
   /** True when boundaries were guessed (silence detection / proportional split) and not yet checked. */
   auto?: boolean;
+  /** 'hand' when the words were placed by a person; 'auto-verses' when only verse ends were found by script. */
+  source?: string;
+}
+
+/** Where a verse sounds in the recording, from any alignment (verse ends are reliable enough to play). */
+export function verseSpan(reciter: string, surah: number, basri: number): Span | null {
+  const v = loadAlignment(reciter, surah)?.verses.find((x) => x.basri === basri);
+  return v && v.end > v.start ? [v.start, v.end] : null;
+}
+
+/** Where a word sounds: only from alignments whose words were placed by hand; script-made word spans are guesses. */
+export function wordSpan(reciter: string, surah: number, basri: number, word: number): Span | null {
+  const a = loadAlignment(reciter, surah);
+  if (!a || a.source === 'auto-verses') return null;
+  const s = a.verses.find((x) => x.basri === basri)?.words[word];
+  return s && s[1] > s[0] ? s : null;
 }
 
 const shipped = import.meta.glob('../content/alignments/*/*.json', { eager: true, import: 'default' }) as Record<string, unknown>;
@@ -75,7 +91,7 @@ export function fromExport(obj: unknown): SurahAlign {
   const verses = Object.entries(o.verses)
     .map(([k, v]) => ({ basri: Number(k), start: v.start, end: v.end, words: v.words }))
     .sort((x, y) => x.basri - y.basri);
-  return { version: 1, reciter: o.reciter, surah: o.surah, preamble: o.preamble, header: o.header, verses, auto: o.auto ? true : undefined };
+  return { version: 1, reciter: o.reciter, surah: o.surah, preamble: o.preamble, header: o.header, verses, auto: o.auto ? true : undefined, source: (o as { source?: string }).source };
 }
 
 /** Which verse / word is sounding at time t. */
