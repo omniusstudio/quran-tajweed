@@ -2,10 +2,10 @@
 
 export type Pt = [number, number];
 
-/** Front-view lip shapes (diagrams.py::lips kinds + a neutral rest). */
+/** Front-view lip shapes. `rest` and `spread` map onto the nearest drawn state (see artwork.ts). */
 export type LipKind = 'rest' | 'closed' | 'rounded' | 'teeth_on_lip' | 'open' | 'narrow' | 'spread';
 
-/** Which part of the tongue is active in the top view (diagrams.py::tongue_top). */
+/** Which part of the tongue is active in the top view (images/B*). */
 export type TopRegion = 'sides' | 'front_edge' | 'tip' | 'middle' | 'back';
 
 export type Airflow =
@@ -23,11 +23,7 @@ export type Phase = 'rest' | 'approach' | 'contact' | 'hold' | 'release';
 export type Velum = 'open' | 'closed';
 
 export interface TopParams {
-  /** 0 = normal width, 1 = widened against the molars (ض). */
-  width: number;
-  /** 0..1 how far the tip pushes forward past the incisors (ظ ذ ث). */
-  forward: number;
-  /** 0..1 intensity of each highlighted region. */
+  /** 0..1 intensity of each highlighted region; also selects the traced tongue shape. */
   highlight: Partial<Record<TopRegion, number>>;
   /** 0..1 lateral airflow arrows around the tongue (ل). */
   lateral: number;
@@ -37,10 +33,10 @@ export interface Keyframe {
   /** Normalised time 0..1. */
   t: number;
   phase: Phase;
-  /** Name of a shape in geometry.SHAPES, or explicit control points (front → back). */
+  /** Name of a shape in artwork.SIDE_SHAPES, or explicit contour points. */
   tongue: string | Pt[];
   lips: LipKind;
-  /** 0 = closed jaw, 1 = fully dropped. */
+  /** Jaw opening. Holds should sit on 0 (closed image), 0.5 (half, A15) or 1 (open, A14). */
   jaw: number;
   velum: Velum;
   /** Contact point (red dot) or near-contact ring. */
@@ -90,10 +86,30 @@ export interface Articulation {
   needsReview?: string;
 }
 
+export interface LipsShape {
+  outer: Pt[];
+  inner: Pt[];
+  teethUpper: Pt[];
+  teethLower: Pt[];
+  tongue: Pt[];
+  teethUpperOpacity: number;
+  teethLowerOpacity: number;
+  tongueOpacity: number;
+  /** 0 = closed, 1 = fully drawn opening. */
+  openness: number;
+}
+
+export interface TopShape {
+  contour: Pt[];
+  highlight: Partial<Record<TopRegion, number>>;
+  lateral: number;
+}
+
 /** Fully interpolated state at one instant, ready to render. */
 export interface ViewState {
   t: number;
   phase: Phase;
+  /** Side-view tongue outline (closed contour). */
   tongue: Pt[];
   jaw: number;
   /** 0 = velum open (hanging), 1 = velum closed (raised against the pharynx). */
@@ -101,22 +117,10 @@ export interface ViewState {
   contact?: { pt: Pt; kind: 'touch' | 'near'; opacity: number };
   airflow?: { type: Airflow; opacity: number };
   heavy: number;
-  lips: LipParams;
-  top: TopParams;
+  lips: LipsShape;
+  top: TopShape;
   /** Progress through the hold phase 0..1 (drives the harakah ticker). */
   hold: number;
-}
-
-/** Parametric front-view lips — every LipKind maps to numbers so any two can be interpolated. */
-export interface LipParams {
-  /** 0 = closed, 1 = wide open. */
-  open: number;
-  /** -1 = spread wide, 0 = neutral, 1 = fully rounded/protruded. */
-  round: number;
-  /** 0..1 lower lip tucked under the upper teeth (ف). */
-  tuck: number;
-  /** 0..1 upper teeth visible. */
-  teeth: number;
 }
 
 export interface ContrastPair {

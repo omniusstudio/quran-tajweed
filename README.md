@@ -29,10 +29,19 @@ Viewer) is in place: three synchronised views (side, lips, top), a keyframe
 engine, all 28 letters plus vowels, heavy/light, ghunnah and imālah, "this, not
 that" contrast pairs, and a dev checklist route.
 
+The viewer is built on the approved artwork in `images/`: `scripts/trace_artwork.py`
+segments the tongue out of every A- and B-image and the lips, opening, teeth and
+tongue out of every C-image, resamples each outline to a fixed number of points,
+reads the contact dots off the annotated images, and writes clean raster
+backgrounds (tongue, uvula and lips removed) plus `app/src/viewer/artwork.json`.
+The animation morphs those traced outlines over the real drawings; the jaw
+crossfades between the closed (A01), half-open (A15) and open (A14) heads.
+
 ```sh
 cd app
 npm install
 npm run content   # content_beginner.py -> src/content/lessons.json (fails on any unverified example)
+npm run trace     # images/ -> src/viewer/artwork.json + src/assets/art/*.png (needs numpy, opencv-python-headless)
 npm run dev       # http://localhost:5173
 npm test          # keyframe engine + anatomical plausibility tests
 npm run build     # typecheck + production build in app/dist
@@ -43,12 +52,13 @@ folders directly; nothing is duplicated inside `app/`.
 
 | Path | Contents |
 |---|---|
-| `app/src/viewer/geometry.ts` | Port of `diagrams.py`: head outline, tongue shapes, Catmull-Rom helpers, landmarks |
+| `app/src/viewer/artwork.ts` | Typed access to the traced artwork: tongue shapes (traced + derived blends), landmarks, airflow paths |
+| `scripts/trace_artwork.py` | Traces `images/` into contours, marks and clean backgrounds |
 | `app/src/viewer/types.ts` | Articulatory state model (`Keyframe`, `Articulation`, `ViewState`) |
 | `app/src/viewer/engine.ts` | Interpolates keyframes into a `ViewState` for any time t |
 | `app/src/viewer/articulations.ts` | The catalogue: every letter/vowel/feature as keyframes, plus contrast pairs |
 | `app/src/viewer/*View.tsx` | Side, lips and top SVG views; `ArticulationViewer` combines them with indicators |
-| `app/src/viewer/engine.test.ts` | Tests, including the tongue-never-passes-through-the-palate guard |
+| `app/src/viewer/engine.test.ts` | Tests, including the guard that keeps the morphing tongue inside the envelope the artwork draws |
 | `scripts/extract_viewer_text.py` | Content pipeline seed: resolves every example against `duri.json` |
 
 ## Verifying the content

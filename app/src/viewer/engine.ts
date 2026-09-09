@@ -1,43 +1,59 @@
 // Keyframe engine: turns an Articulation + time into a fully interpolated ViewState.
 
-import { LIP_KINDS, SHAPES, resample } from './geometry';
-import type { Airflow, Articulation, Keyframe, LipParams, Pt, TopParams, TopRegion, ViewState } from './types';
+import { LIP_STATES, LIP_STATE_OF, SIDE_SHAPES, TOP_REGION_SHAPE, TOP_SHAPES, blend } from './artwork';
+import type { Airflow, Articulation, Keyframe, LipsShape, Pt, TopParams, TopRegion, TopShape, ViewState } from './types';
 
 export const easeInOut = (t: number): number => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const lerp = (a: number, b: number, f: number) => a + (b - a) * f;
 
-const shapeCache = new Map<string, Pt[]>();
-
 export function tongueOf(kf: Keyframe): Pt[] {
-  if (typeof kf.tongue !== 'string') return resample(kf.tongue);
-  let s = shapeCache.get(kf.tongue);
-  if (!s) {
-    const raw = SHAPES[kf.tongue];
-    if (!raw) throw new Error(`Unknown tongue shape "${kf.tongue}"`);
-    s = resample(raw);
-    shapeCache.set(kf.tongue, s);
-  }
+  if (typeof kf.tongue !== 'string') return kf.tongue;
+  const s = SIDE_SHAPES[kf.tongue];
+  if (!s) throw new Error(`Unknown tongue shape "${kf.tongue}"`);
   return s;
 }
 
-const DEFAULT_TOP: TopParams = { width: 0, forward: 0, highlight: {}, lateral: 0 };
 const REGIONS: TopRegion[] = ['sides', 'front_edge', 'tip', 'middle', 'back'];
+const DEFAULT_TOP: TopParams = { highlight: {}, lateral: 0 };
 
 function topOf(kf: Keyframe): TopParams {
   return { ...DEFAULT_TOP, ...(kf.top ?? {}), highlight: { ...(kf.top?.highlight ?? {}) } };
 }
 
-function lerpTop(a: TopParams, b: TopParams, f: number): TopParams {
+/** The top-view contour for a set of highlight weights: rest plus each region's traced offset. */
+export function topContour(highlight: Partial<Record<TopRegion, number>>): Pt[] {
+  let c = TOP_SHAPES.rest;
+  for (const r of REGIONS) {
+    const w = highlight[r] ?? 0;
+    const shapeName = TOP_REGION_SHAPE[r];
+    if (w > 0 && shapeName) c = blend(c, TOP_SHAPES[shapeName], w);
+  }
+  return c;
+}
+
+function lerpTop(a: TopParams, b: TopParams, f: number): TopShape {
   const highlight: Partial<Record<TopRegion, number>> = {};
   for (const r of REGIONS) {
     const v = lerp(a.highlight[r] ?? 0, b.highlight[r] ?? 0, f);
     if (v > 0.001) highlight[r] = v;
   }
-  return { width: lerp(a.width, b.width, f), forward: lerp(a.forward, b.forward, f), highlight, lateral: lerp(a.lateral, b.lateral, f) };
+  return { contour: topContour(highlight), highlight, lateral: lerp(a.lateral, b.lateral, f) };
 }
 
-function lerpLips(a: LipParams, b: LipParams, f: number): LipParams {
-  return { open: lerp(a.open, b.open, f), round: lerp(a.round, b.round, f), tuck: lerp(a.tuck, b.tuck, f), teeth: lerp(a.teeth, b.teeth, f) };
+function lerpLips(ka: Keyframe, kb: Keyframe, f: number): LipsShape {
+  const a = LIP_STATES[LIP_STATE_OF[ka.lips]];
+  const b = LIP_STATES[LIP_STATE_OF[kb.lips]];
+  return {
+    outer: blend(a.outer, b.outer, f),
+    inner: blend(a.inner, b.inner, f),
+    teethUpper: blend(a.teethUpper, b.teethUpper, f),
+    teethLower: blend(a.teethLower, b.teethLower, f),
+    tongue: blend(a.tongue, b.tongue, f),
+    teethUpperOpacity: lerp(a.hasTeethUpper ? 1 : 0, b.hasTeethUpper ? 1 : 0, f),
+    teethLowerOpacity: lerp(a.hasTeethLower ? 1 : 0, b.hasTeethLower ? 1 : 0, f),
+    tongueOpacity: lerp(a.hasTongue ? 1 : 0, b.hasTongue ? 1 : 0, f),
+    openness: lerp(a.open ? 1 : 0, b.open ? 1 : 0, f),
+  };
 }
 
 /** Opacity of an optional feature across a segment: 1 when both ends have it, fades when only one does. */
@@ -85,9 +101,7 @@ export function sampleState(art: Articulation, t: number): ViewState {
   const { a, b, f } = segmentAt(kfs, t);
   const e = easeInOut(f);
 
-  const ta = tongueOf(a);
-  const tb = tongueOf(b);
-  const tongue: Pt[] = ta.map((p, i) => [lerp(p[0], tb[i][0], e), lerp(p[1], tb[i][1], e)]);
+  const tongue = blend(tongueOf(a), tongueOf(b), e);
 
   const contactOpacity = presence(a.contact, b.contact, f);
   let contact: ViewState['contact'];
@@ -117,7 +131,7 @@ export function sampleState(art: Articulation, t: number): ViewState {
     contact,
     airflow,
     heavy: lerp(a.heavy ? 1 : 0, b.heavy ? 1 : 0, e),
-    lips: lerpLips(LIP_KINDS[a.lips], LIP_KINDS[b.lips], e),
+    lips: lerpLips(a, b, e),
     top: lerpTop(topOf(a), topOf(b), e),
     hold: holdProgress(kfs, t),
   };
@@ -132,5 +146,8 @@ export function validate(art: Articulation): void {
   for (let i = 1; i < k.length; i++) {
     if (k[i].t < k[i - 1].t) throw new Error(`${art.id}: keyframe ${i} goes backwards in time`);
   }
-  for (const kf of k) tongueOf(kf);
+  for (const kf of k) {
+    tongueOf(kf);
+    if (!LIP_STATES[LIP_STATE_OF[kf.lips]]) throw new Error(`${art.id}: unknown lips "${kf.lips}"`);
+  }
 }
