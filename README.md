@@ -22,6 +22,35 @@ See `PROMPT.md` for the full project brief, milestones and quality bars.
 | `fonts/` | Amiri Quran, Amiri, Scheherazade New, Noto Sans Arabic (SIL OFL) |
 | `pdf/` | Generated reference books (general rules, Dūrī reference, beginner book) |
 
+## The app (`app/`)
+
+Vite + React + TypeScript, SVG only, no backend. Milestone 1 (the Articulation
+Viewer) is in place: three synchronised views (side, lips, top), a keyframe
+engine, all 28 letters plus vowels, heavy/light, ghunnah and imālah, "this, not
+that" contrast pairs, and a dev checklist route.
+
+```sh
+cd app
+npm install
+npm run content   # content_beginner.py -> src/content/lessons.json (fails on any unverified example)
+npm run dev       # http://localhost:5173
+npm test          # keyframe engine + anatomical plausibility tests
+npm run build     # typecheck + production build in app/dist
+```
+
+Fonts and reference images are imported from the repo's `fonts/` and `images/`
+folders directly; nothing is duplicated inside `app/`.
+
+| Path | Contents |
+|---|---|
+| `app/src/viewer/geometry.ts` | Port of `diagrams.py`: head outline, tongue shapes, Catmull-Rom helpers, landmarks |
+| `app/src/viewer/types.ts` | Articulatory state model (`Keyframe`, `Articulation`, `ViewState`) |
+| `app/src/viewer/engine.ts` | Interpolates keyframes into a `ViewState` for any time t |
+| `app/src/viewer/articulations.ts` | The catalogue: every letter/vowel/feature as keyframes, plus contrast pairs |
+| `app/src/viewer/*View.tsx` | Side, lips and top SVG views; `ArticulationViewer` combines them with indicators |
+| `app/src/viewer/engine.test.ts` | Tests, including the tongue-never-passes-through-the-palate guard |
+| `scripts/extract_viewer_text.py` | Content pipeline seed: resolves every example against `duri.json` |
+
 ## Verifying the content
 
 Every example in the curriculum must be found programmatically in `duri.json`

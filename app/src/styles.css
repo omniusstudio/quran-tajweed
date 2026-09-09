@@ -1,0 +1,124 @@
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  src: url('../../fonts/NotoSansArabic-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans Arabic';
+  src: url('../../fonts/NotoSansArabic-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Scheherazade New';
+  src: url('../../fonts/ScheherazadeNew-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Scheherazade New';
+  src: url('../../fonts/ScheherazadeNew-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --ink: #2b2b2b;
+  --muted: #6b6b6b;
+  --bg: #faf7f2;
+  --card: #ffffff;
+  --line: #e4ddd3;
+  --green: #1f7a4d;
+  --green-soft: #e6f2ec;
+  --red: #c81e1e;
+  --blue: #1d63b5;
+  --ui: 'Noto Sans Arabic', system-ui, sans-serif;
+  --quran: 'Scheherazade New', 'Amiri', serif;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--ui); }
+body { font-size: 17px; line-height: 1.7; }
+button { font-family: inherit; font-size: inherit; cursor: pointer; }
+
+.app { max-width: 1180px; margin-inline: auto; padding: 12px 14px 48px; }
+.app-header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-block-end: 8px; }
+.app-header h1 { font-size: 1.5rem; margin: 0; color: var(--green); }
+.app-header .sub { color: var(--muted); font-size: .95rem; }
+
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-block: 8px 12px; }
+.tabs button { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 6px 14px; }
+.tabs button[aria-pressed="true"] { background: var(--green); color: #fff; border-color: var(--green); }
+
+.groups { display: flex; flex-direction: column; gap: 10px; }
+.group { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+.group h3 { margin: 0 0 6px; font-size: 1rem; color: var(--muted); font-weight: 400; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font-family: var(--quran); font-size: 1.7rem; line-height: 1;
+  min-width: 52px; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+}
+.chip.small { font-family: var(--ui); font-size: .95rem; padding: 8px 12px; }
+.chip[aria-pressed="true"] { background: var(--green); color: #fff; border-color: var(--green); }
+.chip.heavy { border-color: #c98c2a; }
+
+.viewer-layout { display: grid; grid-template-columns: 1fr; gap: 12px; }
+@media (min-width: 900px) { .viewer-layout { grid-template-columns: 3fr 2fr; } }
+
+.viewer { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+.viewer-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-block-end: 6px; }
+.viewer-title .letters { font-family: var(--quran); font-size: 2.4rem; color: var(--green); line-height: 1; }
+.viewer-title .name { font-weight: 700; }
+.badge { font-size: .8rem; padding: 2px 8px; border-radius: 999px; background: var(--green-soft); color: var(--green); }
+.badge.heavy { background: #fbeed6; color: #8a5a10; }
+.badge.warn { background: #fdecec; color: var(--red); }
+.badge.review { background: #fff4d6; color: #7a5a00; border: 1px dashed #c98c2a; }
+
+.views { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.views .side { grid-column: span 2; }
+@media (min-width: 640px) {
+  .views { grid-template-columns: 5fr 3fr; }
+  .views .side { grid-column: auto; grid-row: span 2; }
+}
+.view { position: relative; background: #fff; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.view svg { display: block; width: 100%; height: auto; }
+.view .caption { position: absolute; inset-block-start: 6px; inset-inline-start: 8px; font-size: .8rem; color: var(--muted); background: rgba(255,255,255,.8); padding: 1px 6px; border-radius: 6px; }
+.view.wrong { filter: grayscale(1); }
+.view.wrong::after { content: '✗ خطأ'; position: absolute; inset-block-start: 6px; inset-inline-end: 8px; color: var(--red); font-weight: 700; font-size: 1.2rem; filter: none; }
+
+.indicators { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-block: 8px 4px; min-height: 40px; }
+.phase { color: var(--muted); font-size: .95rem; }
+.ticker { display: flex; gap: 4px; align-items: center; }
+.ticker .cell { width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--line); display: grid; place-items: center; font-size: .9rem; color: var(--muted); }
+.ticker .cell.on { background: var(--green); color: #fff; border-color: var(--green); }
+.nose { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.nose.on { background: #fdecec; color: var(--red); border-color: var(--red); }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-block-start: 6px; }
+.controls .play { width: 48px; height: 48px; border-radius: 50%; border: none; background: var(--green); color: #fff; font-size: 1.3rem; }
+.controls input[type="range"] { flex: 1 1 160px; accent-color: var(--green); height: 32px; }
+.speeds { display: flex; gap: 4px; }
+.speeds button, .controls .toggle { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 6px 10px; }
+.speeds button[aria-pressed="true"], .controls .toggle[aria-pressed="true"] { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+
+.info { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.info h2 { font-size: 1.1rem; margin: 0 0 6px; }
+.info p { margin: 0 0 8px; }
+.info .todo { font-size: .9rem; color: #7a5a00; }
+.figs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-block-start: 8px; }
+.fig img { width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
+.fig figcaption { font-size: .85rem; color: var(--muted); line-height: 1.5; }
+.examples { margin-block-start: 8px; display: flex; flex-direction: column; gap: 6px; }
+.ayah { font-family: var(--quran); font-size: 1.9rem; line-height: 1.9; color: var(--green); }
+.ayah .hl { background: #fff1b8; border-radius: 4px; padding-inline: 2px; }
+.ref { font-size: .85rem; color: var(--muted); }
+
+.contrast { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.contrast .viewer { padding: 8px; }
+
+.checklist table { border-collapse: collapse; width: 100%; background: var(--card); }
+.checklist th, .checklist td { border: 1px solid var(--line); padding: 4px 8px; text-align: start; }
+.checklist td.q { font-family: var(--quran); font-size: 1.4rem; }
