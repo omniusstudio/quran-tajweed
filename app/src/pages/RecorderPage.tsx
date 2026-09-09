@@ -1,4 +1,5 @@
 import { Icon } from '../ui/icons';
+import { micProblem } from '../audio/mic';
 import { useEffect, useRef, useState } from 'react';
 import { deleteClip, extensionFor, getClip, listKeys, putClip, startRecording } from '../audio/store';
 import { downloadBlob, makeZip } from '../audio/zip';
@@ -36,7 +37,7 @@ export function RecorderPage() {
       try {
         setRec(await startRecording());
       } catch (e) {
-        alert(`تعذر الوصول إلى الميكروفون: ${String(e)}`);
+        alert(micProblem(e));
       }
     }
   };

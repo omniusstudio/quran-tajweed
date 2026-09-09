@@ -13,6 +13,7 @@ import { Icon } from '../ui/icons';
 import { rewardRecording } from '../ui/rewards';
 import { sfx } from '../ui/sound';
 import { useSettings } from '../ui/settings';
+import { micProblem } from '../audio/mic';
 
 const SPEEDS: { v: PlaySpeed; label: string }[] = [
   { v: 0.5, label: '٠٫٥×' },
@@ -287,6 +288,7 @@ function RecordCompare({ reciter, surah, basri, span, player }: { reciter: strin
   const [recording, setRecording] = useState<{ stop: () => Promise<Blob> } | null>(null);
   const [open, setOpen] = useState(false);
   const [loopMine, setLoopMine] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
   const mineAudio = useRef<HTMLAudioElement | null>(null);
   const mineCanvas = useRef<HTMLCanvasElement | null>(null);
   const teacherCanvas = useRef<HTMLCanvasElement | null>(null);
@@ -326,8 +328,9 @@ function RecordCompare({ reciter, surah, basri, span, player }: { reciter: strin
       try {
         const r = await startRecording();
         setRecording(r);
+        setProblem(null);
       } catch (e) {
-        alert(`تعذر الوصول إلى الميكروفون: ${String(e)}`);
+        setProblem(micProblem(e));
       }
     }
   };
@@ -349,7 +352,7 @@ function RecordCompare({ reciter, surah, basri, span, player }: { reciter: strin
 
   return (
     <span className="compare">
-      <button className={`mini${recording ? ' rec' : ''}`} onClick={toggleRec} disabled={!span && !recording}>
+      <button className={`mini${recording ? ' rec' : ''}`} onClick={toggleRec}>
         <Icon name={recording ? 'stop' : 'record'} size={14} /> {recording ? 'أوقف التسجيل' : mine ? 'سجّل من جديد' : 'سجّل نفسك'}
       </button>
       {mine && (
@@ -357,12 +360,17 @@ function RecordCompare({ reciter, surah, basri, span, player }: { reciter: strin
           قارن
         </button>
       )}
+      {problem && <span className="todo"><Icon name="alert" size={16} /> {problem}</span>}
       {open && mine && (
         <span className="compare-panel">
-          <span className="ab">
-            <button className="ab-btn teacher" onClick={playTeacher}>المعلم</button>
-            <canvas ref={teacherCanvas} width={240} height={40} />
-          </span>
+          {span ? (
+            <span className="ab">
+              <button className="ab-btn teacher" onClick={playTeacher}>المعلم</button>
+              <canvas ref={teacherCanvas} width={240} height={40} />
+            </span>
+          ) : (
+            <span className="ref">لم تُحدَّد هذه الآية في التسجيل بعد، فلا مقارنة مع القارئ هنا.</span>
+          )}
           <span className="ab">
             <button className="ab-btn me" onClick={playMine}>أنا</button>
             <canvas ref={mineCanvas} width={240} height={40} />

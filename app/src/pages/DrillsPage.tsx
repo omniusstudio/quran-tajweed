@@ -15,6 +15,7 @@ import { LetterViewer, LinkedText, arNum } from './shared';
 import { Icon } from '../ui/icons';
 import { rewardRecording } from '../ui/rewards';
 import { sfx } from '../ui/sound';
+import { micProblem } from '../audio/mic';
 
 interface Instance {
   ref: VerseRef;
@@ -123,6 +124,7 @@ function WordDrill({ inst, drill }: { inst: Instance; drill: Drill }) {
   const [teacher, setTeacher] = useState<Blob | null>(null);
   const [mine, setMine] = useState<Blob | null>(null);
   const [rec, setRec] = useState<{ stop: () => Promise<Blob> } | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
   const mineKey = `me/drill/${drill.id}/${inst.ref.surah}/${inst.ref.basri}/${inst.word}`;
   const mineCanvas = useRef<HTMLCanvasElement | null>(null);
   const mineAudio = useRef<HTMLAudioElement | null>(null);
@@ -170,8 +172,9 @@ function WordDrill({ inst, drill }: { inst: Instance; drill: Drill }) {
     } else {
       try {
         setRec(await startRecording());
+        setProblem(null);
       } catch (e) {
-        alert(`تعذر الوصول إلى الميكروفون: ${String(e)}`);
+        setProblem(micProblem(e));
       }
     }
   };
@@ -205,6 +208,7 @@ function WordDrill({ inst, drill }: { inst: Instance; drill: Drill }) {
         {mine && <canvas ref={mineCanvas} width={240} height={40} className="thumb" />}
         <span className="ref">{sourceNote}</span>
       </div>
+      {problem && <p className="todo"><Icon name="alert" size={16} /> {problem}</p>}
       {player.error && !teacher && <p className="ref">{player.error}</p>}
     </div>
   );

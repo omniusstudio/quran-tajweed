@@ -7,6 +7,7 @@ import { beep, usePlayer } from '../audio/usePlayer';
 import { Icon } from '../ui/icons';
 import { rewardRecording } from '../ui/rewards';
 import { sfx } from '../ui/sound';
+import { micProblem } from '../audio/mic';
 import { arNum } from './shared';
 
 /**
@@ -29,6 +30,7 @@ export function VerseDrill({ surah, verses, reciter = DEFAULT_RECITER, hideByDef
   const mineCanvas = useRef<HTMLCanvasElement | null>(null);
   const teacherCanvas = useRef<HTMLCanvasElement | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
     void getClip(clipKey).then((c) => setMine(c?.blob ?? null));
@@ -103,9 +105,10 @@ export function VerseDrill({ surah, verses, reciter = DEFAULT_RECITER, hideByDef
       player.pause();
       try {
         setRec(await startRecording());
+        setProblem(null);
         sfx('toggle');
       } catch (e) {
-        alert(`تعذر الوصول إلى الميكروفون: ${String(e)}`);
+        setProblem(micProblem(e));
       }
     }
   };
@@ -157,6 +160,7 @@ export function VerseDrill({ surah, verses, reciter = DEFAULT_RECITER, hideByDef
           ))}
         </div>
       </div>
+      {problem && <p className="todo"><Icon name="alert" size={16} /> {problem}</p>}
       {!canPlay && <p className="ref"><Icon name="alert" size={16} /> لم تُحدَّد مواضع آيات هذه السورة في التسجيل بعد، فالسماع غير متاح لها؛ اقرأ وسجّل، وسيُضاف الصوت حين تُحاذى.</p>}
       {align?.auto && canPlay && <p className="ref">حدود الآيات هنا تقديرية (يُراجع)؛ قد تسبق البداية أو تتأخر قليلاً.</p>}
       {mine && (
