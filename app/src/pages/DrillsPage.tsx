@@ -8,7 +8,7 @@ import { DRILLS, type Drill } from '../content/drills';
 import { REF_RULES } from '../content/duriRef';
 import { RULES as LESSON_RULES } from '../content/lessons';
 import { taggedVerses, type VerseRef } from '../exercises/bank';
-import { RULES as TAG_RULES } from '../rules/tagger';
+import { RULES as TAG_RULES, readingForm } from '../rules/tagger';
 import { CONTRAST_PAIRS } from '../viewer/articulations';
 import { ContrastView } from '../viewer/ContrastView';
 import { LetterViewer, LinkedText, arNum } from './shared';
@@ -182,7 +182,7 @@ function WordDrill({ inst, drill }: { inst: Instance; drill: Drill }) {
       <div className="row wrap">
         <span className="badge">{inst.label}</span>
         {inst.detail && <span className="ref">{inst.detail}</span>}
-        {hafs && hafs !== word && <span className="ref">حفص: <span className="ayah small">{hafs}</span></span>}
+        {hafs && readingForm(hafs) !== readingForm(word) && <span className="ref">حفص: <span className="ayah small">{hafs}</span></span>}
       </div>
       <div className="ayah" dir="rtl" style={{ fontSize: '1.5rem' }}>
         {inst.ref.words.map((w, i) => (

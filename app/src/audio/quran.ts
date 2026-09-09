@@ -53,7 +53,7 @@ export function bare(word: string): string {
  * madd count from the muṣḥaf's own signs, and ghunnah from a shaddah on ن or م.
  */
 export function wordCues(word: string): { madd: 0 | 2 | 4 | 6; ghunnah: boolean; imalah: boolean; tashil: boolean } {
-  const imalah = word.includes(IMALAH_MARK);
+  const imalah = word.includes(IMALAH_MARK) && !/^[وفبكل]?[َُِ]?ا[َُِ]?۪/.test(word); // the rhombus also marks a verb's waṣl alif
   const tashil = word.includes(TASHIL_MARK);
   const ghunnah = /[نم][\u064B-\u0652]*\u0651/.test(word); // shaddah on ن or م (a vowel may sit before the shaddah in the encoding)
   let madd: 0 | 2 | 4 | 6 = 0;

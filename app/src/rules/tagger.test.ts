@@ -92,6 +92,12 @@ describe('tagger details', () => {
     expect(t(['مَآءٗ', 'ثَجَّاجٗا'])).toContain('ikhfa');
   });
 
+  it('does not read the rhombus under a verb\'s waṣl alif as imālah', () => {
+    expect(tagVerse({ words: ['اُ۪هۡدِنَا'] }).some((t) => t.rule === 'imalah')).toBe(false);
+    expect(tagVerse({ words: ['اَ۬لنّ۪اسِ'] }).some((t) => t.rule === 'imalah')).toBe(true);
+    expect(tagVerse({ words: ['وَاُ۪هۡدِنَا'] }).some((t) => t.rule === 'imalah')).toBe(false);
+  });
+
   it('never tags a nūn sākinah rule on the last word of a verse when nothing follows', () => {
     const tags = tagVerse({ words: ['مِنۡ'] });
     expect(tags.some((t) => ['izhar', 'ikhfa', 'idgham_ghunnah'].includes(t.rule))).toBe(false);

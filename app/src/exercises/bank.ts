@@ -2,7 +2,7 @@
 // answer key is the muṣḥaf's own notation, never a hand-typed list.
 
 import { SURAHS, type Surah, type Verse } from '../audio/quran';
-import { QUIZ_RULES, RULES, tagVerse, type RuleId, type Tag } from '../rules/tagger';
+import { QUIZ_RULES, RULES, hasImalah, tagVerse, type RuleId, type Tag } from '../rules/tagger';
 import { CONTRAST_PAIRS } from '../viewer/articulations';
 
 export interface VerseRef {
@@ -138,7 +138,7 @@ export function imalahItems(): ImalahItem[] {
       if (taqlil.has(i)) return;
       const sk = w.replace(/[^ء-ي]/g, '').replace(/[أإٱ]/g, 'ا');
       if (!IMALAH_STEMS.some((st) => sk.includes(st))) return;
-      out.push({ id: `imalah:${t.ref.surah}:${t.ref.basri}:${i}`, ref: t.ref, word: i, shown: w.split(IMALAH_MARK).join(''), answer: w.includes(IMALAH_MARK) });
+      out.push({ id: `imalah:${t.ref.surah}:${t.ref.basri}:${i}`, ref: t.ref, word: i, shown: w.split(IMALAH_MARK).join(''), answer: hasImalah(w) });
     });
   }
   return out;

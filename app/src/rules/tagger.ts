@@ -154,6 +154,11 @@ const haraka = (u: Unit) => u.marks.find((m) => HARAKAT.has(m));
 const isBare = (u: Unit) => !haraka(u) && !hasAny(u, SUKUN) && !has(u, SHADDA) && !hasAny(u, TANWIN_PLAIN) && !hasAny(u, TANWIN_SEQ);
 const isAlif = (u: Unit) => u.ch === 'ا' || u.ch === 'ٱ' || u.ch === 'ى';
 
+/** True when the word carries the imālah rhombus on a real letter (not on a waṣl alif). */
+export function hasImalah(word: string): boolean {
+  return tagVerse({ words: [word] }).some((t) => t.rule === 'imalah');
+}
+
 /** Letters only, hamzah forms unified, for word-list matching. */
 export function skeleton(word: string): string {
   return units(word)
@@ -318,7 +323,7 @@ export function tagVerse(input: TagInput): Tag[] {
       if (u.ch === 'ه' && (has(u, SMALL_WAW) || has(u, SMALL_YA))) push('madd_silah', k, { length: 2 });
 
       // ---- Dūrī features --------------------------------------------------------------------
-      if (has(u, IMALAH)) pushDuri('imalah', k);
+      if (has(u, IMALAH) && !(isAlif(u) && k <= 1 && !us.slice(0, k).some((p) => p.ch !== 'و' && p.ch !== 'ف' && p.ch !== 'ب' && p.ch !== 'ك' && p.ch !== 'ل'))) pushDuri('imalah', k); // the same rhombus sits under a verb's hamzat al-waṣl (اُ۪هۡدِنَا)
       if (lowMeemTaqlil) pushDuri('taqlil', k, { detail: 'علامة في مصحف الدوري تحت ذوات الياء؛ المحتوى يذكر أنها تُنطق ألفاً عادية — يُراجع' });
       if (has(u, WASL_OR_TASHIL) && isAlif(u) && k > 0) pushDuri('tashil', k, { detail: 'نصف همزة' });
       if (k === 0 && HAMZA.has(u.ch) && has(u, DAGGER) && has(u, ZERO)) pushDuri('tashil', k, { detail: 'نصف همزة مع ألف بينهما' });
