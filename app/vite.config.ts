@@ -30,6 +30,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ['sw-reload.js'],
         globPatterns: ['**/*.{js,css,html,png,ttf,json,svg}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         runtimeCaching: [

@@ -9,6 +9,8 @@ export interface Player {
   playing: boolean;
   ready: boolean;
   error: string | null;
+  /** While the server is still fetching the recording: fraction downloaded (0..1) or null. */
+  loading: number | null;
   speed: PlaySpeed;
   loop: [number, number] | null;
   play: () => Promise<void>;
@@ -40,6 +42,7 @@ export function usePlayer(src: string | null): Player {
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<number | null>(null);
   const [speed, setSpeedState] = useState<PlaySpeed>(1);
   const loopRef = useRef<[number, number] | null>(null);
   const [loop, setLoopState] = useState<[number, number] | null>(null);
@@ -48,12 +51,42 @@ export function usePlayer(src: string | null): Player {
   useEffect(() => {
     setReady(false);
     setError(null);
+    setLoading(null);
     setTime(0);
     setDuration(0);
     audio.pause();
     if (!src) return;
-    audio.src = src;
-    audio.load();
+    let dead = false;
+    // A recording the local server has not cached yet would make the audio element wait on a long
+    // download (and proxies give up); ask the server to fetch it first and show the progress.
+    const m = /\/audio\/([\w-]+)\/(\d{3})\.mp3$/.exec(src);
+    const start = () => {
+      if (dead) return;
+      setLoading(null);
+      audio.src = src;
+      audio.load();
+    };
+    if (!m) {
+      start();
+      return;
+    }
+    const statusUrl = `${src.slice(0, src.indexOf('/audio/'))}/__audio/${m[1]}/${m[2]}`;
+    const poll = async () => {
+      try {
+        const r = await fetch(statusUrl, { cache: 'no-store' });
+        if (!r.ok) return start(); // no such endpoint (dev server): let the audio element try
+        const st = (await r.json()) as { ready: boolean; received?: number; total?: number };
+        if (st.ready) return start();
+        setLoading(st.total ? Math.min(0.99, (st.received ?? 0) / st.total) : 0);
+        if (!dead) setTimeout(poll, 1000);
+      } catch {
+        start();
+      }
+    };
+    void poll();
+    return () => {
+      dead = true;
+    };
   }, [src, audio]);
 
   useEffect(() => {
@@ -152,7 +185,7 @@ export function usePlayer(src: string | null): Player {
     [audio],
   );
 
-  return { audio, time, duration, playing, ready, error, speed, loop, play, pause, toggle, seek, setSpeed, setLoop, playRange };
+  return { audio, time, duration, playing, ready, error, loading, speed, loop, play, pause, toggle, seek, setSpeed, setLoop, playRange };
 }
 
 /** A short beep for echo mode (no TTS, just a tone). */

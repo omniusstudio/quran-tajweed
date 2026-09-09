@@ -208,7 +208,13 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
           </div>
         </div>
         {player.error && <p className="todo"><Icon name="alert" size={18} /> {player.error}</p>}
-        {!player.ready && !player.error && <p className="ref">جارٍ تحميل التلاوة… (في المرة الأولى تُجلب من الإنترنت وتُحفظ على هذا الجهاز)</p>}
+        {player.loading !== null && (
+          <p className="ref loading-note">
+            <span className="bar" style={{ width: 160, display: 'inline-block', verticalAlign: 'middle' }}><i style={{ transform: `scaleX(${player.loading})` }} /></span>{' '}
+            جارٍ جلب التلاوة من الإنترنت للمرة الأولى ({arNum(Math.round(player.loading * 100))}٪)… تُحفظ على الجهاز بعدها.
+          </p>
+        )}
+        {!player.ready && !player.error && player.loading === null && <p className="ref">جارٍ تحميل التلاوة…</p>}
         {!align && (
           <p className="todo">
             <Icon name="alert" size={18} /> لم تُحاذَ هذه السورة لهذا القارئ بعد، فلن تُضاء الكلمات مع الصوت.{' '}

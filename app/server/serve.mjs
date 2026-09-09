@@ -131,7 +131,7 @@ function clipsHandler(req, res, url) {
 // Reciter servers (copied next to this file by the installer; falls back to the source tree).
 const RECITERS_FILE = [join(APP, 'server', 'reciters.json'), join(APP, 'src', 'content', 'reciters.json')].find((f) => existsSync(f));
 const RECITERS = RECITERS_FILE ? JSON.parse(readFileSync(RECITERS_FILE, 'utf8')).reciters : [];
-/** In-flight downloads keyed by relative path, so parallel requests share one fetch. */
+/** In-flight downloads keyed by relative path ({ promise, received, total }), so parallel requests share one fetch. */
 const downloads = new Map();
 
 /**
@@ -145,15 +145,19 @@ async function ensureAudio(rel) {
   if (!reciter) return null;
   const dst = join(PUBLIC, 'audio', m[1], `${m[2]}.mp3`);
   if (existsSync(dst) && statSync(dst).size > 10_000) return dst;
-  if (downloads.has(rel)) return downloads.get(rel);
-  const job = (async () => {
+  if (downloads.has(rel)) return downloads.get(rel).promise;
+  const state = { promise: null, received: 0, total: 0 };
+  state.promise = (async () => {
     mkdirSync(dirname(dst), { recursive: true });
     const url = `${reciter.server}${m[2]}.mp3`;
     const res = await fetch(url, { headers: { 'user-agent': 'nutq-tajweed/1.0 (local cache)' } });
     if (!res.ok || !res.body) throw new Error(`${url}: HTTP ${res.status}`);
+    state.total = Number(res.headers.get('content-length')) || 0;
     const tmp = `${dst}.part`;
     try {
-      await pipeline(Readable.fromWeb(res.body), createWriteStream(tmp));
+      const counting = Readable.fromWeb(res.body);
+      counting.on('data', (chunk) => { state.received += chunk.length; });
+      await pipeline(counting, createWriteStream(tmp));
       renameSync(tmp, dst);
       console.log(`fetched ${rel} (${Math.round(statSync(dst).size / 1024)} KB)`);
       return dst;
@@ -164,8 +168,27 @@ async function ensureAudio(rel) {
       downloads.delete(rel);
     }
   })();
-  downloads.set(rel, job);
-  return job;
+  downloads.set(rel, state);
+  return state.promise;
+}
+
+/** GET /__audio/<reciter>/<NNN>: is the recording on disk? If not, start fetching it and report progress. */
+function audioStatus(req, res, url) {
+  const json = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
+  const m = /^\/__audio\/([\w-]+)\/(\d{3})\b/.exec(url);
+  if (!m) { res.writeHead(400, json); return res.end('{"error":"bad path"}'); }
+  const rel = `audio/${m[1]}/${m[2]}.mp3`;
+  const dst = join(PUBLIC, 'audio', m[1], `${m[2]}.mp3`);
+  const distFile = join(DIST, 'audio', m[1], `${m[2]}.mp3`);
+  if ((existsSync(dst) && statSync(dst).size > 10_000) || (existsSync(distFile) && statSync(distFile).size > 10_000)) {
+    res.writeHead(200, json);
+    return res.end(JSON.stringify({ ready: true }));
+  }
+  if (!RECITERS.some((r) => r.id === m[1])) { res.writeHead(404, json); return res.end('{"error":"unknown reciter"}'); }
+  if (!downloads.has(rel)) ensureAudio(rel).catch((e) => console.warn(String(e)));
+  const st = downloads.get(rel);
+  res.writeHead(200, json);
+  res.end(JSON.stringify({ ready: false, received: st ? st.received : 0, total: st ? st.total : 0 }));
 }
 
 const MIME = {
@@ -301,6 +324,7 @@ function handler(req, res) {
     return;
   }
   if (url.startsWith('/__clips')) return clipsHandler(req, res, url);
+  if (url.startsWith('/__audio/')) return audioStatus(req, res, url.split('?')[0]);
   if (url.startsWith('/__state')) {
     const headers = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
     if (req.method === 'GET') {
@@ -314,6 +338,9 @@ function handler(req, res) {
           const incoming = txt ? JSON.parse(txt) : null;
           const merged = mergeState(readState(), incoming);
           if (merged) writeStateSync(merged);
+          const who = `${req.socket.remoteAddress} ${(req.headers['user-agent'] || '').slice(0, 40)}`;
+          const done = merged && merged.progress && merged.progress.done ? Object.keys(merged.progress.done).length : 0;
+          console.log(`${new Date().toISOString()} state PUT from ${who} → ${done} steps done`);
           res.writeHead(200, headers);
           res.end(JSON.stringify(merged));
         })

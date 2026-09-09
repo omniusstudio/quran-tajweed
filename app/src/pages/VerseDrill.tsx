@@ -161,6 +161,7 @@ export function VerseDrill({ surah, verses, reciter = DEFAULT_RECITER, hideByDef
         </div>
       </div>
       {problem && <p className="todo"><Icon name="alert" size={16} /> {problem}</p>}
+      {player.loading !== null && <p className="ref">جارٍ جلب التلاوة من الإنترنت للمرة الأولى ({arNum(Math.round(player.loading * 100))}٪)…</p>}
       {!canPlay && <p className="ref"><Icon name="alert" size={16} /> لم تُحدَّد مواضع آيات هذه السورة في التسجيل بعد، فالسماع غير متاح لها؛ اقرأ وسجّل، وسيُضاف الصوت حين تُحاذى.</p>}
       {align?.auto && canPlay && <p className="ref">حدود الآيات هنا تقديرية (يُراجع)؛ قد تسبق البداية أو تتأخر قليلاً.</p>}
       {mine && (
