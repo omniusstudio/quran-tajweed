@@ -99,7 +99,7 @@ export function SideView({ state, letters, showFlow = true }: { state: ViewState
       )}
 
       {letters && (
-        <text x={780} y={170} fontSize={84} fontFamily="var(--quran)" fill={GREEN} textAnchor="middle" direction="rtl">
+        <text x={780} y={170} fontSize={[...letters].length > 2 ? 40 : 84} fontFamily="var(--quran)" fill={GREEN} textAnchor="middle" direction="rtl">
           {letters}
         </text>
       )}

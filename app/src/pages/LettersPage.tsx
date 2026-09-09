@@ -14,7 +14,12 @@ export function LettersPage({ id, go }: { id: string; go: (hash: string) => void
   useEffect(() => clock.restart(), [id]); // eslint-disable-line react-hooks/exhaustive-deps
   const rule = art.ruleId ? RULES[art.ruleId] : undefined;
   return (
-    <div className="page">
+    <div className="page letters-page">
+      <header className="page-head">
+        <span className="eyebrow">مخارج الحروف</span>
+        <h2 className="page-title">من أين يخرج كل حرف؟</h2>
+        <p className="ref">اختر حرفاً من اللوحة لترى اللسان والشفتين من ثلاث جهات، ثم قلّد الحركة ببطء.</p>
+      </header>
       <div className="viewer-layout">
         <div>
           <ArticulationViewer art={art} t={clock.t} />
@@ -29,27 +34,29 @@ export function LettersPage({ id, go }: { id: string; go: (hash: string) => void
             {rule.examples.length > 0 && (
               <div className="examples">
                 {rule.examples.slice(0, 3).map((ex, i) => (
-                  <Ayah key={i} ex={ex} />
+                  <div key={i} className="mushaf-panel">
+                    <Ayah ex={ex} />
+                  </div>
                 ))}
               </div>
             )}
             <p className="ref" style={{ marginBlockStart: 8 }}>
-              <a href={`#/lessons/${rule.id}`} onClick={(e) => { e.preventDefault(); go(`#/lessons/${rule.id}`); }}>
+              <a className="crumb" href={`#/lessons/${rule.id}`} onClick={(e) => { e.preventDefault(); go(`#/lessons/${rule.id}`); }}>
                 افتح هذا الدرس <Icon name="chevronLeft" size={14} />
               </a>
             </p>
           </aside>
         )}
       </div>
-      <div className="groups stagger" style={{ marginBlockStart: 12 }}>
+      <section className="board" aria-label="لوحة الحروف">
         {GROUPS.map((g) => (
-          <div className="group" key={g.id}>
-            <h3>{g.title}</h3>
+          <div className="board-group" key={g.id}>
+            <h4>{g.title}</h4>
             <div className="chips">
               {ARTICULATIONS.filter((a) => a.group === g.id).map((a) => (
                 <button
                   key={a.id}
-                  className={`chip${a.letters.length > 3 ? ' small' : ''}${a.keyframes.some((k) => k.heavy) ? ' heavy' : ''}`}
+                  className={`chip${a.letters.length > 3 ? ' small' : ''}${a.keyframes.some((k) => k.heavy) ? ' heavy' : ''}${a.wrong ? ' wrong' : ''}`}
                   aria-pressed={a.id === id}
                   onClick={() => {
                     go(`#/letters/${a.id}`);
@@ -57,13 +64,14 @@ export function LettersPage({ id, go }: { id: string; go: (hash: string) => void
                   }}
                   title={a.nameAr}
                 >
-                  {a.wrong ? `${a.letters} ✗` : a.letters}
+                  {a.letters}
+                  {a.wrong && <Icon name="x" size={14} />}
                 </button>
               ))}
             </div>
           </div>
         ))}
-      </div>
+      </section>
     </div>
   );
 }

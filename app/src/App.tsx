@@ -19,6 +19,7 @@ import { SURAH_BY_NUMBER } from './audio/quran';
 import { BY_ID, CONTRAST_PAIRS } from './viewer/articulations';
 import { Celebrations } from './ui/celebrate';
 import { Icon, type IconName } from './ui/icons';
+import { Mark } from './ui/Mark';
 import { isDark, useSettings } from './ui/settings';
 import { primeSound, sfx } from './ui/sound';
 
@@ -140,7 +141,7 @@ export default function App() {
     <div className="app">
       <aside className="sidebar" aria-label="التنقل">
         <a className="brand" href="#/" onClick={(e) => { e.preventDefault(); nav('#/'); }}>
-          <span className="logo" aria-hidden>ن</span>
+          <span className="logo" aria-hidden><Mark size={40} /></span>
           <h1>
             نُطق
             <small>رواية الدوري عن أبي عمرو</small>
@@ -181,7 +182,7 @@ export default function App() {
       </aside>
       <header className="app-header">
         <a className="brand" href="#/" onClick={(e) => { e.preventDefault(); nav('#/'); }}>
-          <span className="logo" aria-hidden>ن</span>
+          <span className="logo" aria-hidden><Mark size={32} /></span>
           <h1>نُطق</h1>
         </a>
         <span className="sub">تعلّم نطق القرآن — رواية الدوري عن أبي عمرو</span>

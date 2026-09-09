@@ -39,8 +39,9 @@ export function Ayah({ ex, maxWords = 22 }: { ex: Example; maxWords?: number }) 
         })}
         {hi < ex.words.length && ' …'}
       </div>
-      <div className="ref">
-        {ex.surahName}، الآية {arNum(ex.basri)} (حفص: {arNum(ex.kufi)}) <PlayVerse surah={ex.surah} basri={ex.basri} />
+      <div className="ref ayah-ref">
+        <span>{ex.surahName}، الآية {arNum(ex.basri)} <span className="dim">(حفص: {arNum(ex.kufi)})</span></span>
+        <PlayVerse surah={ex.surah} basri={ex.basri} />
       </div>
     </div>
   );
@@ -69,8 +70,9 @@ export function PlayVerse({ surah, basri }: { surah: number; basri: number }) {
     void el.play();
   };
   return (
-    <button className="mini" onClick={play} title="اسمع الآية">
-      <Icon name="play" size={14} /> اسمع
+    <button className="play-chip" onClick={play} title="اسمع الآية">
+      <span className="dot"><Icon name="play" size={12} /></span>
+      اسمع
     </button>
   );
 }

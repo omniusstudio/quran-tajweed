@@ -32,6 +32,7 @@ tell application "Google Chrome"
       set i to i + 1
       if URL of t starts with "$URL" then
         set active tab index of w to i
+        reload t
         set minimized of w to false
         set visible of w to true
         set index of w to 1

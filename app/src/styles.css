@@ -583,3 +583,30 @@ h1, h2, h3, .card h2, .card h3, .info h2, .group h3, .sheet h2 { font-family: va
 .mushaf-panel .ayah { text-align: center; }
 .mushaf-panel .ref { justify-content: center; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .lessons .card h3 { font-size: 1.35rem; }
+
+/* ---------- page heads, listen chip, letters board ---------- */
+.page-head { margin-block-end: 16px; }
+.page-head .page-title { margin: 2px 0 4px; }
+.page-head .ref { max-width: 60ch; }
+.viewer-title { align-items: baseline; }
+.viewer-title .letters { font-size: clamp(1.5rem, 1rem + 2vw, 2.4rem); line-height: 1.4; }
+.ayah-ref { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-block-start: 6px; }
+.ayah-ref .dim { opacity: .75; }
+.play-chip { display: inline-flex; align-items: center; gap: 8px; border: none; background: var(--primary-soft); color: var(--primary); border-radius: var(--pill); padding: 3px 12px 3px 4px; min-height: 32px; font-size: .88rem; font-weight: 700; transition: background var(--dur) var(--ease), transform var(--dur-fast) var(--ease); }
+[dir="rtl"] .play-chip { padding: 3px 4px 3px 12px; }
+.play-chip .dot { width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; }
+.play-chip:hover { background: color-mix(in srgb, var(--primary) 18%, var(--surface)); }
+.play-chip:active { transform: scale(.96); }
+.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px 22px; padding: 18px 20px; margin-block-start: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); background-image: linear-gradient(to top, var(--surface), color-mix(in srgb, var(--surface) 55%, transparent)), var(--pattern); }
+.board-group h4 { font-family: var(--display); font-weight: 700; font-size: 1.05rem; margin: 0 0 8px; color: var(--ink-2); }
+.board .chip { font-size: 1.95rem; min-width: 56px; min-height: 52px; padding: 6px 12px; background: var(--surface); }
+.board .chip.small { font-family: var(--quran); font-size: 1.2rem; }
+.board .chip.heavy { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
+.board .chip.wrong { color: var(--danger); border-style: dashed; display: inline-flex; align-items: center; gap: 4px; }
+.board .chip[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+.info .examples .mushaf-panel .ayah { font-size: calc(1.6rem * var(--quran-scale)); }
+
+/* brand mark tiles */
+.app-header .logo, .sidebar .logo { background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-1); padding: 3px; }
+.sidebar .logo { width: 52px; height: 52px; border-radius: 16px; }
+.mark { display: block; }

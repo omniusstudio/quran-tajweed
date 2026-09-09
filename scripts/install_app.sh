@@ -62,5 +62,9 @@ echo "▸ launcher"
 mkdir -p "$APPDIR"
 rsync -a --delete "$ROOT/نُطق.app/" "$APPDIR/نُطق.app/"
 touch "$APPDIR/نُطق.app"
+# an open نُطق window gets the new build right away
+if pgrep -xq "Google Chrome"; then
+  osascript -e 'tell application "Google Chrome" to repeat with w in windows' -e 'repeat with t in tabs of w' -e 'if URL of t starts with "http://localhost:7373" then reload t' -e 'end repeat' -e 'end repeat' 2>/dev/null || true
+fi
 echo
 echo "Done. Drag  $APPDIR/نُطق.app  to the Dock. Phone: Settings → على هاتفك."
