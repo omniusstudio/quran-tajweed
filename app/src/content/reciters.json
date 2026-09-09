@@ -1,0 +1,30 @@
+{
+  "default": "nourin_siddig",
+  "reciters": [
+    {
+      "id": "nourin_siddig",
+      "nameAr": "نورين محمد صديق",
+      "nameEn": "Noreen Mohammad Siddiq",
+      "note": "الصوت الافتراضي (سوداني)",
+      "server": "https://server16.mp3quran.net/nourin_siddig/Rewayat-Aldori-A-n-Abi-Amr/",
+      "credit": "الصوت: الشيخ نورين محمد صديق، رواية الدوري عن أبي عمرو — عبر mp3quran.net"
+    },
+    {
+      "id": "fateh",
+      "nameAr": "الفاتح الزبير",
+      "nameEn": "Alfateh Alzubair",
+      "note": "سوداني",
+      "server": "https://server6.mp3quran.net/fateh/",
+      "credit": "الصوت: الشيخ الفاتح الزبير، رواية الدوري عن أبي عمرو — عبر mp3quran.net"
+    },
+    {
+      "id": "husr",
+      "nameAr": "محمود خليل الحصري",
+      "nameEn": "Mahmoud Khalil Al-Hussary",
+      "note": "قراءة بطيئة واضحة للمبتدئين",
+      "server": "https://server13.mp3quran.net/husr/Rewayat-Aldori-A-n-Abi-Amr/",
+      "credit": "الصوت: الشيخ محمود خليل الحصري، رواية الدوري عن أبي عمرو — عبر mp3quran.net"
+    }
+  ],
+  "v1Surahs": [1, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114]
+}

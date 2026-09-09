@@ -61,6 +61,28 @@ folders directly; nothing is duplicated inside `app/`.
 | `app/src/viewer/engine.test.ts` | Tests, including the guard that keeps the morphing tongue inside the envelope the artwork draws |
 | `scripts/extract_viewer_text.py` | Content pipeline seed: resolves every example against `duri.json` |
 
+### Audio (M3)
+
+- `npm run audio` (`scripts/fetch_audio.py`) downloads the Dūrī per-sūrah MP3s
+  for v1 (al-Fātiḥah + juzʾ ʿAmma) from mp3quran.net into `app/public/audio/`
+  (git-ignored, never hot-linked). Reciters and credits are in
+  `app/src/content/reciters.json`; the default voice is Noreen Mohammad Siddiq.
+- **المتابعة** (`#/follow/1`): the verse text in Scheherazade New with words
+  highlighted in sync with the recording, 0.5×/0.75×/1× with pitch preserved,
+  echo mode (word → pause → beep → repeat), tap a word to loop it and open its
+  letters in the viewer, a madd ticker and ghunnah indicator driven by the
+  muṣḥaf's own marks (approximate until the M4 rule tagger), and per-verse
+  record-and-compare (teacher / me, waveform thumbnails, loop) stored in
+  IndexedDB.
+- **المحاذاة** (`#/align/1`): the alignment editor. Waveform + zoom strip, Enter
+  marks the next boundary at the playhead, silence detection proposes verse
+  boundaries, proportional word spread as a starting point, save to the
+  browser, export/import JSON keyed by sūrah / Baṣrī verse / word index. Put a
+  finished export at `app/src/content/alignments/<reciter>/<NNN>.json` to ship it.
+- **تسجيل المعلم** (`#/recorder`): walks the teacher through the clip manifest
+  (letters alone and with each vowel, madd letters, minimal pairs, every lesson
+  example) and exports all takes as a zip with the fixed file names.
+
 ## Verifying the content
 
 Every example in the curriculum must be found programmatically in `duri.json`
