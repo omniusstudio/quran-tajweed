@@ -366,7 +366,7 @@ button.danger { background: var(--danger-soft); color: var(--danger); border: 1p
 .controls .play:disabled { opacity: .45; box-shadow: none; }
 .controls input[type="range"] { flex: 1 1 160px; accent-color: var(--primary); height: 44px; }
 .speeds { display: flex; gap: 4px; }
-.controls.sticky { position: sticky; inset-block-start: 64px; z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); padding-block: 8px; margin-inline: -4px; padding-inline: 4px; border-radius: var(--radius-sm); }
+.controls.sticky { position: sticky; inset-block-start: var(--sticky-top, 65px); z-index: 5; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); padding-block: 8px; margin-inline: -4px; padding-inline: 4px; border-radius: var(--radius-sm); }
 .info { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow-1); }
 .info h2 { font-size: 1.1rem; margin: 0 0 6px; }
 .info p { margin: 0 0 8px; }
@@ -515,6 +515,7 @@ h1, h2, h3, .card h2, .card h3, .info h2, .group h3, .sheet h2 { font-family: va
   .side-actions { display: flex; gap: 6px; }
   .side-actions .icon-btn { flex: 1; border: 1px solid var(--line); background: var(--surface); }
   .app-main { max-width: 1240px; padding: 36px 44px 64px; }
+  :root { --sticky-top: 0px; }
 }
 
 /* home: today, verse, journey, tiles */
@@ -612,7 +613,7 @@ h1, h2, h3, .card h2, .card h3, .info h2, .group h3, .sheet h2 { font-family: va
 .mark { display: block; }
 
 /* ---------- form fields: one select style everywhere, no page ever scrolls sideways ---------- */
-html, body { overflow-x: hidden; }
+html, body { overflow-x: clip; } /* clip, not hidden: hidden would make body the scroll container and break position: sticky */
 select {
   appearance: none; -webkit-appearance: none; width: 100%; max-width: 100%; min-height: 48px;
   padding: 10px 14px; padding-inline-end: 44px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink);
@@ -686,3 +687,28 @@ select:focus-visible { outline: none; border-color: var(--primary); box-shadow: 
 .verse-play.next { background: var(--primary); color: var(--on-primary); border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
 .resume-hint { font-size: .85rem; color: var(--primary); font-weight: 700; white-space: nowrap; }
 .controls.sticky .segmented { margin-inline-start: auto; }
+
+/* follow-along: the madd counter and the nose stay in the sticky bar; the count also rides on the word */
+.controls.sticky { flex-wrap: wrap; row-gap: 6px; }
+.indicators.in-bar { flex-basis: 100%; margin: 0; min-height: 34px; gap: 8px; }
+.indicators.in-bar .ticker .cell { width: 24px; height: 24px; font-size: .8rem; }
+.indicators.in-bar .nose { padding: 2px 10px; font-size: .9rem; }
+button.word { position: relative; }
+.word-madd { position: absolute; inset-block-start: -14px; inset-inline-start: 50%; transform: translateX(50%); display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; border-radius: var(--pill); background: var(--primary); color: var(--on-primary); font-family: var(--ui); font-size: .7rem; line-height: 1; white-space: nowrap; box-shadow: var(--shadow-1); pointer-events: none; }
+[dir="ltr"] .word-madd { transform: translateX(-50%); }
+.word-madd i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.35); }
+.word-madd i.on { background: var(--on-primary); }
+.word-madd b { margin-inline-start: 3px; font-weight: 700; }
+.mushaf .verse { padding-block-start: 16px; }
+
+/* phones: a tighter sticky bar so the text keeps most of the screen */
+@media (max-width: 599px) {
+  .controls.sticky { row-gap: 4px; padding-block: 6px; }
+  .controls.sticky .toggle, .controls.sticky .speeds button, .controls.sticky .segmented button { min-height: 36px; padding: 4px 10px; font-size: .85rem; }
+  .controls.sticky .segmented { padding: 2px; }
+  .controls.sticky .play { width: 44px; height: 44px; }
+  .controls.sticky input[type="range"] { height: 32px; }
+  .indicators.in-bar { min-height: 28px; gap: 6px; }
+  .indicators.in-bar .phase { font-size: .8rem; }
+  .indicators.in-bar .ticker .cell { width: 20px; height: 20px; font-size: .72rem; border-radius: 6px; }
+}

@@ -249,9 +249,7 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
           <button aria-pressed={mode === 'continuous'} onClick={() => { updateSettings({ playMode: 'continuous' }); sfx('toggle'); }}>متواصل</button>
           <button aria-pressed={mode === 'verse'} onClick={() => { updateSettings({ playMode: 'verse' }); sfx('toggle'); player.pause(); }} disabled={!align}>آية آية</button>
         </div>
-      </div>
-
-      <div className="indicators">
+        <div className="indicators in-bar">
         <span className={`ticker${cues?.madd ? '' : ' off'}`} aria-label="عداد المد">
           <span className="phase">مد</span>
           {Array.from({ length: cues?.madd || 2 }, (_, i) => (
@@ -266,7 +264,9 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
         {align?.preamble && player.time >= align.preamble[0] && player.time < align.preamble[1] && <span className="badge">الاستعاذة</span>}
         {cues?.imalah && <span className="badge">إمالة</span>}
         {cues?.tashil && <span className="badge">تسهيل</span>}
+        </div>
       </div>
+
 
       <div className="mushaf card">
         {s.header && (
@@ -293,6 +293,14 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
                     <span key={wi}>
                       <button className={`word${on ? ' on' : ''}${isPicked ? ' picked' : ''}`} onClick={() => tapWord(vi, wi)} disabled={!va}>
                         {w}
+                        {on && maddLen > 0 && (
+                          <span className="word-madd" aria-hidden>
+                            {Array.from({ length: maddLen }, (_, i) => (
+                              <i key={i} className={i < maddCount ? 'on' : ''} />
+                            ))}
+                            <b>{AR[maddLen]}</b>
+                          </span>
+                        )}
                       </button>{' '}
                     </span>
                   );
