@@ -15,7 +15,7 @@ export function GoalRing({ value, goal, size = 112 }: { value: number; goal: num
   const c = 2 * Math.PI * r;
   const frac = Math.min(1, goal ? value / goal : 0);
   return (
-    <div className={`ring${frac >= 1 ? ' done' : ''}`} style={{ width: size, height: size }} role="img" aria-label={`اليوم ${arNum(value)} من ${arNum(goal)} نقاط`}>
+    <div className={`ring${frac >= 1 ? ' done' : ''}${frac <= 0 ? ' empty' : ''}`} style={{ width: size, height: size }} role="img" aria-label={`اليوم ${arNum(value)} من ${arNum(goal)} نقاط`}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <circle className="track" cx={size / 2} cy={size / 2} r={r} />
         <circle className="fill" cx={size / 2} cy={size / 2} r={r} strokeDasharray={c} strokeDashoffset={c * (1 - frac)} />
@@ -74,7 +74,7 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
               )}
             </div>
           </div>
-          <GoalRing value={today} goal={settings.dailyGoal} />
+          <GoalRing value={today} goal={settings.dailyGoal} size={typeof matchMedia === 'function' && matchMedia('(min-width: 1024px)').matches ? 156 : 112} />
         </div>
         <div className="home-cta">
           <button className="primary" onClick={() => go(allDone ? '#/practice' : `#/lessons/${next}`)}>
@@ -98,7 +98,7 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card home-quick">
         <h3>ابدأ من هنا</h3>
         <div className="quick">
           <button className="quick-card" onClick={() => go('#/exercises')}>
@@ -124,7 +124,7 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
         </div>
       </div>
 
-      <div className="card">
+      <div className="card home-lessons">
         <div className="section-head">
           <h3>الدروس</h3>
           <span className="badge neutral">{arNum(done)} / {arNum(ORDER.length)}</span>

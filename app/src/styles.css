@@ -84,7 +84,9 @@
 /* ---------- base ---------- */
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--ui); }
-body { font-size: 17px; line-height: 1.7; -webkit-font-smoothing: antialiased; }
+body { font-size: 17px; line-height: 1.7; -webkit-font-smoothing: antialiased; background-image: radial-gradient(900px 320px at 50% -120px, color-mix(in srgb, var(--primary-soft) 85%, transparent), transparent 70%); background-repeat: no-repeat; }
+@media (min-width: 1200px) { body { font-size: 18px; } }
+#main:focus { outline: none; }
 button { font-family: inherit; font-size: inherit; cursor: pointer; color: inherit; touch-action: manipulation; }
 button:disabled { cursor: not-allowed; }
 a { color: var(--primary); }
@@ -119,8 +121,8 @@ h1, h2, h3 { line-height: 1.35; letter-spacing: 0; }
 .icon-btn:active { transform: scale(.94); }
 .icon-btn[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary); }
 
-.app-main { flex: 1; width: 100%; max-width: 1120px; margin-inline: auto; padding: 14px 16px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom)); }
-@media (min-width: 900px) { .app-main { padding: 18px 24px 48px; } }
+.app-main { flex: 1; width: 100%; max-width: 1320px; margin-inline: auto; padding: 14px 16px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom)); }
+@media (min-width: 900px) { .app-main { padding: 24px 32px 56px; } }
 
 /* primary navigation: bottom bar on phones, inline in the header on wide screens */
 .nav {
@@ -142,7 +144,7 @@ h1, h2, h3 { line-height: 1.35; letter-spacing: 0; }
 @keyframes navPill { from { transform: scaleX(.4); opacity: 0; } }
 @media (min-width: 900px) {
   .nav { position: static; height: auto; padding: 0; background: none; border: none; backdrop-filter: none; display: flex; gap: 2px; }
-  .nav button { flex-direction: row; gap: 8px; font-size: .95rem; padding: 8px 14px; border-radius: var(--pill); min-height: 44px; }
+  .nav button { flex-direction: row; gap: 8px; font-size: 1rem; padding: 8px 16px; border-radius: var(--pill); min-height: 44px; }
   .nav button[aria-current="page"]::before { inset: 0; width: auto; height: auto; }
   .app-header .sub { display: block; }
 }
@@ -176,6 +178,12 @@ h1, h2, h3 { line-height: 1.35; letter-spacing: 0; }
 /* page enter + list stagger */
 .page { animation: fadeUp var(--dur-slow) var(--ease) both; }
 .stagger > * { animation: fadeUp var(--dur-slow) var(--ease) both; }
+/* index pages: two columns of cards on wide screens, the intro/hero card across both */
+@media (min-width: 1024px) {
+  .grid2 { columns: 2; column-gap: 14px; }
+  .grid2 > * { break-inside: avoid; margin-block-end: 14px; }
+  .grid2 > .card.hero, .grid2 > .card.intro { column-span: all; }
+}
 .stagger > *:nth-child(2) { animation-delay: 40ms; } .stagger > *:nth-child(3) { animation-delay: 80ms; } .stagger > *:nth-child(4) { animation-delay: 120ms; }
 .stagger > *:nth-child(5) { animation-delay: 160ms; } .stagger > *:nth-child(6) { animation-delay: 200ms; } .stagger > *:nth-child(7) { animation-delay: 240ms; } .stagger > *:nth-child(n+8) { animation-delay: 280ms; }
 
@@ -250,14 +258,15 @@ button.danger { background: var(--danger-soft); color: var(--danger); border: 1p
 .setting small { display: block; color: var(--muted); font-size: .8rem; line-height: 1.4; }
 
 /* ---------- progress ---------- */
-.bar { position: relative; height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.bar { position: relative; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--ink) 9%, transparent); overflow: hidden; }
 .bar > i { position: absolute; inset: 0; transform-origin: right; background: var(--primary); border-radius: 4px; transition: transform var(--dur-slow) var(--ease); }
 .bar.gold > i { background: var(--accent); }
 .ring { display: grid; place-items: center; position: relative; }
 .ring svg { transform: rotate(-90deg); }
 .ring circle { fill: none; stroke-width: 8; stroke-linecap: round; }
-.ring .track { stroke: var(--surface-2); }
-.ring .fill { stroke: var(--primary); transition: stroke-dashoffset var(--dur-slow) var(--ease); }
+.ring .track { stroke: color-mix(in srgb, var(--ink) 10%, transparent); }
+.ring .fill { stroke: var(--primary); transition: stroke-dashoffset var(--dur-slow) var(--ease), opacity var(--dur) var(--ease); }
+.ring.empty .fill { opacity: 0; }
 .ring.done .fill { stroke: var(--accent); }
 .ring .center { position: absolute; text-align: center; line-height: 1.15; }
 .ring .center strong { font-size: 1.4rem; display: block; }
@@ -265,6 +274,17 @@ button.danger { background: var(--danger-soft); color: var(--danger); border: 1p
 .card.home-card { display: block; }
 .home-hero { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; }
 .home-hero h2 { font-size: 1.5rem; margin: 0 0 4px; }
+@media (min-width: 1024px) {
+  .home { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); grid-template-areas: 'hero hero' 'quick lessons' 'audio lessons'; gap: 16px; align-items: start; }
+  .home > .home-card { grid-area: hero; margin: 0; padding: 28px 32px; }
+  .home > .home-quick { grid-area: quick; margin: 0; }
+  .home > .home-lessons { grid-area: lessons; margin: 0; }
+  .home-hero { grid-template-columns: 1fr auto; gap: 32px; align-items: center; }
+  .home-hero h2 { font-size: 2.1rem; }
+  .home-hero > div > .ref { font-size: 1.05rem; }
+  .home-stats .stat { font-size: 1rem; padding: 8px 14px; }
+  .home-cta .primary { font-size: 1.05rem; min-height: 52px; padding-inline: 26px; }
+}
 .home-cta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-block: 10px 4px; }
 .home-cta .primary { flex: 1 1 auto; }
 @media (min-width: 600px) { .home-cta .primary { flex: none; } }
@@ -272,24 +292,27 @@ button.danger { background: var(--danger-soft); color: var(--danger); border: 1p
 .stat { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--pill); background: var(--surface); border: 1px solid var(--line); font-size: .9rem; }
 .stat .icon { color: var(--accent); }
 .stat.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); font-weight: 700; }
-.week { display: flex; gap: 6px; justify-content: space-between; margin-block-start: 8px; }
-.week .day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: .72rem; color: var(--muted); }
-.week .dot { width: min(100%, 40px); aspect-ratio: 1; height: auto; border-radius: 12px; background: var(--surface-2); display: grid; place-items: center; color: var(--muted); line-height: 1; transition: background var(--dur) var(--ease); }
+.week { display: flex; gap: 8px; justify-content: space-between; max-width: 460px; margin-block-start: 12px; }
+.week .day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: .74rem; color: var(--muted); }
+.week .dot { width: min(100%, 44px); aspect-ratio: 1; height: auto; border-radius: 12px; background: color-mix(in srgb, var(--ink) 7%, transparent); display: grid; place-items: center; color: var(--muted); line-height: 1; transition: background var(--dur) var(--ease); }
 .week .dot.on { background: var(--primary-soft); color: var(--primary); }
 .week .dot.goal { background: var(--primary); color: var(--on-primary); }
 .week .day.today .dot { outline: 2px solid var(--primary); outline-offset: 2px; }
-.section-progress { display: grid; gap: 10px; }
-.section-progress a { display: grid; grid-template-columns: 28px 1fr auto; gap: 10px; align-items: center; text-decoration: none; color: inherit; padding: 6px 8px; border-radius: var(--radius-sm); transition: background var(--dur) var(--ease); }
+.section-progress { display: grid; gap: 6px; }
+.section-progress a { display: grid; grid-template-columns: 30px 1fr auto; gap: 12px; align-items: center; text-decoration: none; color: inherit; padding: 8px 10px; min-height: 48px; border-radius: var(--radius-sm); transition: background var(--dur) var(--ease); }
 .section-progress a:hover { background: var(--surface-2); }
 .section-progress .num { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); font-size: .85rem; }
 .section-progress .num.done { background: var(--primary); color: var(--on-primary); }
-.section-progress .bar { margin-block-start: 4px; }
-.quick { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.quick-card { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-align: start; padding: 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-1); min-height: 100px; transition: transform var(--dur) var(--ease-spring), box-shadow var(--dur) var(--ease); }
+.section-progress .bar { display: block; height: 6px; margin-block-start: 6px; }
+.quick { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 900px) { .quick { grid-template-columns: repeat(4, minmax(0, 1fr)); } .home .quick { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.quick-card { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; text-align: start; padding: 18px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow-1); min-height: 132px; transition: transform var(--dur) var(--ease-spring), box-shadow var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+.quick-card:hover { border-color: color-mix(in srgb, var(--primary) 45%, var(--line)); }
+.quick-card .icon { width: 30px; height: 30px; padding: 5px; box-sizing: content-box; border-radius: 12px; background: var(--primary-soft); }
 .quick-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
 .quick-card:active { transform: scale(.98); }
 .quick-card .icon { color: var(--primary); }
-.quick-card strong { font-size: 1rem; }
+.quick-card strong { font-size: 1.08rem; }
 .quick-card small { color: var(--muted); font-size: .8rem; line-height: 1.4; }
 .quick-card .count { margin-inline-start: auto; }
 

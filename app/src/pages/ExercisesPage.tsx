@@ -95,8 +95,8 @@ export function ExercisesPage({ kind, param, go }: { kind?: ExerciseKind; param?
   };
   if (!kind) {
     return (
-      <div className="page lessons stagger">
-        <div className="card">
+      <div className="page lessons stagger grid2">
+        <div className="card intro">
           <h2>التمارين</h2>
           <p className="ref">كل الأسئلة مولّدة من مصحف الدوري نفسه (سورة الفاتحة وجزء عمّ). ما تخطئ فيه يعود إليك أسرع.</p>
         </div>

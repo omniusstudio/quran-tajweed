@@ -70,8 +70,8 @@ export function SettingsPage({ go }: { go: (hash: string) => void }) {
   const [s, update] = useSettings();
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => update({ [k]: v } as Partial<Settings>);
   return (
-    <div className="page lessons stagger">
-      <div className="card">
+    <div className="page lessons stagger grid2">
+      <div className="card intro">
         <h2>الإعدادات</h2>
         <p className="ref">كل شيء يُحفظ على هذا الجهاز فقط.</p>
       </div>

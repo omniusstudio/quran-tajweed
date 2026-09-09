@@ -24,7 +24,7 @@ export function LessonsIndex({ go }: { go: (hash: string) => void }) {
   const done = ORDER.filter((id) => progress.done[id]).length;
   const next = progress.last && ORDER.includes(progress.last) ? progress.last : ORDER[0];
   return (
-    <div className="page lessons stagger">
+    <div className="page lessons stagger grid2">
       <div className="card hero">
         <div style={{ flex: '1 1 240px' }}>
           <h2>الدروس</h2>

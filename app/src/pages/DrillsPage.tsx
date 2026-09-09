@@ -40,8 +40,8 @@ export function DrillsPage({ drillId, go }: { drillId?: string; go: (hash: strin
   const drill = DRILLS.find((d) => d.id === drillId);
   if (!drill) {
     return (
-      <div className="page lessons stagger">
-        <div className="card">
+      <div className="page lessons stagger grid2">
+        <div className="card intro">
           <h2>تدريبات الدوري</h2>
           <p className="ref">ما يجعل قراءة الدوري تُسمع كما هي. كل تدريب: شاهد الفم → اسمع ببطء → اسمع عادياً → سجّل نفسك → قارن.</p>
         </div>
