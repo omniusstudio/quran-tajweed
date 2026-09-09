@@ -33,13 +33,11 @@ export default defineConfig({
         importScripts: ['sw-reload.js'],
         globPatterns: ['**/*.{js,css,html,png,ttf,json,svg}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.pathname.includes('/audio/'),
-            handler: 'CacheFirst',
-            options: { cacheName: 'nutq-audio', expiration: { maxEntries: 200, maxAgeSeconds: 365 * 24 * 3600 }, cacheableResponse: { statuses: [0, 200] } },
-          },
-        ],
+        // Recordings are deliberately NOT cached by the worker: the player fetches them with byte
+        // ranges, and a cache-first copy answered a range with the whole file, which broke playback
+        // until the cache was cleared. The server's immutable cache headers let the browser's own
+        // HTTP cache (which understands ranges) do the job; the worker never sees /audio/.
+        navigateFallbackDenylist: [/^\/__/, /^\/audio\//],
       },
     }),
   ],
