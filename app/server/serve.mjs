@@ -193,6 +193,33 @@ function bonjourName() {
   return `${name}.local`;
 }
 
+/**
+ * Tailscale, if installed and signed in: the private way to reach this Mac from outside the home
+ * network. `tailscale serve` in front of port 7373 gives a real https address on the tailnet.
+ */
+function tailscaleInfo() {
+  const bins = ['/Applications/Tailscale.app/Contents/MacOS/Tailscale', '/usr/local/bin/tailscale', '/opt/homebrew/bin/tailscale'];
+  const bin = bins.find((b) => existsSync(b));
+  if (!bin) return { installed: false };
+  try {
+    const st = JSON.parse(execFileSync(bin, ['status', '--json'], { stdio: ['ignore', 'pipe', 'ignore'], timeout: 4000 }).toString());
+    const self = st.Self || {};
+    const dns = (self.DNSName || '').replace(/\.$/, '');
+    const ip = (self.TailscaleIPs || [])[0];
+    let serve = null;
+    try {
+      const out = execFileSync(bin, ['serve', 'status'], { stdio: ['ignore', 'pipe', 'ignore'], timeout: 4000 }).toString();
+      const m = /https:\/\/[^\s/]+/.exec(out);
+      if (m && /7373/.test(out)) serve = `${m[0]}/`;
+    } catch {
+      /* serve not configured */
+    }
+    return { installed: true, online: st.BackendState === 'Running', dnsName: dns, ip, http: dns ? `http://${dns}:${PORT}/` : ip ? `http://${ip}:${PORT}/` : null, serve };
+  } catch {
+    return { installed: true, online: false };
+  }
+}
+
 /** IPv4 addresses of this Mac on the local network (no loopback, no link-local). */
 function lanAddresses() {
   const out = [];
@@ -257,7 +284,7 @@ async function lanInfo(req) {
   const plain = online ? `http://${host}:${PORT}/` : null;
   const secure = tls && online ? `https://${host}:${TLS_PORT}/` : null;
   const qr = await QRCode.toString(preferred, { type: 'svg', margin: 1, color: { dark: '#1f2622', light: '#0000' } });
-  return { hostname: host, http, https, preferred, fallback, plain, secure, qr };
+  return { hostname: host, http, https, preferred, fallback, plain, secure, qr, tailscale: tailscaleInfo() };
 }
 
 function handler(req, res) {

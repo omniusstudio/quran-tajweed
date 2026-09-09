@@ -35,6 +35,43 @@ interface LanInfo {
   /** https on the name: needed for the phone's microphone; one-time certificate warning. */
   secure: string | null;
   qr: string;
+  tailscale?: { installed: boolean; online?: boolean; dnsName?: string; ip?: string; http?: string | null; serve?: string | null };
+}
+
+/** Reaching the app away from home: Tailscale keeps it private and gives a real https address. */
+function AwayAccess({ ts }: { ts?: LanInfo['tailscale'] }) {
+  return (
+    <div className="card">
+      <h3>خارج شبكة البيت</h3>
+      {ts?.installed && ts.online ? (
+        <>
+          <p>
+            هذا الجهاز على شبكة Tailscale الخاصة بك. من أي مكان، على هاتف فيه Tailscale مسجّل بحسابك نفسه، افتح:
+          </p>
+          <p className="mono" style={{ fontSize: '1rem', color: 'var(--ink)' }}>{ts.serve ?? ts.http}</p>
+          {ts.serve ? (
+            <p className="ref">عنوان https حقيقي: الميكروفون يعمل ولا تحذير من الشهادة.</p>
+          ) : (
+            <>
+              <p className="ref">للحصول على عنوان https (يلزم للميكروفون على الهاتف) شغّل مرة واحدة في الطرفية على هذا الجهاز:</p>
+              <pre className="mono" style={{ direction: 'ltr', textAlign: 'left', margin: '4px 0 8px', whiteSpace: 'pre-wrap' }}>tailscale serve --bg 7373</pre>
+              <p className="ref">وفعّل HTTPS certificates و MagicDNS من لوحة Tailscale (DNS). بعدها يظهر العنوان هنا تلقائياً.</p>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <p>الطريقة الآمنة للوصول من خارج البيت هي شبكة خاصة بينك وبين أجهزتك، لا فتح المنفذ على الإنترنت: التطبيق بلا كلمة سر ويحفظ تقدمك وتسجيلاتك.</p>
+          <ol className="ref" style={{ paddingInlineStart: 20, margin: '4px 0 8px' }}>
+            <li>ثبّت Tailscale على هذا الجهاز (من App Store أو tailscale.com) وعلى الهاتف، وسجّل الدخول بالحساب نفسه في الاثنين. مجاني للاستخدام الشخصي.</li>
+            <li>على هذا الجهاز، في الطرفية: <span className="mono">tailscale serve --bg 7373</span></li>
+            <li>افتح هذه الصفحة من جديد؛ يظهر عنوان https هنا يعمل من أي مكان، بميكروفون وبلا تحذير.</li>
+          </ol>
+          <p className="ref">{ts?.installed ? 'Tailscale مثبّت لكنه غير متصل الآن.' : 'لم يُعثر على Tailscale على هذا الجهاز.'}</p>
+        </>
+      )}
+    </div>
+  );
 }
 
 /** Addresses for a phone on the same Wi-Fi, answered by server/serve.mjs (absent under the dev server). */
@@ -111,6 +148,19 @@ function SyncRow() {
       </button>
     </div>
   );
+}
+
+/** Wrapper that reads /__lan once for the away-from-home card. */
+function AwayAccessFromLan() {
+  const [ts, setTs] = useState<LanInfo['tailscale'] | null | 'none'>(null);
+  useEffect(() => {
+    fetch('/__lan', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((j: LanInfo) => setTs(j.tailscale ?? { installed: false }))
+      .catch(() => setTs('none'));
+  }, []);
+  if (ts === 'none' || ts === null) return null;
+  return <AwayAccess ts={ts} />;
 }
 
 export function SettingsPage({ go }: { go: (hash: string) => void }) {
@@ -191,6 +241,7 @@ export function SettingsPage({ go }: { go: (hash: string) => void }) {
       </div>
 
       <PhoneAccess />
+      <AwayAccessFromLan />
 
       <div className="card">
         <h3>البيانات</h3>

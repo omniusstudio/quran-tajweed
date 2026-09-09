@@ -678,3 +678,11 @@ select:focus-visible { outline: none; border-color: var(--primary); box-shadow: 
 .path-item.done .n { background: var(--primary); color: var(--on-primary); }
 .path-item.now { border-color: var(--accent); color: var(--ink); font-weight: 700; }
 .path-item.now .n { background: var(--accent-soft); color: var(--accent-strong); }
+
+/* follow-along: play from any verse, verse-by-verse mode */
+.verse-play { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--surface); color: var(--primary); vertical-align: middle; margin-inline-end: 6px; transition: background var(--dur) var(--ease), transform var(--dur-fast) var(--ease), border-color var(--dur) var(--ease); }
+.verse-play:hover { background: var(--primary-soft); border-color: var(--primary); }
+.verse-play:active { transform: scale(.92); }
+.verse-play.next { background: var(--primary); color: var(--on-primary); border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-soft); }
+.resume-hint { font-size: .85rem; color: var(--primary); font-weight: 700; white-space: nowrap; }
+.controls.sticky .segmented { margin-inline-start: auto; }

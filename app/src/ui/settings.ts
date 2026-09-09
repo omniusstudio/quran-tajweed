@@ -21,11 +21,15 @@ export interface Settings {
   reciter: string;
   /** Sūrah last opened in follow-along. */
   lastSurah: number;
+  /** Follow-along: keep playing through the sūrah, or stop at the end of every verse. */
+  playMode: 'continuous' | 'verse';
+  /** Follow-along: where each sūrah was left (seconds), keyed by sūrah number. */
+  positions: Record<string, number>;
   /** Last local change, for merging between devices. */
   updatedAt?: number;
 }
 
-export const DEFAULTS: Settings = { theme: 'system', sound: true, haptics: true, quranScale: 1, motion: 'system', dailyGoal: 10, reciter: 'nourin_siddig', lastSurah: 1 };
+export const DEFAULTS: Settings = { theme: 'system', sound: true, haptics: true, quranScale: 1, motion: 'system', dailyGoal: 10, reciter: 'nourin_siddig', lastSurah: 1, playMode: 'continuous', positions: {} };
 
 function read(): Settings {
   try {

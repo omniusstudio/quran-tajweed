@@ -35,6 +35,53 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
   const player = usePlayer(audioUrl(reciter, s.number));
   const pos = align ? locate(align, player.time) : null;
   const [picked, setPicked] = useState<{ verse: number; word: number } | null>(null);
+  const mode = settings.playMode ?? 'continuous';
+  /** Verse to play next (verse-by-verse mode), and where to resume (continuous mode). */
+  const savedAt = settings.positions?.[String(s.number)] ?? 0;
+  const savedVerse = align && savedAt > 0 ? Math.max(0, align.verses.findIndex((v) => savedAt < v.end)) : 0;
+  const [cursor, setCursor] = useState<number>(savedVerse);
+  const lastVerseRef = useRef<number | null>(null);
+  // remember where the learner is: on pause, and whenever the verse changes
+  useEffect(() => {
+    if (pos && pos.verse !== lastVerseRef.current) {
+      lastVerseRef.current = pos.verse;
+      if (mode === 'continuous') setCursor(pos.verse);
+    }
+  }, [pos?.verse]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (player.playing || player.time <= 0) return;
+    const positions = { ...(settings.positions ?? {}), [String(s.number)]: Number(player.time.toFixed(2)) };
+    if ((settings.positions ?? {})[String(s.number)] !== positions[String(s.number)]) updateSettings({ positions });
+  }, [player.playing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Play one verse and stop (verse-by-verse mode); the cursor moves on when it finishes. */
+  const playVerse = (vi: number) => {
+    if (!align) return;
+    const v = align.verses[vi];
+    if (!v) return;
+    setCursor(vi);
+    player.setLoop(null);
+    void player.playRange(v.start, v.end).then((ok) => ok && setCursor(Math.min(vi + 1, align.verses.length - 1)));
+  };
+  /** Start from the beginning of a verse: through to the end in continuous mode, one verse otherwise. */
+  const playFrom = (vi: number) => {
+    if (!align) return;
+    sfx('tap');
+    if (mode === 'verse') return playVerse(vi);
+    setCursor(vi);
+    player.setLoop(null);
+    player.seek(align.verses[vi].start);
+    void player.play();
+  };
+  /** The big button: pause, or continue from the verse the learner is on. */
+  const mainToggle = () => {
+    if (player.playing) return player.pause();
+    if (!align) return void player.play();
+    if (mode === 'verse') return playVerse(cursor);
+    if (player.time <= 0.01 && savedAt > 0) player.seek(align.verses[cursor]?.start ?? savedAt);
+    void player.play();
+  };
+  const cursorVerse = align?.verses[cursor];
   const [echo, setEcho] = useState(false);
   const echoRef = useRef(false);
   const verseRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -174,9 +221,12 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
       </div>
 
       <div className="controls sticky">
-        <button className="play" onClick={player.toggle} aria-label={player.playing ? 'إيقاف مؤقت' : 'تشغيل'} disabled={!player.ready}>
+        <button className="play" onClick={mainToggle} aria-label={player.playing ? 'إيقاف مؤقت' : 'تشغيل'} disabled={!player.ready} title={cursorVerse && !player.playing ? `من الآية ${arNum(cursorVerse.basri)}` : undefined}>
           <Icon name={player.playing ? 'pause' : 'play'} size={24} />
         </button>
+        {!player.playing && cursorVerse && (cursor > 0 || mode === 'verse') && (
+          <span className="resume-hint" aria-live="polite">{mode === 'verse' ? 'الآية' : 'من الآية'} {arNum(cursorVerse.basri)}</span>
+        )}
         <input type="range" min={0} max={Math.max(1, Math.round(player.duration * 100))} value={Math.round(player.time * 100)} onChange={(e) => player.seek(Number(e.target.value) / 100)} aria-label="موضع التشغيل" />
         <div className="speeds">
           {SPEEDS.map((sp) => (
@@ -189,6 +239,10 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
           <Icon name="repeat" size={18} />
           وضع الصدى
         </button>
+        <div className="segmented" role="group" aria-label="طريقة التشغيل" title="متواصل: يكمل السورة. آية آية: يقف بعد كل آية وتتابع أنت.">
+          <button aria-pressed={mode === 'continuous'} onClick={() => { updateSettings({ playMode: 'continuous' }); sfx('toggle'); }}>متواصل</button>
+          <button aria-pressed={mode === 'verse'} onClick={() => { updateSettings({ playMode: 'verse' }); sfx('toggle'); player.pause(); }} disabled={!align}>آية آية</button>
+        </div>
       </div>
 
       <div className="indicators">
@@ -221,6 +275,11 @@ export function FollowPage({ surah, go }: { surah: number; go: (hash: string) =>
           return (
             <div key={v.basri} ref={(el) => { verseRefs.current[vi] = el; }} className={`verse${active ? ' active' : ''}`} dir="rtl">
               <span className="ayah">
+                {va && (
+                  <button className={`verse-play${cursor === vi && !player.playing ? ' next' : ''}`} onClick={() => playFrom(vi)} aria-label={`شغّل من الآية ${arNum(v.basri)}`} title={`من الآية ${arNum(v.basri)}`}>
+                    <Icon name="play" size={14} />
+                  </button>
+                )}
                 {v.words.map((w, wi) => {
                   const on = pos?.verse === vi && pos.word === wi;
                   const isPicked = picked?.verse === vi && picked.word === wi;

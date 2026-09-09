@@ -100,6 +100,13 @@ the latest change). Recordings (record-and-compare takes and teacher clips) are
 shared the same way through `/__clips`, and the chosen reciter and the last sūrah
 opened travel with the settings.
 
+Away from home, the safe route is a private network between your devices, not a
+port opened on the internet (the app has no password and holds your progress and
+recordings). Install Tailscale on the Mac and the phone with the same account,
+run `tailscale serve --bg 7373` once on the Mac, and Settings → خارج شبكة البيت
+shows a real https address that works anywhere (microphone included, no
+certificate warning). The server detects Tailscale and its serve status itself.
+
 On the phone, "Add to Home Screen" gives it an icon and a full-screen window.
 Logs: `~/Library/Logs/nutq.log` (server) and `nutq-launcher.log`. Without the
 launcher, `cd app && npm start` builds and serves the same thing from the repo.
@@ -190,6 +197,10 @@ launcher, `cd app && npm start` builds and serves the same thing from the repo.
   muṣḥaf's own marks (approximate until the M4 rule tagger), and per-verse
   record-and-compare (teacher / me, waveform thumbnails, loop) stored in
   IndexedDB.
+- Follow-along remembers where each sūrah was left (per device, synced) and the
+  big play button continues from that verse; every verse has its own play button;
+  a switch at the top chooses continuous play or stopping at the end of each
+  verse (the next tap plays the next verse). Both live in the settings.
 - **المحاذاة** (`#/align/1`): the alignment editor. Waveform + zoom strip, Enter
   marks the next boundary at the playhead, silence detection proposes verse
   boundaries (one extra leading segment is taken as the istiʿādhah and kept
