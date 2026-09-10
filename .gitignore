@@ -7,3 +7,4 @@ dist/
 app/public/audio/*/
 .claude/
 app/.local/
+data/hafs_audio/

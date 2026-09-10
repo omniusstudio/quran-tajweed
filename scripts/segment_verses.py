@@ -19,6 +19,10 @@ ROOT = Path(__file__).resolve().parent.parent
 APP = ROOT / 'app'
 CFG = json.load(open(APP / 'src' / 'content' / 'reciters.json', encoding='utf-8'))
 MUSHAF = {s['number']: s for s in json.load(open(APP / 'src' / 'content' / 'mushaf.json', encoding='utf-8'))['surahs']}
+# rhythm prior: how long each verse takes in a Ḥafṣ recitation (scripts/fetch_timings.py)
+_T = ROOT / 'data' / 'timings_hafs.json'
+TIMINGS = json.load(open(_T, encoding='utf-8')) if _T.exists() else {}
+QURAN = json.load(open(ROOT / 'data' / 'quran.json', encoding='utf-8'))['data']
 PER = 50
 HARAKAT = set('ًٌٍَُِّْٰٕٖٜٟٓٔٗ٘ٙٚٛٝٞۖۗۘۙۚۛۜ۝۞ۣ۟۠ۡۢۤۥۦۧۨ۩۪ۭ۫۬')
 
@@ -146,6 +150,61 @@ def letters(word: str) -> int:
     return max(1, len([c for c in word if c not in HARAKAT]))
 
 
+def verse_weights(n: int, verses) -> list:
+    """Expected relative duration of each Baṣrī verse: from the Ḥafṣ per-verse timings when we have
+    them (each Baṣrī verse takes the time of the share of the sūrah's Ḥafṣ words it covers), else
+    from letter counts."""
+    t = TIMINGS.get(str(n))
+    if not t:
+        return [sum(letters(w) for w in v['words']) + 2 for v in verses]
+    import re as _re
+    _letters = _re.compile('[\u0621-\u064A\u0671]')
+    hafs = [dict(a) for a in QURAN['surahs'][n - 1]['ayahs']]
+    # real words only (the text carries pause marks as tokens); no basmalah (verse 1 of al-Fātiḥah
+    # in Ḥafṣ, a prefix of verse 1 elsewhere) since the Dūrī verses never include it
+    words_of = lambda text: [w for w in text.split() if _letters.search(w)]
+    if n == 1:
+        hafs = hafs[1:]
+    elif n != 9 and len(words_of(hafs[0]['text'])) >= 4:
+        hafs[0]['text'] = ' '.join(words_of(hafs[0]['text'])[4:])
+    by_ayah = {x['ayah']: x for x in t}
+    # a time function over the Ḥafṣ word stream: cumulative words → cumulative recited time
+    pts = [(0, 0.0)]
+    wcount = 0
+    for a in hafs:
+        nw = len(words_of(a['text']))
+        tm = by_ayah.get(a['numberInSurah'])
+        dur = ((tm['to'] - tm['from']) / 1000.0) if tm else 0.0
+        if tm and tm.get('words') and len(tm['words']) == nw:
+            for k, (w0, w1) in enumerate(tm['words']):
+                pts.append((wcount + k + 1, pts[-1][1] + max(0.05, (w1 - w0) / 1000.0)))
+        else:
+            for k in range(nw):
+                pts.append((wcount + k + 1, pts[-1][1] + max(0.05, dur / max(1, nw))))
+        wcount += nw
+    total_hw = wcount or 1
+
+    def time_at(frac):
+        x = frac * total_hw
+        lo = 0
+        for i in range(1, len(pts)):
+            if pts[i][0] >= x:
+                x0, t0 = pts[i - 1]
+                x1, t1 = pts[i]
+                return t0 + (t1 - t0) * ((x - x0) / (x1 - x0) if x1 > x0 else 0)
+            lo = i
+        return pts[-1][1]
+
+    total_dw = sum(len(v['words']) for v in verses) or 1
+    weights, acc = [], 0
+    for v in verses:
+        f0 = acc / total_dw
+        acc += len(v['words'])
+        f1 = acc / total_dw
+        weights.append(max(0.2, time_at(f1) - time_at(f0)))
+    return weights
+
+
 def build(reciter: str, n: int, mp3: Path):
     s = MUSHAF[n]
     x = pcm(mp3)
@@ -182,7 +241,7 @@ def build(reciter: str, n: int, mp3: Path):
     fine = segments(env, 0.15, 0.2, min_len=0.3) or segs
     sound = [(max(a, t0), b) for a, b in fine if b > t0]
     total_sound = sum(b - a for a, b in sound)
-    weights = [sum(letters(w) for w in v['words']) + 2 for v in s['verses']]
+    weights = verse_weights(n, s['verses'])
     W = sum(weights)
 
     def at_sound(frac):
@@ -242,7 +301,7 @@ def build(reciter: str, n: int, mp3: Path):
     out['verses'] = verses
     out['auto'] = True
     out['source'] = 'auto-verses'  # verse ends from pauses and letter proportion; words proportional
-    notes.append(f'{len(segs)} breaths, {len(fine)} pauses, {snapped}/{max(0, len(weights) - 1)} verse ends on a pause')
+    notes.append(f'{len(segs)} breaths, {len(fine)} pauses, {snapped}/{max(0, len(weights) - 1)} verse ends on a pause, {"timed" if TIMINGS.get(str(n)) else "letters"}')
     return out, ', '.join(notes)
 
 

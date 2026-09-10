@@ -121,13 +121,24 @@ launcher, `cd app && npm start` builds and serves the same thing from the repo.
   the text hidden (recorded), compare, then the learner decides "حفظتها" (the app
   never grades). Memorized runs come back for a recall after 1, 3, 7, 14 and 30
   days. State lives in the progress store and syncs between devices.
-- Both need verse boundaries in the recording. `scripts/segment_verses.py`
-  writes them for every cached sūrah of a reciter: the istiʿādhah and basmalah
-  are found by matching against al-Fātiḥah's hand-aligned ones, verse ends are
-  placed by letter proportion within each breath group and snapped to a nearby
-  pause; words are spread proportionally. Files are flagged `auto` and
-  `source: auto-verses` (يُراجع in the app) and never overwrite one placed by
-  hand (`source: hand`). Word alignment stays manual, as the brief asks.
+- Both need verse boundaries in the recording. Two scripts write them for every
+  cached sūrah of a reciter, and neither ever overwrites a file placed by hand
+  (`source: hand`); word alignment stays manual, as the brief asks.
+  - `scripts/segment_verses.py` (`source: auto-verses`): istiʿādhah and basmalah
+    found by matching against al-Fātiḥah's hand-aligned ones, verse ends spread
+    by a rhythm prior (Ḥafṣ per-verse timings from quran.com,
+    `scripts/fetch_timings.py`, else letter counts) and snapped to nearby
+    pauses. Fine for short sūrahs; drifts by many verses in long ones.
+  - `scripts/align_guided.py` (`source: hafs-dtw`): the Dūrī recording aligned
+    to Mishari al-ʿAfasy's Ḥafṣ recording of the same sūrah (whose verse
+    boundaries are known) by a banded global DTW on normalised MFCC + loudness
+    frames, so pauses meet pauses and every verse boundary is read off the path
+    and snapped to the recording's own pause. Reproduces the hand-aligned
+    al-Fātiḥah within 0.1 s. Accepted only when the path clearly finds the
+    recording's verse ends (`quality` in the file); otherwise the pause-based
+    file stays. Every automatic verse also carries a `safe` playback span
+    (previous verse start → next verse end) so playback never cuts a verse.
+    Ḥafṣ audio is cached in `data/hafs_audio/` (git-ignored).
 
 ### The daily wird
 
