@@ -415,7 +415,13 @@ def main():
         dest = outdir / f'{n:03d}.json'
         if dest.exists():
             old = json.load(open(dest, encoding='utf-8'))
-            if old.get('source') == 'hand': print(f'{n:3d}: hand-aligned, kept'); continue
+            if old.get('source') == 'hand':
+                # boundaries stay as placed by hand; only the hold (madd) spans come from the recogniser
+                out, info = build(rec, a.reciter, n, mp3, report_dir)
+                for k, v in old['verses'].items():
+                    if k in out['verses']: v['hold'] = out['verses'][k]['hold']
+                json.dump(old, open(dest, 'w', encoding='utf-8'), ensure_ascii=False, indent=0)
+                print(f'{n:3d}: hand-aligned, kept; hold spans added'); continue
         out, info = build(rec, a.reciter, n, mp3, report_dir)
         if out['quality']['matched'] < a.min_matched:
             print(f"{n:3d}: NOT WRITTEN, only {out['quality']['matched']:.0%} of words matched — see report; {info}"); continue
