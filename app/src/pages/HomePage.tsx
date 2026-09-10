@@ -7,6 +7,7 @@ import { useSettings } from '../ui/settings';
 import { Icon } from '../ui/icons';
 import { arNum } from './shared';
 import { VerseDrill } from './VerseDrill';
+import { DuaCard } from './DuaCard';
 import { challenges, currentChallenge, dueReviews, hifzState, versesMemorized } from '../content/hifz';
 import { todayPortion, wirdState, wirdStreak } from '../content/wird';
 
@@ -79,6 +80,7 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
 
   return (
     <div className="page home">
+      <DuaCard go={go} />
       <section className="today-panel">
         <div className="today-grid">
           <div>

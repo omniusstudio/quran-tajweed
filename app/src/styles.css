@@ -734,3 +734,14 @@ button.word { position: relative; }
 .wird-verse .num-btn:hover { background: var(--accent-soft); }
 .wird-verse.read .num-btn { color: var(--primary); }
 .wird input[type="time"] { font: inherit; min-height: 44px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+
+/* ---------- the daily supplication card ---------- */
+.dua-card { position: relative; margin-block-end: 16px; padding: 18px 20px 14px; border-radius: var(--radius-lg); border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line)); background: linear-gradient(160deg, var(--accent-soft), var(--surface) 70%); animation: fadeUp var(--dur-slow) var(--ease) both; }
+.dua-card::after { content: ''; position: absolute; inset: 6px; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: calc(var(--radius-lg) - 6px); pointer-events: none; }
+.dua-card > * { position: relative; z-index: 1; }
+.dua-card .eyebrow { display: block; text-align: center; }
+.dua-close { position: absolute; inset-block-start: 8px; inset-inline-start: 8px; z-index: 2; width: 40px; height: 40px; }
+.dua-text { text-align: center; font-size: calc(2rem * var(--quran-scale)); line-height: 2; margin: 6px 0 4px; }
+.dua-ref { text-align: center; margin: 0 0 10px; }
+.dua-actions { justify-content: center; }
+@media (min-width: 1024px) { .dua-card { padding: 24px 32px 18px; } .dua-text { font-size: calc(2.3rem * var(--quran-scale)); } }

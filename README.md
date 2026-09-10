@@ -143,6 +143,14 @@ from the pace, the streak forgives one missed day (two in a row end it), and an
 optional local reminder fires at a chosen time while the app is open. State
 syncs between devices (the reader further ahead sets the position).
 
+### Daily supplication card
+
+At the top of the home page: a Qur'anic duʿāʾ (one verse or a few), a new one each
+day from `app/src/content/duas.ts`, which holds references only (sūrah, Kūfī verse
+range, a key word) resolved against the bundled muṣḥaf; the test checks every
+reference lands on verses containing its key word. Playable in the reciter's
+voice, opens in follow-along, closable for the day.
+
 ### Interface (`app/src/ui/`)
 
 - `settings.ts`: local preferences (theme system/light/dark, interface sounds, haptics,
