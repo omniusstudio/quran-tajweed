@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { loadAlignment, locate, playSpan, type SurahAlign } from '../audio/alignment';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { loadAlignment, locate, playSpan, type SurahAlign, type VerseAlign } from '../audio/alignment';
 import { lettersOf } from '../audio/letters';
 import { audioContext, decode, drawWave, envelope, normalise } from '../audio/peaks';
 import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl } from '../audio/quran';
@@ -184,6 +184,24 @@ export function FollowPage({ surah, verse, go }: { surah: number; verse?: number
     }
   };
 
+  // The verse rows are memoised (al-Baqarah has 6,000 words; re-rendering them every animation frame
+  // made the highlight lag behind the voice), so they get stable handlers and a stable player API.
+  const actRef = useRef<RowActions>({ playFrom, tapWord, toggleBookmark, loopVerse });
+  actRef.current = { playFrom, tapWord, toggleBookmark, loopVerse };
+  const act = useMemo<RowActions>(
+    () => ({
+      playFrom: (vi) => actRef.current.playFrom(vi),
+      tapWord: (vi, wi) => actRef.current.tapWord(vi, wi),
+      toggleBookmark: (vi) => actRef.current.toggleBookmark(vi),
+      loopVerse: (vi) => actRef.current.loopVerse(vi),
+    }),
+    [],
+  );
+  const api = useMemo<PlayerApi>(
+    () => ({ audio: player.audio, pause: player.pause, setLoop: player.setLoop, playRange: player.playRange }),
+    [player.audio, player.pause, player.setLoop, player.playRange],
+  );
+
   // ---- indicators for the word being sounded, from the rule tagger ----
   const cur = pos ?? picked;
   const curTags: Tag[] = cur ? verseTags[cur.verse]?.[cur.word] ?? [] : [];
@@ -303,47 +321,27 @@ export function FollowPage({ surah, verse, go }: { surah: number; verse?: number
         {s.verses.map((v, vi) => {
           const va = align?.verses[vi];
           const active = pos?.verse === vi;
-          const looping = !!(va && player.loop && player.loop[0] === va.start && player.loop[1] === va.end);
           return (
-            <div key={v.basri} ref={(el) => { verseRefs.current[vi] = el; }} className={`verse${active ? ' active' : ''}${hereMarked(vi) ? (bookmark?.pinned ? ' marked pinned' : ' marked') : ''}`} dir="rtl">
-              {hereMarked(vi) && <span className="ribbon" title={bookmark?.pinned ? 'علامة مثبّتة' : 'هنا توقفت'}><Icon name="bookmark" size={16} /></span>}
-              <span className="ayah">
-                {va && (
-                  <button className={`verse-play${cursor === vi && !player.playing ? ' next' : ''}`} onClick={() => playFrom(vi)} aria-label={`شغّل من الآية ${arNum(v.basri)}`} title={`من الآية ${arNum(v.basri)}`}>
-                    <Icon name="play" size={14} />
-                  </button>
-                )}
-                {v.words.map((w, wi) => {
-                  const on = pos?.verse === vi && pos.word === wi;
-                  const isPicked = picked?.verse === vi && picked.word === wi;
-                  return (
-                    <span key={wi}>
-                      <button className={`word${on ? ' on' : ''}${isPicked ? ' picked' : ''}`} onClick={() => tapWord(vi, wi)} disabled={!va}>
-                        {w}
-                        {on && maddLen > 0 && (
-                          <span className="word-madd" aria-hidden>
-                            {Array.from({ length: maddLen }, (_, i) => (
-                              <i key={i} className={i < maddCount ? 'on' : ''} />
-                            ))}
-                            <b>{AR[maddLen]}</b>
-                          </span>
-                        )}
-                      </button>{' '}
-                    </span>
-                  );
-                })}
-                <span className="num">﴿{arNum(v.basri)}﴾</span>
-              </span>
-              <span className="verse-tools">
-                <button className="mini" onClick={() => toggleBookmark(vi)} aria-pressed={hereMarked(vi) && bookmark?.pinned} title="ثبّت العلامة هنا">
-                  <Icon name="bookmark" size={14} /> {hereMarked(vi) && bookmark?.pinned ? 'مثبّتة' : 'علامة'}
-                </button>
-                <button className="mini" onClick={() => loopVerse(vi)} aria-pressed={looping} disabled={!va}>
-                  {looping ? 'أوقف التكرار' : 'كرر الآية'}
-                </button>
-                <RecordCompare reciter={reciter} surah={s.number} basri={v.basri} span={va ? playSpan(va) : null} player={player} />
-              </span>
-            </div>
+            <VerseRow
+              key={v.basri}
+              v={v}
+              vi={vi}
+              va={va}
+              active={active}
+              onWord={active ? pos!.word : -1}
+              pickedWord={picked?.verse === vi ? picked.word : -1}
+              maddLen={active ? maddLen : 0}
+              maddCount={active ? maddCount : 0}
+              marked={hereMarked(vi)}
+              pinned={!!bookmark?.pinned}
+              looping={!!(va && player.loop && player.loop[0] === playSpan(va)[0] && player.loop[1] === playSpan(va)[1])}
+              next={cursor === vi && !player.playing}
+              reciter={reciter}
+              surah={s.number}
+              api={api}
+              act={act}
+              refs={verseRefs}
+            />
           );
         })}
         <p className="ref credit">{rec.credit}</p>
@@ -385,7 +383,77 @@ export function FollowPage({ surah, verse, go }: { surah: number; verse?: number
 }
 
 /** Record yourself reciting one verse, then switch instantly between the teacher and you. */
-function RecordCompare({ reciter, surah, basri, span, player }: { reciter: string; surah: number; basri: number; span: [number, number] | null; player: ReturnType<typeof usePlayer> }) {
+type PlayerApi = Pick<ReturnType<typeof usePlayer>, 'audio' | 'pause' | 'setLoop' | 'playRange'>;
+interface RowActions {
+  playFrom: (vi: number) => void;
+  tapWord: (vi: number, wi: number) => void;
+  toggleBookmark: (vi: number) => void;
+  loopVerse: (vi: number) => void;
+}
+
+/** One verse of the follow-along text. Memoised: only the verse being read (and the one just left) re-renders while the audio plays. */
+const VerseRow = memo(function VerseRow({ v, vi, va, active, onWord, pickedWord, maddLen, maddCount, marked, pinned, looping, next, reciter, surah, api, act, refs }: {
+  v: { basri: number; words: string[] };
+  vi: number;
+  va: VerseAlign | undefined;
+  active: boolean;
+  onWord: number;
+  pickedWord: number;
+  maddLen: number;
+  maddCount: number;
+  marked: boolean;
+  pinned: boolean;
+  looping: boolean;
+  next: boolean;
+  reciter: string;
+  surah: number;
+  api: PlayerApi;
+  act: RowActions;
+  refs: React.MutableRefObject<(HTMLDivElement | null)[]>;
+}) {
+  return (
+    <div ref={(el) => { refs.current[vi] = el; }} className={`verse${active ? ' active' : ''}${marked ? (pinned ? ' marked pinned' : ' marked') : ''}`} dir="rtl">
+      {marked && <span className="ribbon" title={pinned ? 'علامة مثبّتة' : 'هنا توقفت'}><Icon name="bookmark" size={16} /></span>}
+      <span className="ayah">
+        {va && (
+          <button className={`verse-play${next ? ' next' : ''}`} onClick={() => act.playFrom(vi)} aria-label={`شغّل من الآية ${arNum(v.basri)}`} title={`من الآية ${arNum(v.basri)}`}>
+            <Icon name="play" size={14} />
+          </button>
+        )}
+        {v.words.map((w, wi) => {
+          const on = onWord === wi;
+          return (
+            <span key={wi}>
+              <button className={`word${on ? ' on' : ''}${pickedWord === wi ? ' picked' : ''}`} onClick={() => act.tapWord(vi, wi)} disabled={!va}>
+                {w}
+                {on && maddLen > 0 && (
+                  <span className="word-madd" aria-hidden>
+                    {Array.from({ length: maddLen }, (_, i) => (
+                      <i key={i} className={i < maddCount ? 'on' : ''} />
+                    ))}
+                    <b>{AR[maddLen]}</b>
+                  </span>
+                )}
+              </button>{' '}
+            </span>
+          );
+        })}
+        <span className="num">﴿{arNum(v.basri)}﴾</span>
+      </span>
+      <span className="verse-tools">
+        <button className="mini" onClick={() => act.toggleBookmark(vi)} aria-pressed={marked && pinned} title="ثبّت العلامة هنا">
+          <Icon name="bookmark" size={14} /> {marked && pinned ? 'مثبّتة' : 'علامة'}
+        </button>
+        <button className="mini" onClick={() => act.loopVerse(vi)} aria-pressed={looping} disabled={!va}>
+          {looping ? 'أوقف التكرار' : 'كرر الآية'}
+        </button>
+        <RecordCompare reciter={reciter} surah={surah} basri={v.basri} span={va ? playSpan(va) : null} player={api} />
+      </span>
+    </div>
+  );
+});
+
+function RecordCompare({ reciter, surah, basri, span, player }: { reciter: string; surah: number; basri: number; span: [number, number] | null; player: PlayerApi }) {
   const key = `me/${reciter}/${surah}/${basri}`;
   const [mine, setMine] = useState<Blob | null>(null);
   const [recording, setRecording] = useState<{ stop: () => Promise<Blob> } | null>(null);
