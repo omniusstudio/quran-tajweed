@@ -15,7 +15,9 @@ How it works, in order:
   3. Muṣḥaf words the recogniser missed are placed by forced alignment inside the gap between
      their matched neighbours (local repair), and marked with low confidence.
   4. Verse ends are extended through the last word's sound to the pause. Word spans tile the
-     verse (each word keeps the pause after it, which is how the app highlights).
+     verse (each word keeps the pause after it, which is how the app highlights). Each word also
+     gets a `hold` span: the longest stretch between two of its letters, i.e. where the vowel is
+     held (the madd), so the app's madd counter runs with the actual elongation.
 Every sūrah also gets a report at data/ctc_reports/<reciter>/<NNN>.tsv: one line per word with
 the recognised text, similarity, probability and how it was placed.
 
@@ -126,7 +128,7 @@ def greedy_words(E: np.ndarray, inv: dict, blank: int, sep: int, spans=()):
     def flush():
         if cur:
             words.append({'text': ''.join(c for c, _, _ in cur), 't0': cur[0][1] * FT, 't1': (cur[-1][1] + 1) * FT,
-                          'p': float(np.exp(np.mean([lp for _, _, lp in cur])))})
+                          'p': float(np.exp(np.mean([lp for _, _, lp in cur]))), 'chars': [(c, i * FT) for c, i, _ in cur]})
             cur.clear()
     for i, t in enumerate(ids):
         if i in cut_at: flush(); last = blank
@@ -268,6 +270,10 @@ def build(rec: Recogniser, reciter: str, n: int, mp3: Path, report_dir: Path, ve
         if isinstance(j, int): return words[j]['text']
         if j[0] == 'split': return words[j[1]]['text'] + ('⌐' if j[2] == 0 else '¬')
         return words[j[0]]['text'] + '+' + words[j[1]]['text']
+    letters: list = [None] * len(ref)     # (char, t) spikes of the recognised word, for the hold (madd) span
+    for i, j in enumerate(assign):
+        if isinstance(j, int): letters[i] = words[j]['chars']
+        elif isinstance(j, tuple) and j[0] != 'split': letters[i] = words[j[0]]['chars'] + words[j[1]]['chars']
     for i, j in enumerate(assign):
         if isinstance(j, tuple) and j[0] == 'split':
             w = words[j[1]]; a, b = (i, i + 1) if j[2] == 0 else (i - 1, i)
@@ -308,8 +314,18 @@ def build(rec: Recogniser, reciter: str, n: int, mp3: Path, report_dir: Path, ve
             repeats.append({'at': round(words[j]['t0'], 2), 'heard': words[j]['text'], 'verse': g, 'word': idx})
 
     # assemble verses
+    def hold(p, ch):
+        """[a, b]: the longest gap between successive letters of the word (a madd, if the word has one), else None."""
+        if not ch or p[3] != 'rec': return None
+        ts = [t for _, t in ch] + [p[1]]
+        gaps = [(ts[m + 1] - ts[m], m) for m in range(len(ts) - 1)]
+        d, m = max(gaps)
+        return [round(ts[m], 2), round(ts[m + 1], 2)] if d >= 0.2 else None
+    holds = [hold(p, ch) for p, ch in zip(place, letters)]
     groups: dict = {}
-    for (g, idx, w), p in zip(ref, place): groups.setdefault(g, []).append(p)
+    gholds: dict = {}
+    for (g, idx, w), p, h in zip(ref, place, holds):
+        groups.setdefault(g, []).append(p); gholds.setdefault(g, []).append(h)
     out_verses, confs, ends_raw = {}, [], []
     s = MUSHAF[n]
     keys = [v['basri'] for v in s['verses']]
@@ -331,7 +347,7 @@ def build(rec: Recogniser, reciter: str, n: int, mp3: Path, report_dir: Path, ve
         wspans = [[round(bounds[m], 3), round(bounds[m + 1], 3)] for m in range(len(ps))]
         conf = float(np.mean([p[2] * (0.5 + 0.5 * p[4]) for p in ps]))
         confs.append(conf)
-        out_verses[str(k)] = {'start': wspans[0][0], 'end': wspans[-1][1], 'words': wspans,
+        out_verses[str(k)] = {'start': wspans[0][0], 'end': wspans[-1][1], 'words': wspans, 'hold': gholds[k],
                               'safe': [round(max(prev_end - 0.05, wspans[0][0] - 0.25), 3), round(min(nxt + 0.05, wspans[-1][1] + 0.25), 3)],
                               'conf': round(conf, 3)}
         prev_end = wspans[-1][1]

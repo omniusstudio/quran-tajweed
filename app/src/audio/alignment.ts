@@ -15,6 +15,9 @@ export interface VerseAlign {
   /** Playback span when the boundaries are estimates: widened to the nearest pause-backed
    *  boundaries, so the whole verse is heard (with a neighbour when needed) rather than cut. */
   safe?: Span;
+  /** Per word, where its vowel is held (the longest stretch between two letters, from the
+   *  recogniser's letter timings) — the madd counter runs over this; null when nothing is held. */
+  hold?: (Span | null)[];
 }
 
 export interface SurahAlign {
@@ -93,16 +96,16 @@ export function clearLocalAlignment(reciter: string, surah: number) {
 
 /** Export format keyed by sūrah / Baṣrī verse / word index, as the brief asks. */
 export function toExport(a: SurahAlign) {
-  const verses: Record<string, { start: number; end: number; words: Span[]; safe?: Span }> = {};
-  for (const v of a.verses) verses[String(v.basri)] = { start: v.start, end: v.end, words: v.words, ...(v.safe ? { safe: v.safe } : {}) };
+  const verses: Record<string, { start: number; end: number; words: Span[]; safe?: Span; hold?: (Span | null)[] }> = {};
+  for (const v of a.verses) verses[String(v.basri)] = { start: v.start, end: v.end, words: v.words, ...(v.safe ? { safe: v.safe } : {}), ...(v.hold ? { hold: v.hold } : {}) };
   return { version: 1, reciter: a.reciter, surah: a.surah, preamble: a.preamble, header: a.header, verses, auto: a.auto || undefined };
 }
 
 export function fromExport(obj: unknown): SurahAlign {
-  const o = obj as { version?: number; reciter: string; surah: number; preamble?: Span; header?: Span; verses: Record<string, { start: number; end: number; words: Span[]; safe?: Span }>; auto?: boolean };
+  const o = obj as { version?: number; reciter: string; surah: number; preamble?: Span; header?: Span; verses: Record<string, { start: number; end: number; words: Span[]; safe?: Span; hold?: (Span | null)[] }>; auto?: boolean };
   if (!o || typeof o.surah !== 'number' || !o.verses) throw new Error('ملف المحاذاة غير صالح');
   const verses = Object.entries(o.verses)
-    .map(([k, v]) => ({ basri: Number(k), start: v.start, end: v.end, words: v.words, ...(v.safe ? { safe: v.safe } : {}) }))
+    .map(([k, v]) => ({ basri: Number(k), start: v.start, end: v.end, words: v.words, ...(v.safe ? { safe: v.safe } : {}), ...(v.hold ? { hold: v.hold } : {}) }))
     .sort((x, y) => x.basri - y.basri);
   return { version: 1, reciter: o.reciter, surah: o.surah, preamble: o.preamble, header: o.header, verses, auto: o.auto ? true : undefined, source: (o as { source?: string }).source };
 }

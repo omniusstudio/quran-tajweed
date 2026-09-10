@@ -209,9 +209,18 @@ export function FollowPage({ surah, verse, go }: { surah: number; verse?: number
   const maddLen = maddTag?.length ?? 0;
   let maddCount = 0;
   if (align && pos && maddLen) {
-    const [a, b] = align.verses[pos.verse].words[pos.word];
-    const p = b > a ? (player.time - a) / (b - a) : 0;
-    maddCount = Math.min(maddLen, Math.ceil((Math.max(0, p - 0.3) / 0.7) * maddLen));
+    const v = align.verses[pos.verse];
+    const held = v.hold?.[pos.word];
+    if (held) {
+      // the recogniser told us where the vowel is held: count along it
+      const p = (player.time - held[0]) / Math.max(0.05, held[1] - held[0]);
+      maddCount = Math.max(0, Math.min(maddLen, Math.ceil(p * maddLen)));
+    } else {
+      // no letter timings (hand / older files): assume the hold is the later part of the word
+      const [a, b] = v.words[pos.word];
+      const p = b > a ? (player.time - a) / (b - a) : 0;
+      maddCount = Math.min(maddLen, Math.ceil((Math.max(0, p - 0.3) / 0.7) * maddLen));
+    }
   }
   const ghunnahRules = new Set(['ghunnah', 'idgham_ghunnah', 'ikhfa', 'iqlab', 'mim_ikhfa', 'mim_idgham']);
   const ghunnahOn = !!(player.playing && pos && curTags.some((t) => ghunnahRules.has(t.rule)));

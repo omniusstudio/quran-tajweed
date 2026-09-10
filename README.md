@@ -135,7 +135,7 @@ launcher, `cd app && npm start` builds and serves the same thing from the repo.
     file as a `repeat`, not smeared into drift; words the recogniser missed are
     placed by forced alignment inside the gap between their neighbours and
     carry low confidence. Word spans are trusted (the listen-and-pick exercise
-    uses them), every verse carries a `conf`, and each sūrah gets a report at
+    uses them), every word carries a `hold` span (the longest stretch between two of its letters, i.e. where the vowel is held, which times the madd counter), every verse carries a `conf`, and each sūrah gets a report at
     `data/ctc_reports/<reciter>/<NNN>.tsv` with one line per word (muṣḥaf word,
     what was heard, similarity, probability, how it was placed, time) so any
     boundary can be traced. Reproduces the hand-aligned al-Fātiḥah to a mean of
