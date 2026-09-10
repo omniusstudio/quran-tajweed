@@ -56,12 +56,13 @@ def segments(env: np.ndarray, min_gap: float, thr_ratio: float, min_len=0.6):
 
 
 def trim_end(env, start, end):
-    """Pull the end back to where the sound really stops (the gap threshold leaves a quiet tail)."""
+    """Pull the end back to where the sound really stops, gently: a soft last letter (a nasal مْ,
+    a whispered ه) sits low in the envelope and must not be cut."""
     i = int(end * PER) - 1
-    floor = 0.11
+    floor = 0.05
     while i > int(start * PER) and env[i] < floor:
         i -= 1
-    return round(min(end, (i + 1) / PER + 0.1), 2)
+    return round(min(end, (i + 1) / PER + 0.25), 2)
 
 
 def proportional(words, start, end):
@@ -198,21 +199,28 @@ def build(reciter: str, n: int, mp3: Path):
     cuts = []  # (end of verse k, start of verse k+1) for the interior boundaries
     acc = 0
     prev_end = sound[0][0]
+    cur_start = sound[0][0]
     for w in weights[:-1]:
         acc += w
         t = at_sound(acc / W)
-        tol = 0.35 * (w / W) * total_sound
+        expected = (w / W) * total_sound
+        tol = 0.35 * expected
         near = [g for g in gaps if abs(g[0] - t) <= tol or abs(g[1] - t) <= tol]
-        if near:
-            t_end, t_start = min(near, key=lambda g: min(abs(g[0] - t), abs(g[1] - t)))
-            snapped_here = True
-        else:
-            t_end = t_start = t
-            snapped_here = False
+        snapped_here = False
+        t_end = t_start = t
+        # snap to the nearest pause only if that keeps this verse a plausible length; a snap that
+        # squeezes it (a mid-verse breath picked as the boundary) is worse than the estimate
+        for g in sorted(near, key=lambda g: min(abs(g[0] - t), abs(g[1] - t))):
+            length = g[0] - cur_start
+            if 0.55 * expected <= length <= 1.6 * expected:
+                t_end, t_start = g
+                snapped_here = True
+                break
         t_end = max(t_end, prev_end + 0.2)
         t_start = max(t_start, t_end)
         cuts.append((t_end, t_start, snapped_here))
         prev_end = t_start
+        cur_start = t_start
     starts = [sound[0][0]] + [c[1] for c in cuts]
     ends = [c[0] for c in cuts] + [sound[-1][1]]
     verses = {}
@@ -220,7 +228,16 @@ def build(reciter: str, n: int, mp3: Path):
         a0, b0 = round(starts[k], 2), round(trim_end(env, starts[k], ends[k]), 2)
         if b0 <= a0:
             b0 = round(a0 + 0.3, 2)
-        verses[str(v['basri'])] = {'start': a0, 'end': b0, 'words': proportional(v['words'], a0, b0)}
+        # a safe span for playback (Mohammed's rule): these boundaries are estimates, so a verse is
+        # played from the start of the verse before it to the end of the verse after it; the verse
+        # itself is then always heard whole, at the cost of hearing its neighbours too
+        ja, jb = max(0, k - 1), min(len(weights) - 1, k + 1)
+        sa = round(max(0.0, starts[ja] - 0.15), 2)
+        sb = round(min(dur, trim_end(env, starts[jb], ends[jb]) + 0.25), 2)
+        entry = {'start': a0, 'end': b0, 'words': proportional(v['words'], a0, b0)}
+        if sa < a0 - 0.01 or sb > b0 + 0.01:
+            entry['safe'] = [sa, sb]
+        verses[str(v['basri'])] = entry
     snapped = sum(1 for c in cuts if c[2])
     out['verses'] = verses
     out['auto'] = True

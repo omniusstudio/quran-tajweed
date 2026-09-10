@@ -12,6 +12,9 @@ export interface VerseAlign {
   end: number;
   /** One span per word of the verse (same order as the muṣḥaf text). */
   words: Span[];
+  /** Playback span when the boundaries are estimates: widened to the nearest pause-backed
+   *  boundaries, so the whole verse is heard (with a neighbour when needed) rather than cut. */
+  safe?: Span;
 }
 
 export interface SurahAlign {
@@ -29,10 +32,16 @@ export interface SurahAlign {
   source?: string;
 }
 
-/** Where a verse sounds in the recording, from any alignment (verse ends are reliable enough to play). */
+/** Where a verse sounds in the recording, for playback: the safe (widened) span when the file has one. */
 export function verseSpan(reciter: string, surah: number, basri: number): Span | null {
   const v = loadAlignment(reciter, surah)?.verses.find((x) => x.basri === basri);
-  return v && v.end > v.start ? [v.start, v.end] : null;
+  if (!v || !(v.end > v.start)) return null;
+  return v.safe ?? [v.start, v.end];
+}
+
+/** Playback span for a verse entry (safe when present). */
+export function playSpan(v: VerseAlign): Span {
+  return v.safe ?? [v.start, v.end];
 }
 
 /** Where a word sounds: only from alignments whose words were placed by hand; script-made word spans are guesses. */
@@ -80,16 +89,16 @@ export function clearLocalAlignment(reciter: string, surah: number) {
 
 /** Export format keyed by sūrah / Baṣrī verse / word index, as the brief asks. */
 export function toExport(a: SurahAlign) {
-  const verses: Record<string, { start: number; end: number; words: Span[] }> = {};
-  for (const v of a.verses) verses[String(v.basri)] = { start: v.start, end: v.end, words: v.words };
+  const verses: Record<string, { start: number; end: number; words: Span[]; safe?: Span }> = {};
+  for (const v of a.verses) verses[String(v.basri)] = { start: v.start, end: v.end, words: v.words, ...(v.safe ? { safe: v.safe } : {}) };
   return { version: 1, reciter: a.reciter, surah: a.surah, preamble: a.preamble, header: a.header, verses, auto: a.auto || undefined };
 }
 
 export function fromExport(obj: unknown): SurahAlign {
-  const o = obj as { version?: number; reciter: string; surah: number; preamble?: Span; header?: Span; verses: Record<string, { start: number; end: number; words: Span[] }>; auto?: boolean };
+  const o = obj as { version?: number; reciter: string; surah: number; preamble?: Span; header?: Span; verses: Record<string, { start: number; end: number; words: Span[]; safe?: Span }>; auto?: boolean };
   if (!o || typeof o.surah !== 'number' || !o.verses) throw new Error('ملف المحاذاة غير صالح');
   const verses = Object.entries(o.verses)
-    .map(([k, v]) => ({ basri: Number(k), start: v.start, end: v.end, words: v.words }))
+    .map(([k, v]) => ({ basri: Number(k), start: v.start, end: v.end, words: v.words, ...(v.safe ? { safe: v.safe } : {}) }))
     .sort((x, y) => x.basri - y.basri);
   return { version: 1, reciter: o.reciter, surah: o.surah, preamble: o.preamble, header: o.header, verses, auto: o.auto ? true : undefined, source: (o as { source?: string }).source };
 }

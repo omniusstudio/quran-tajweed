@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { loadAlignment, type SurahAlign } from '../audio/alignment';
+import { loadAlignment, playSpan, type SurahAlign } from '../audio/alignment';
 import { decode, drawWave, envelope, normalise, audioContext } from '../audio/peaks';
 import { DEFAULT_RECITER, SURAH_BY_NUMBER, audioUrl } from '../audio/quran';
 import { getClip, putClip, startRecording } from '../audio/store';
@@ -18,8 +18,10 @@ import { arNum } from './shared';
 export function VerseDrill({ surah, verses, reciter = DEFAULT_RECITER, hideByDefault = false, clipKey, onRecorded }: { surah: number; verses: number[]; reciter?: string; hideByDefault?: boolean; clipKey: string; onRecorded?: () => void }) {
   const s = SURAH_BY_NUMBER[surah];
   const align: SurahAlign | undefined = loadAlignment(reciter, surah);
-  const spans = verses.map((b) => align?.verses.find((v) => v.basri === b)).filter(Boolean) as SurahAlign['verses'];
+  const entries = verses.map((b) => align?.verses.find((v) => v.basri === b)).filter(Boolean) as SurahAlign['verses'];
+  const spans = entries.map((v) => ({ ...v, start: playSpan(v)[0], end: playSpan(v)[1] }));
   const canPlay = spans.length === verses.length && spans.every((v) => v.end > v.start);
+  const widened = entries.some((v) => !!v.safe);
   const player = usePlayer(canPlay ? audioUrl(reciter, surah) : null);
   const [hidden, setHidden] = useState(hideByDefault);
   const [mine, setMine] = useState<Blob | null>(null);
@@ -163,7 +165,7 @@ export function VerseDrill({ surah, verses, reciter = DEFAULT_RECITER, hideByDef
       {problem && <p className="todo"><Icon name="alert" size={16} /> {problem}</p>}
       {player.loading !== null && <p className="ref">جارٍ جلب التلاوة من الإنترنت للمرة الأولى ({arNum(Math.round(player.loading * 100))}٪)…</p>}
       {!canPlay && <p className="ref"><Icon name="alert" size={16} /> لم تُحدَّد مواضع آيات هذه السورة في التسجيل بعد، فالسماع غير متاح لها؛ اقرأ وسجّل، وسيُضاف الصوت حين تُحاذى.</p>}
-      {align?.auto && canPlay && <p className="ref">حدود الآيات هنا تقديرية (يُراجع)؛ قد تسبق البداية أو تتأخر قليلاً.</p>}
+      {align?.auto && canPlay && <p className="ref">حدود الآيات هنا تقديرية (يُراجع){widened ? '؛ لذلك تُسمع معها الآية التي قبلها والتي بعدها حتى لا تُقطع' : ''}.</p>}
       {mine && (
         <div className="compare-panel">
           {canPlay && (

@@ -62,6 +62,7 @@ export function DuaCard({ go }: { go: (hash: string) => void }) {
         </button>
         {player.loading !== null && <span className="ref">جارٍ جلب التلاوة ({arNum(Math.round(player.loading * 100))}٪)…</span>}
         {!canPlay && <span className="ref">لا صوت لهذه السورة بعد</span>}
+        {canPlay && <span className="ref">تُسمع معها الآية التي قبلها والتي بعدها حتى لا تُقطع.</span>}
         <a className="crumb" href={`#/follow/${dua.ref.surah}/${dua.verses[0]}`} onClick={(e) => { e.preventDefault(); go(`#/follow/${dua.ref.surah}/${dua.verses[0]}`); }}>
           في المتابعة <Icon name="chevronLeft" size={14} />
         </a>

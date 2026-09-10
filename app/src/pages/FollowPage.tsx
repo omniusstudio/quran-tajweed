@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { loadAlignment, locate, type SurahAlign } from '../audio/alignment';
+import { loadAlignment, locate, playSpan, type SurahAlign } from '../audio/alignment';
 import { lettersOf } from '../audio/letters';
 import { audioContext, decode, drawWave, envelope, normalise } from '../audio/peaks';
 import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl } from '../audio/quran';
@@ -86,7 +86,8 @@ export function FollowPage({ surah, verse, go }: { surah: number; verse?: number
     if (!v) return;
     setCursor(vi);
     player.setLoop(null);
-    void player.playRange(v.start, v.end).then((ok) => ok && setCursor(Math.min(vi + 1, align.verses.length - 1)));
+    const [a, b] = playSpan(v);
+    void player.playRange(a, b).then((ok) => ok && setCursor(Math.min(vi + 1, align.verses.length - 1)));
   };
   /** Start from the beginning of a verse: through to the end in continuous mode, one verse otherwise. */
   const playFrom = (vi: number) => {
@@ -95,7 +96,7 @@ export function FollowPage({ surah, verse, go }: { surah: number; verse?: number
     if (mode === 'verse') return playVerse(vi);
     setCursor(vi);
     player.setLoop(null);
-    player.seek(align.verses[vi].start);
+    player.seek(playSpan(align.verses[vi])[0]);
     void player.play();
   };
   /** The big button: pause, or continue from the verse the learner is on. */
@@ -174,11 +175,11 @@ export function FollowPage({ surah, verse, go }: { surah: number; verse?: number
 
   const loopVerse = (vi: number) => {
     if (!align) return;
-    const v = align.verses[vi];
-    const same = player.loop && player.loop[0] === v.start && player.loop[1] === v.end;
-    player.setLoop(same ? null : [v.start, v.end]);
+    const [a, b] = playSpan(align.verses[vi]);
+    const same = player.loop && player.loop[0] === a && player.loop[1] === b;
+    player.setLoop(same ? null : [a, b]);
     if (!same) {
-      player.seek(v.start);
+      player.seek(a);
       void player.play();
     }
   };
@@ -340,7 +341,7 @@ export function FollowPage({ surah, verse, go }: { surah: number; verse?: number
                 <button className="mini" onClick={() => loopVerse(vi)} aria-pressed={looping} disabled={!va}>
                   {looping ? 'أوقف التكرار' : 'كرر الآية'}
                 </button>
-                <RecordCompare reciter={reciter} surah={s.number} basri={v.basri} span={va ? [va.start, va.end] : null} player={player} />
+                <RecordCompare reciter={reciter} surah={s.number} basri={v.basri} span={va ? playSpan(va) : null} player={player} />
               </span>
             </div>
           );
