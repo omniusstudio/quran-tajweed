@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { loadAlignment } from '../audio/alignment';
+import { loadAlignment, playSpan } from '../audio/alignment';
 import { DEFAULT_RECITER, audioUrl } from '../audio/quran';
 import type { Example } from '../content/lessons';
 import { linkTerms } from '../content/terms';
@@ -53,15 +53,16 @@ export function PlayVerse({ surah, basri }: { surah: number; basri: number }) {
   const v = a?.verses.find((x) => x.basri === basri);
   const audio = useRef<HTMLAudioElement | null>(null);
   if (!v || !(v.end > v.start)) return null;
+  const [from, to] = playSpan(v);
   const play = () => {
     if (!audio.current) {
       audio.current = new Audio(audioUrl(DEFAULT_RECITER, surah));
       (audio.current as HTMLAudioElement & { preservesPitch: boolean }).preservesPitch = true;
     }
     const el = audio.current;
-    el.currentTime = v.start;
+    el.currentTime = from;
     const stop = () => {
-      if (el.currentTime >= v.end) {
+      if (el.currentTime >= to) {
         el.pause();
         el.removeEventListener('timeupdate', stop);
       }
