@@ -28,7 +28,8 @@ export interface SurahAlign {
   verses: VerseAlign[];
   /** True when boundaries were guessed (silence detection / proportional split) and not yet checked. */
   auto?: boolean;
-  /** 'hand' when the words were placed by a person; 'auto-verses' when only verse ends were found by script. */
+  /** 'hand' when the words were placed by a person; 'ctc' from speech recognition (scripts/align_ctc.py);
+   *  'auto-verses' / 'hafs-dtw' when only verse ends were estimated by script. */
   source?: string;
 }
 
@@ -44,10 +45,13 @@ export function playSpan(v: VerseAlign): Span {
   return v.safe ?? [v.start, v.end];
 }
 
-/** Where a word sounds: only from alignments whose words were placed by hand; script-made word spans are guesses. */
+/** Sources whose word boundaries can be trusted: placed by hand, or read off a speech recogniser's letter timings. */
+export const WORD_SOURCES = new Set(['hand', 'ctc']);
+
+/** Where a word sounds: only from alignments with trustworthy words; older script-made word spans are guesses. */
 export function wordSpan(reciter: string, surah: number, basri: number, word: number): Span | null {
   const a = loadAlignment(reciter, surah);
-  if (!a || a.source === 'auto-verses') return null;
+  if (!a || (a.source && !WORD_SOURCES.has(a.source))) return null;
   const s = a.verses.find((x) => x.basri === basri)?.words[word];
   return s && s[1] > s[0] ? s : null;
 }

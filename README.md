@@ -121,9 +121,27 @@ launcher, `cd app && npm start` builds and serves the same thing from the repo.
   the text hidden (recorded), compare, then the learner decides "حفظتها" (the app
   never grades). Memorized runs come back for a recall after 1, 3, 7, 14 and 30
   days. State lives in the progress store and syncs between devices.
-- Both need verse boundaries in the recording. Two scripts write them for every
-  cached sūrah of a reciter, and neither ever overwrites a file placed by hand
-  (`source: hand`); word alignment stays manual, as the brief asks.
+- Both need verse boundaries in the recording. Three scripts can write them for
+  every cached sūrah of a reciter, and none ever overwrites a file placed by
+  hand (`source: hand`). The first is the one in use; the other two are kept as
+  fallbacks.
+  - `scripts/align_ctc.py` (`source: ctc`): speech recognition. The recording is
+    cut at every pause into breath groups, each is transcribed letter by letter
+    (with a time and probability per letter) by a Qur'an-tuned wav2vec2 CTC
+    model (`rabah2026/wav2vec2-large-xlsr-53-arabic-quran-v_final`, Apache-2.0,
+    trained on Ḥafṣ but recognising Noreen's Dūrī almost perfectly), and the
+    recognised words are matched to the muṣḥaf words by a banded sequence
+    alignment. A reciter going back a few words is detected and listed in the
+    file as a `repeat`, not smeared into drift; words the recogniser missed are
+    placed by forced alignment inside the gap between their neighbours and
+    carry low confidence. Word spans are trusted (the listen-and-pick exercise
+    uses them), every verse carries a `conf`, and each sūrah gets a report at
+    `data/ctc_reports/<reciter>/<NNN>.tsv` with one line per word (muṣḥaf word,
+    what was heard, similarity, probability, how it was placed, time) so any
+    boundary can be traced. Reproduces the hand-aligned al-Fātiḥah to a mean of
+    0.04 s. Needs `~/.venvs/nutq-align` (torch, torchaudio, transformers,
+    rapidfuzz, soundfile, librosa) and ffmpeg; al-Baqarah takes under two
+    minutes on an M-series Mac.
   - `scripts/segment_verses.py` (`source: auto-verses`): istiʿādhah and basmalah
     found by matching against al-Fātiḥah's hand-aligned ones, verse ends spread
     by a rhythm prior (Ḥafṣ per-verse timings from quran.com,

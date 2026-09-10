@@ -264,7 +264,7 @@ export function AlignPage({ surah, go }: { surah: number; go: (hash: string) => 
             </select>
           </label>
           <span className="ref">
-            {align.auto ? 'محاذاة تقديرية' : 'محاذاة يدوية'}
+            {align.auto ? (align.source === 'ctc' ? 'محاذاة آلية بالتعرّف على الكلام' : 'محاذاة تقديرية') : 'محاذاة يدوية'}
             {dirty ? ' — تغييرات غير محفوظة' : ''}
           </span>
         </div>
