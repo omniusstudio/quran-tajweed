@@ -4,7 +4,8 @@ sūrahs (al-Fātiḥah + juzʾ ʿAmma, `--v1`) as the first release shipped.
 
 Output app/src/content/mushaf.json:
   { "surahs": [ { "number": 1, "name": "...", "header": "بِسۡمِ ...",
-      "verses": [ { "basri": 1, "kufi": 2, "words": [...], "hafs": [Ḥafṣ word or null per word] } ] } ] }
+      "verses": [ { "basri": 1, "kufi": 2, "juz": 1, "q": 1 (ḥizb quarter 1–240), "page": 1,
+                    "words": [...], "hafs": [Ḥafṣ word or null per word] } ] } ] }
 
 The muṣḥaf text is copied verbatim (imālah rhombus U+06EA, tas-hīl U+06EC, small letters and
 all). Only al-Fātiḥah carries a title + basmalah entry numbered 1 in duri.json; it is split off
@@ -22,6 +23,8 @@ DURI = json.load(open(ROOT / 'data' / 'duri.json', encoding='utf-8'))
 Q = json.load(open(ROOT / 'data' / 'quran.json', encoding='utf-8'))['data']
 NAMES = {s['number']: s['name'] for s in Q['surahs']}
 CFG = json.load(open(ROOT / 'app' / 'src' / 'content' / 'reciters.json', encoding='utf-8'))
+# juzʾ / ḥizb-quarter / page of every Ḥafṣ ayah (AlQuran.cloud metadata), keyed by (sūrah, Kūfī number)
+META = {(s['number'], a['numberInSurah']): (a['juz'], a['hizbQuarter'], a['page']) for s in Q['surahs'] for a in s['ayahs']}
 
 ALL = '--v1' not in sys.argv
 numbers = sorted(int(k) for k in DURI) if ALL else CFG['v1Surahs']
@@ -42,6 +45,21 @@ for n in numbers:
         kufi = kufi_number(n, text)
         # `words` is the verse (join with spaces); the full string is not repeated to keep the bundle small
         verses.append({'basri': num, 'kufi': kufi, 'words': words, 'hafs': align_words(words, hafs_words(n, kufi) if kufi else [])})
+    # juzʾ / ḥizb quarter / page: by the verse's share of the sūrah's text, which is monotone (the
+    # per-verse Kūfī match above can slip on repeated phrases and is only used for the Ḥafṣ words)
+    hafs = Q['surahs'][n - 1]['ayahs']
+    hcum, acc = [], 0
+    for a in hafs:
+        acc += len(a['text'].split())
+        hcum.append(acc)
+    dtotal = sum(len(v['words']) for v in verses) or 1
+    acc = 0
+    for v in verses:
+        acc += len(v['words'])
+        frac = acc / dtotal
+        target = frac * hcum[-1]
+        k = next((i for i, c in enumerate(hcum) if c >= target - 1e-9), len(hcum) - 1)
+        v['juz'], v['q'], v['page'] = hafs[k]['juz'], hafs[k]['hizbQuarter'], hafs[k]['page']
     if header is None and n != 9 and BASMALAH:
         header = BASMALAH
     out['surahs'].append({'number': n, 'name': NAMES[n], 'header': header, 'verses': verses})

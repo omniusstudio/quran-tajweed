@@ -16,6 +16,7 @@ import { arNum } from './pages/shared';
 import { PracticePage } from './pages/PracticePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { HifzPage } from './pages/HifzPage';
+import { WirdPage } from './pages/WirdPage';
 import { SURAH_BY_NUMBER } from './audio/quran';
 import { BY_ID, CONTRAST_PAIRS } from './viewer/articulations';
 import { Celebrations } from './ui/celebrate';
@@ -29,6 +30,7 @@ type Route =
   | { tab: 'practice' }
   | { tab: 'settings' }
   | { tab: 'hifz' }
+  | { tab: 'wird' }
   | { tab: 'lessons'; id?: string }
   | { tab: 'letters'; id: string }
   | { tab: 'contrast'; id: string }
@@ -48,6 +50,7 @@ function parseHash(): Route {
   if (tab === 'practice') return { tab: 'practice' };
   if (tab === 'settings') return { tab: 'settings' };
   if (tab === 'hifz') return { tab: 'hifz' };
+  if (tab === 'wird') return { tab: 'wird' };
   if (tab === 'letters') return { tab: 'letters', id: id && BY_ID[id] ? id : 'qaf' };
   if (tab === 'contrast') return { tab: 'contrast', id: id && CONTRAST_PAIRS.some((p) => p.id === id) ? id : CONTRAST_PAIRS[0].id };
   if (tab === 'dictionary') return { tab: 'dictionary', id: id && RULES[id] ? id : undefined };
@@ -89,9 +92,10 @@ const NAV: NavItem[] = [
   { tab: 'home', label: 'الرئيسية', hash: '#/', icon: 'home' },
   { tab: 'lessons', label: 'الدروس', hash: '#/lessons', icon: 'book', covers: ['lessons', 'dictionary'] },
   { tab: 'letters', label: 'الحروف', hash: '#/letters/qaf', icon: 'face', covers: ['letters'] },
-  { tab: 'practice', label: 'التدريب', hash: '#/practice', icon: 'target', covers: ['practice', 'exercises', 'drills', 'follow', 'contrast', 'hifz'] },
+  { tab: 'practice', label: 'التدريب', hash: '#/practice', icon: 'target', covers: ['practice', 'exercises', 'drills', 'follow', 'contrast', 'hifz', 'wird'] },
 ];
 const MORE: NavItem[] = [
+  { tab: 'wird', label: 'الورد اليومي', hash: '#/wird', icon: 'calendar', hint: 'ربع أو حزب أو جزء كل يوم، حتى الختمة' },
   { tab: 'hifz', label: 'تحدي الحفظ', hash: '#/hifz', icon: 'star', hint: 'خمس آيات كل يوم، والمراجعة في وقتها' },
   { tab: 'reference', label: 'المرجع', hash: '#/reference', icon: 'library', hint: 'الدوري وحفص، الأصول والفرش' },
   { tab: 'dictionary', label: 'القاموس', hash: '#/dictionary', icon: 'dictionary', hint: 'كل مصطلح بتعريف بسيط' },
@@ -239,6 +243,7 @@ export default function App() {
         {route.tab === 'practice' && <PracticePage go={go} />}
         {route.tab === 'settings' && <SettingsPage go={go} />}
         {route.tab === 'hifz' && <HifzPage go={go} />}
+        {route.tab === 'wird' && <WirdPage go={go} />}
         {route.tab === 'lessons' && (route.id ? <LessonScreen ruleId={route.id} go={go} /> : <LessonsIndex go={go} />)}
         {route.tab === 'letters' && <LettersPage id={route.id} go={go} />}
         {route.tab === 'contrast' && <ContrastPage id={route.id} go={go} />}

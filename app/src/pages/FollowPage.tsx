@@ -13,6 +13,8 @@ import { Icon } from '../ui/icons';
 import { rewardRecording } from '../ui/rewards';
 import { sfx } from '../ui/sound';
 import { useSettings } from '../ui/settings';
+import { inPortionAhead, markRead, wirdState } from '../content/wird';
+import { rewardWird } from '../ui/rewards';
 import { micProblem } from '../audio/mic';
 
 const SPEEDS: { v: PlaySpeed; label: string }[] = [
@@ -59,6 +61,12 @@ export function FollowPage({ surah, verse, go }: { surah: number; verse?: number
   // remember where the learner is: on pause, and whenever the verse changes
   useEffect(() => {
     if (pos && pos.verse !== lastVerseRef.current) {
+      // the verse just finished counts toward today's wird when it lies inside the portion
+      const prev = lastVerseRef.current;
+      if (prev !== null && pos.verse > prev) {
+        const ref = { surah: s.number, basri: s.verses[prev].basri };
+        if (inPortionAhead(wirdState(), ref)) rewardWird(markRead(ref));
+      }
       lastVerseRef.current = pos.verse;
       if (mode === 'continuous') setCursor(pos.verse);
     }

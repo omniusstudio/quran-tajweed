@@ -8,6 +8,7 @@ import { Icon } from '../ui/icons';
 import { arNum } from './shared';
 import { VerseDrill } from './VerseDrill';
 import { challenges, currentChallenge, dueReviews, hifzState, versesMemorized } from '../content/hifz';
+import { todayPortion, wirdState, wirdStreak } from '../content/wird';
 
 const ORDER: string[] = SECTIONS.flatMap((s) => s.rules.map((r) => r.id));
 const DAY_NAMES = ['أحد', 'اثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
@@ -67,6 +68,9 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
   }, []);
   const verse = useMemo(verseOfDay, []);
   const hifz = hifzState(p);
+  const wird = wirdState(p);
+  const portion = todayPortion(wird);
+  const wirdStreakN = wirdStreak(wird);
   const challenge = currentChallenge(hifz);
   const reviewsDue = dueReviews(hifz).length;
   const allDone = done === ORDER.length;
@@ -152,6 +156,19 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
         </section>
 
         <div>
+          <section className="card wird-card">
+            <div className="section-head">
+              <h3><Icon name="calendar" size={20} /> وردك اليوم</h3>
+              {wirdStreakN > 0 && <span className="badge"><Icon name="flame" size={14} /> {arNum(wirdStreakN)}</span>}
+            </div>
+            <p className="challenge-title">{portion.title}</p>
+            {portion.segments.length > 0 && <p className="ref">{portion.segments.map((s) => `${s.surahName} ${arNum(s.from)}${s.to !== s.from ? `–${arNum(s.to)}` : ''}`).join(' · ')}</p>}
+            <span className="bar" aria-hidden><i style={{ transform: `scaleX(${portion.target ? portion.done / portion.target : 1})` }} /></span>
+            <div className="row wrap" style={{ marginBlockStart: 10 }}>
+              <button className="primary" onClick={() => go('#/wird')}><Icon name={portion.complete ? 'check' : 'book'} size={18} /> {portion.complete ? 'تم ورد اليوم' : 'اقرأ الورد'}</button>
+              <span className="ref">{arNum(portion.done)} / {arNum(portion.target)} {portion.target === 1 ? 'ربع' : 'أرباع'}</span>
+            </div>
+          </section>
           <section className="card challenge-card">
             <div className="section-head">
               <h3><Icon name="star" size={20} /> تحدي الحفظ اليومي</h3>

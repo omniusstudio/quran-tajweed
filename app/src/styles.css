@@ -719,3 +719,18 @@ button.word { position: relative; }
 .mushaf .verse.pinned .ribbon { background: var(--primary); }
 .mushaf .verse.marked { background: color-mix(in srgb, var(--accent-soft) 60%, transparent); }
 .mushaf .verse.marked.active { background: var(--primary-soft); }
+
+/* ---------- the daily wird ---------- */
+.wird-card { border-color: color-mix(in srgb, var(--primary) 35%, var(--line)); }
+.wird-card h3, .wird-today h3 { display: flex; align-items: center; gap: 8px; }
+.wird-card h3 .icon { color: var(--primary); }
+.wird-card .bar { display: block; margin-block-start: 8px; }
+.wird-today .bar { display: block; margin-block-start: 8px; }
+.wird-text { margin-block-start: 14px; border-block-start: 1px dashed var(--line); padding-block-start: 10px; }
+.wird-surah-name { font-family: var(--display); font-size: 1.3rem; text-align: center; margin: 12px 0 6px; color: var(--accent-strong); }
+.wird-run { font-size: calc(1.9rem * var(--quran-scale)); line-height: 2.1; text-align: justify; }
+.wird-verse.read { color: var(--muted); }
+.wird-verse .num-btn { font: inherit; color: var(--accent-strong); background: none; border: none; padding: 0 2px; border-radius: 8px; cursor: pointer; transition: background var(--dur) var(--ease); }
+.wird-verse .num-btn:hover { background: var(--accent-soft); }
+.wird-verse.read .num-btn { color: var(--primary); }
+.wird input[type="time"] { font: inherit; min-height: 44px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }

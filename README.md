@@ -129,6 +129,20 @@ launcher, `cd app && npm start` builds and serves the same thing from the repo.
   `source: auto-verses` (يُراجع in the app) and never overwrite one placed by
   hand (`source: hand`). Word alignment stays manual, as the brief asks.
 
+### The daily wird
+
+`#/wird` (`app/src/content/wird.ts`): a reading habit on the muṣḥaf's own
+divisions. Every verse in the bundle carries its juzʾ, ḥizb quarter (1–240) and
+page, derived from the Ḥafṣ metadata by the verse's share of the sūrah's text.
+The portion is the next quarter / half / ḥizb / juzʾ from wherever the reader is
+(never calendar-bound; Ramadan mode = a juzʾ a day). Reading it in the page and
+tapping "قرأت حتى هنا" on a verse number, or listening along in follow-along,
+both advance it; "أتممت الورد" jumps to the end. The day's portion earns 5
+points, a finished juzʾ and a khatm are celebrated, the khatm date is projected
+from the pace, the streak forgives one missed day (two in a row end it), and an
+optional local reminder fires at a chosen time while the app is open. State
+syncs between devices (the reader further ahead sets the position).
+
 ### Interface (`app/src/ui/`)
 
 - `settings.ts`: local preferences (theme system/light/dark, interface sounds, haptics,

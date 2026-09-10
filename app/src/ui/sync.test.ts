@@ -9,7 +9,7 @@ describe('state merge between devices', () => {
     const phone: P = { done: { c: true }, days: { '2026-09-09': { lessons: 1, answers: 6, correct: 5, drills: 1 }, '2026-09-08': { lessons: 1, answers: 0, correct: 0, drills: 0 } }, last: 'c', updatedAt: 20 };
     const m = mergeProgress(mac, phone) as P;
     expect(Object.keys(m.done).sort()).toEqual(['a', 'b', 'c']);
-    expect(m.days['2026-09-09']).toEqual({ lessons: 2, answers: 6, correct: 5, drills: 1, challenges: 0 });
+    expect(m.days['2026-09-09']).toEqual({ lessons: 2, answers: 6, correct: 5, drills: 1, challenges: 0, wird: 0 });
     expect(m.days['2026-09-08'].lessons).toBe(1);
     expect(m.last).toBe('c');
     expect(m.updatedAt).toBe(20);

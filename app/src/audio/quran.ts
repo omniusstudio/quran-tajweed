@@ -4,6 +4,10 @@ import recitersJson from '../content/reciters.json';
 export interface Verse {
   basri: number;
   kufi: number | null;
+  /** Juzʾ (1–30), ḥizb quarter (1–240) and muṣḥaf page (1–604) of the Ḥafṣ ayah this verse maps to. */
+  juz: number | null;
+  q: number | null;
+  page: number | null;
   words: string[];
   /** Ḥafṣ counterpart per word (null when unaligned). */
   hafs: (string | null)[];

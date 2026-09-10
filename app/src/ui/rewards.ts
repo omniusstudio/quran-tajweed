@@ -55,6 +55,28 @@ export function rewardAnswer(ok: boolean, run: number) {
   }
 }
 
+/** The wird moved on: points for the day's portion, a celebration for a juzʾ or a khatm. */
+export function rewardWird(ev: { advanced: boolean; dayCompleted: boolean; juzCompleted: number | null; khatm: boolean }) {
+  if (!ev.advanced) return;
+  if (ev.khatm) {
+    logActivity('wird');
+    celebrate({ kind: 'section', title: 'ختمة مباركة', text: 'ختمت المصحف كله. يبدأ الورد من جديد من الفاتحة.' });
+    return;
+  }
+  if (ev.dayCompleted) {
+    const { before, after } = logActivity('wird');
+    if (ev.juzCompleted) {
+      celebrate({ kind: 'section', title: `أتممت الجزء ${arNum(ev.juzCompleted)}`, text: 'وردك اليوم تام أيضاً.' });
+      return;
+    }
+    if (checkGoal(before, after)) return;
+    sfx('complete');
+    celebrate({ kind: 'lesson', title: 'وردك اليوم تام' });
+    return;
+  }
+  if (ev.juzCompleted) celebrate({ kind: 'section', title: `أتممت الجزء ${arNum(ev.juzCompleted)}` });
+}
+
 /** The learner recorded themselves in a drill or the follow-along mode. */
 export function rewardRecording() {
   const { before, after } = logActivity('drill');
