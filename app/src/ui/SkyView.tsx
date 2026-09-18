@@ -147,9 +147,23 @@ export function SkyView({ times, now, place, nextKey }: { times: Record<PrayerKe
     return { x: X(a.az + (b.az - a.az) * f), y: Y(a.alt + (b.alt - a.alt) * f), alt: a.alt + (b.alt - a.alt) * f };
   };
   const path = pts.map((p, i) => `${i ? 'L' : 'M'}${X(p.az).toFixed(1)} ${Y(p.alt).toFixed(1)}`).join(' ');
+  /** How far along the drawn line (0 … 1 of its length) a moment is: the shine runs from the line's start to the sun. */
+  const along = (time: number) => {
+    let total = 0, upTo = 0;
+    const target = onPath(time);
+    for (let i = 1; i < pts.length; i++) {
+      const dx = X(pts[i].az) - X(pts[i - 1].az), dy = Y(pts[i].alt) - Y(pts[i - 1].alt);
+      const seg = Math.hypot(dx, dy);
+      if (pts[i].t <= time) upTo += seg;
+      else if (pts[i - 1].t < time) upTo += Math.hypot(target.x - X(pts[i - 1].az), target.y - Y(pts[i - 1].alt));
+      total += seg;
+    }
+    return { total, upTo };
+  };
   const inWindow = now.getTime() >= pts[0].t && now.getTime() <= pts[pts.length - 1].t;
   const sun = inWindow ? onPath(now.getTime()) : null;
   const tint = sunTint(sun?.alt ?? 30);
+  const run = sun ? along(now.getTime()) : { total: 0, upTo: 0 };
   const horizonGlow = sun ? Math.max(0, 1 - Math.abs(sun.alt - 1) / 11) : 0;
 
   const moon = moonState(now, place);
@@ -191,6 +205,12 @@ export function SkyView({ times, now, place, nextKey }: { times: Record<PrayerKe
       <path d={path} className="sky-path under" />
       <g clipPath="url(#sky-above)">
         <path d={path} className="sky-path" />
+        {sun && sun.alt > 0 && (
+          <g className="sky-shine" style={{ '--to': `${(-run.upTo).toFixed(1)}px`, '--gap': `${(run.total * 2).toFixed(0)}px` } as React.CSSProperties}>
+            <path d={path} className="tail" />
+            <path d={path} className="head" />
+          </g>
+        )}
         {moonUp && (
           <g transform={`translate(${X(maz).toFixed(1)} ${Y(moon.alt).toFixed(1)})`}>
             <MoonDisc r={9} lit={moon.lit} waxing={moon.waxing} south={south} id="sky-moon" />
