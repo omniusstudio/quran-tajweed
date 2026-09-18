@@ -30,7 +30,7 @@ export interface Settings {
   /** Days to add to the computed (Umm al-Qura) Hijri date, to follow a local moon sighting: -2 … 2. */
   hijriOffset?: number;
   /** Where prayer times are computed for. */
-  place?: { lat: number; lon: number; name?: string };
+  place?: { lat: number; lon: number; name?: string; /** IANA zone the times are shown in; absent = the device's */ tz?: string };
   /** Calculation method (see server/prayer.mjs METHODS) and the ʿaṣr shadow rule. */
   prayerMethod?: string;
   asrMethod?: 'standard' | 'hanafi';

@@ -1,13 +1,19 @@
 // Prayer times for the place in the settings (computed locally by server/prayer.mjs).
-import { METHODS, PRAYERS, PRAYER_NAMES, nextPrayer, prayerTimes } from '../../server/prayer.mjs';
+import { METHODS, PRAYERS, PRAYER_NAMES, deviceTz, nextPrayer, placeTz as zoneOf, timesAt, tzOffsetMinutes } from '../../server/prayer.mjs';
 import { getSettings, type Settings } from '../ui/settings';
 
-export { METHODS, PRAYERS, PRAYER_NAMES };
+export { METHODS, PRAYERS, PRAYER_NAMES, tzOffsetMinutes };
 export type PrayerKey = 'fajr' | 'sunrise' | 'dhuhr' | 'asr' | 'maghrib' | 'isha';
+
+export const DEVICE_TZ: string = deviceTz();
+
+export function placeTz(s: Settings = getSettings()): string {
+  return zoneOf(s.place);
+}
 
 export function timesFor(date = new Date(), s: Settings = getSettings()): Record<PrayerKey, Date> | null {
   if (!s.place) return null;
-  return prayerTimes(date, s.place, { method: s.prayerMethod, asr: s.asrMethod }) as Record<PrayerKey, Date>;
+  return timesAt(date, s.place, { method: s.prayerMethod, asr: s.asrMethod }) as Record<PrayerKey, Date>;
 }
 
 export function next(now = new Date(), s: Settings = getSettings()): { key: PrayerKey; at: Date } | null {
@@ -15,9 +21,11 @@ export function next(now = new Date(), s: Settings = getSettings()): { key: Pray
   return nextPrayer(now, s.place, { method: s.prayerMethod, asr: s.asrMethod }) as { key: PrayerKey; at: Date } | null;
 }
 
-export function clock(d: Date): string {
-  const h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, '0');
+/** A time on the clock of the place (not of the device). */
+export function clock(d: Date, tz: string = placeTz()): string {
+  const p = new Intl.DateTimeFormat('en-US-u-nu-latn', { timeZone: tz, hourCycle: 'h23', hour: 'numeric', minute: '2-digit' }).formatToParts(d);
+  const h = Number(p.find((x) => x.type === 'hour')?.value);
+  const m = p.find((x) => x.type === 'minute')?.value ?? '00';
   const AR = '٠١٢٣٤٥٦٧٨٩';
   return `${h % 12 === 0 ? 12 : h % 12}:${m}`.replace(/\d/g, (c) => AR[Number(c)]) + (h < 12 ? ' ص' : ' م');
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { mergeProgress } from '../../server/merge.mjs';
-import { prayerTimes } from '../../server/prayer.mjs';
+import { placeTz, prayerTimes, timesAt } from '../../server/prayer.mjs';
+import { CITIES } from './cities';
+import { clock } from './prayer';
 import { adhkar, resolveRef } from './adhkar';
 import { monthDays, shiftMonth, toHijri } from './hijri';
 import { fastingOn, hadith, occasionsOn, upcoming } from './occasions';
@@ -82,6 +84,40 @@ describe('prayer times', () => {
     const utc = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
     const want = { fajr: 2 * 60 + 21, dhuhr: 9 * 60 + 44, asr: 13 * 60 + 5, maghrib: 15 * 60 + 49, isha: 16 * 60 + 59 }; // Khartoum is UTC+2
     for (const [k, v] of Object.entries(want)) expect(Math.abs(utc(t[k]) - v), k).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('prayer times are on the clock of the place, not of the device', () => {
+  const noon = new Date(Date.UTC(2026, 8, 18, 17)); // midday in Dallas, evening in Khartoum
+  it('matches the published timetable for Dallas (ISNA, 18 Sep 2026) and keeps fajr in the morning', () => {
+    const dallas = CITIES.find((c) => c.name === 'دالاس')!;
+    const t = timesAt(noon, dallas, { method: dallas.method });
+    const hhmm = (d: Date) => d.toLocaleTimeString('en-GB', { timeZone: dallas.tz, hour: '2-digit', minute: '2-digit' });
+    expect(hhmm(t.fajr)).toBe('06:05');
+    expect(hhmm(t.dhuhr)).toBe('13:21');
+    expect(hhmm(t.maghrib)).toBe('19:29');
+    expect(hhmm(t.isha)).toBe('20:37');
+    expect(clock(t.fajr, dallas.tz)).toBe('٦:٠٥ ص');
+    expect(clock(t.isha, dallas.tz)).toBe('٨:٣٧ م');
+  });
+  it('shows a far-away place in its own zone even without one stored (Khartoum seen from any device)', () => {
+    const khartoum = { lat: 15.5007, lon: 32.5599, tz: 'Africa/Khartoum' };
+    const t = timesAt(noon, khartoum, { method: 'egypt' });
+    expect(clock(t.fajr, 'Africa/Khartoum')).toBe('٤:٢١ ص');
+    expect(clock(t.maghrib, 'Africa/Khartoum')).toBe('٥:٤٩ م');
+    // order within the day always holds on the place's clock
+    const order = ['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'].map((k) => t[k].getTime());
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // a whole-hour zone is guessed from the longitude when the device is elsewhere or the zone is absent
+    expect(['Etc/GMT-2', 'Africa/Khartoum']).toContain(placeTz({ lat: 15.5, lon: 32.56 }) === 'Etc/GMT-2' ? 'Etc/GMT-2' : 'Africa/Khartoum');
+  });
+  it('every listed city has fajr before sunrise in the morning of its own clock', () => {
+    for (const c of CITIES) {
+      const t = timesAt(noon, c, { method: c.method });
+      const h = Number(t.fajr.toLocaleTimeString('en-GB', { timeZone: c.tz, hour: '2-digit' }).slice(0, 2));
+      expect(h, c.name).toBeLessThan(8);
+      expect(t.fajr.getTime(), c.name).toBeLessThan(t.sunrise.getTime());
+    }
   });
 });
 

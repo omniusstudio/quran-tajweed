@@ -88,11 +88,45 @@ export function prayerTimes(date, place, opts = {}) {
   return out;
 }
 
+/** Minutes east of UTC for an IANA zone at an instant. */
+export function tzOffsetMinutes(tz, at = new Date()) {
+  const p = new Intl.DateTimeFormat('en-US-u-nu-latn', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }).formatToParts(at);
+  const g = (t) => Number(p.find((x) => x.type === t).value);
+  return Math.round((Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute')) - at.getTime()) / 60000);
+}
+
+export const deviceTz = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+/**
+ * The zone a place's times are shown in: the one stored with the place; else the device's zone when
+ * the place is near the device's own meridian ("here"); else the whole-hour zone of its longitude.
+ */
+export function placeTz(place, at = new Date()) {
+  if (!place) return deviceTz();
+  if (place.tz) return place.tz;
+  const solar = place.lon / 15;
+  if (Math.abs(tzOffsetMinutes(deviceTz(), at) / 60 - solar) <= 2.5) return deviceTz();
+  const h = Math.round(solar);
+  return h === 0 ? 'Etc/UTC' : `Etc/GMT${h > 0 ? '-' : '+'}${Math.abs(h)}`; // POSIX sign: Etc/GMT-2 is UTC+2
+}
+
+/** The calendar day it is at the place, as a Date whose local fields carry that day. */
+export function placeDay(at, tz, addDays = 0) {
+  const p = new Intl.DateTimeFormat('en-US-u-nu-latn', { timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric' }).formatToParts(at);
+  const g = (t) => Number(p.find((x) => x.type === t).value);
+  return new Date(g('year'), g('month') - 1, g('day') + addDays);
+}
+
+/** Today's times at the place (its own calendar day, wherever the device is). */
+export function timesAt(now, place, opts) {
+  return prayerTimes(placeDay(now, placeTz(place, now)), place, opts);
+}
+
 /** The next prayer after `now`: { key, at } (looks into tomorrow after ʿishāʾ). */
 export function nextPrayer(now, place, opts) {
+  const tz = placeTz(place, now);
   for (let add = 0; add < 2; add++) {
-    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + add);
-    const t = prayerTimes(day, place, opts);
+    const t = prayerTimes(placeDay(now, tz, add), place, opts);
     for (const k of PRAYERS) if (t[k] > now) return { key: k, at: t[k] };
   }
   return null;

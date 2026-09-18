@@ -19,7 +19,7 @@ import { dirname, extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { mergeState } from './merge.mjs';
-import { PRAYERS, PRAYER_NAMES, nextPrayer, prayerTimes } from './prayer.mjs';
+import { PRAYERS, PRAYER_NAMES, nextPrayer, timesAt } from './prayer.mjs';
 
 const APP = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(APP, 'dist');
@@ -174,7 +174,7 @@ function adhanTick() {
   const { place, opts, adhan } = adhanSettings();
   if (!place || !adhan.enabled) return;
   const now = new Date();
-  const times = prayerTimes(now, place, opts);
+  const times = timesAt(now, place, opts);
   for (const k of PRAYERS) {
     if (adhan.prayers && adhan.prayers[k] === false) continue;
     const late = now - times[k];

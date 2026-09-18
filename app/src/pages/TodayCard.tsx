@@ -6,6 +6,7 @@ import { upcoming } from '../content/occasions';
 import { PRAYER_NAMES, clock, next as nextPrayer, timesFor, type PrayerKey } from '../content/prayer';
 import { logActivity, useProgress } from '../content/progress';
 import { celebrate } from '../ui/celebrate';
+import { AdhanPlay } from '../ui/AdhanPlay';
 import { Icon } from '../ui/icons';
 import { useSettings } from '../ui/settings';
 import { sfx } from '../ui/sound';
@@ -61,18 +62,19 @@ export function DayStrip({ go }: { go: (hash: string) => void }) {
         </button>
       ) : null}
       {times && nxt ? (
-        <button className="day-prayer" onClick={() => go('#/settings')} aria-label="أوقات الصلاة">
-          <div className="np">
+        <div className="day-prayer">
+          <button className="np" onClick={() => go('#/settings')} aria-label="أوقات الصلاة: افتح الإعدادات">
             <small>الصلاة القادمة</small>
             <strong>{PRAYER_NAMES[nxt.key]} {clock(nxt.at)}</strong>
-            <small>بعد {countdown(nxt.at.getTime() - now.getTime())}</small>
-          </div>
+            <small>بعد {countdown(nxt.at.getTime() - now.getTime())}{settings.place?.name ? ` · ${settings.place.name.split('،')[0]}` : ''}</small>
+          </button>
           <div className="prayer-row compact">
             {(['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as PrayerKey[]).map((k) => (
               <span key={k} className={k === nxt.key ? 'next' : ''}><small>{PRAYER_NAMES[k]}</small>{clock(times[k])}</span>
             ))}
           </div>
-        </button>
+          <AdhanPlay className="mini adhan-play" onMissing={() => go('#/settings')} />
+        </div>
       ) : (
         <button className="day-prayer empty" onClick={() => go('#/settings')}>
           <Icon name="mapPin" size={20} />
