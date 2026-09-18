@@ -29,11 +29,13 @@ export function MoonDisc({ r, lit, waxing, south = false, id = 'm', halo = true 
           <stop offset="1" stopColor="#dfe9ff" stopOpacity="0" />
         </radialGradient>
         <clipPath id={`${id}-clip`}><path d={litPath} transform={`scale(${flip} 1)`} /></clipPath>
+        <clipPath id={`${id}-disc`}><circle r={r} /></clipPath>
+        <filter id={`${id}-soft`} x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation={r * 0.06} /></filter>
       </defs>
       {halo && <circle r={r * 3.4} fill={`url(#${id}-halo)`} />}
       <circle r={r} fill="#0b1422" opacity=".55" />
       <circle r={r} fill="#cdd6e6" opacity=".10" />
-      <g clipPath={`url(#${id}-clip)`}>
+      <g clipPath={`url(#${id}-disc)`}><g filter={`url(#${id}-soft)`}><g clipPath={`url(#${id}-clip)`}>
         <circle r={r} fill={`url(#${id}-lit)`} />
         <g fill="#8d8a7c" opacity=".26">
           <circle cx={-r * 0.3} cy={-r * 0.32} r={r * 0.2} />
@@ -42,15 +44,73 @@ export function MoonDisc({ r, lit, waxing, south = false, id = 'm', halo = true 
           <circle cx={r * 0.46} cy={r * 0.46} r={r * 0.11} />
           <circle cx={-r * 0.52} cy={r * 0.1} r={r * 0.1} />
         </g>
-      </g>
+      </g></g></g>
     </g>
   );
 }
 
+/** The sun's colours by height: pale gold overhead, deep orange with a red rim near the horizon. */
 function sunTint(alt: number) {
-  if (alt < 6) return { core: '#ffe2bd', edge: '#ff9b52', glow: '#ff7e3d' };
-  if (alt < 22) return { core: '#fff1cc', edge: '#ffc267', glow: '#ffae4a' };
-  return { core: '#fffbea', edge: '#ffe08a', glow: '#ffd36b' };
+  if (alt < 7) return { heart: '#fff0b8', body: '#ffc15e', limb: '#f26522', rim: '#d73a4d', glow: '#ff7e3d' };
+  if (alt < 24) return { heart: '#fffbd0', body: '#ffe48a', limb: '#fb8a2a', rim: '#ee5a2a', glow: '#ffae4a' };
+  return { heart: '#fffef0', body: '#fff3a8', limb: '#ffb347', rim: '#ff8a3c', glow: '#ffd36b' };
+}
+
+const BOIL = [
+  { a: 0, d: 1.7, r: 12.6, t: 17 }, { a: 52, d: 2.1, r: 12.2, t: -23 }, { a: 118, d: 1.5, r: 12.8, t: 29 }, { a: 171, d: 2.3, r: 12.0, t: -19 },
+  { a: 233, d: 1.8, r: 12.5, t: 31 }, { a: 287, d: 2.0, r: 12.3, t: -27 }, { a: 324, d: 1.4, r: 12.9, t: 21 },
+];
+const RAYS = Array.from({ length: 16 }, (_, i) => ({ a: i * 22.5, len: i % 4 === 0 ? 34 : i % 2 === 0 ? 26 : 18 }));
+
+/**
+ * A sun that looks like one: a pale heart darkening to an orange limb, a rim of fire around it whose
+ * edge slowly boils (blurred discs circling a little off-centre), long soft rays, and a wide bloom.
+ */
+function Sun({ alt }: { alt: number }) {
+  const c = sunTint(alt);
+  const high = Math.min(1, Math.max(0, (alt - 3) / 20)); // rays and bloom fade out as the sun gets low
+  return (
+    <g className="sky-sun">
+      <defs>
+        <radialGradient id="sun-body" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stopColor={c.heart} />
+          <stop offset=".46" stopColor={c.body} />
+          <stop offset=".88" stopColor={c.limb} />
+          <stop offset="1" stopColor={c.limb} stopOpacity=".0" />
+        </radialGradient>
+        <radialGradient id="sun-bloom">
+          <stop offset="0" stopColor={c.glow} stopOpacity=".62" />
+          <stop offset=".22" stopColor={c.glow} stopOpacity=".26" />
+          <stop offset=".55" stopColor={c.glow} stopOpacity=".07" />
+          <stop offset="1" stopColor={c.glow} stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="sun-ray" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor={c.glow} stopOpacity=".55" />
+          <stop offset="1" stopColor={c.glow} stopOpacity="0" />
+        </linearGradient>
+        <filter id="sun-soft" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="1.5" /></filter>
+        <filter id="sun-softer" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="2.6" /></filter>
+      </defs>
+      <circle r="78" fill="url(#sun-bloom)" className="bloom" />
+      <g className="rays" opacity={0.12 + 0.34 * high} filter="url(#sun-soft)">
+        {RAYS.map((r) => (
+          <path key={r.a} d={`M14 -2.2 L${14 + r.len} 0 L14 2.2 Z`} fill="url(#sun-ray)" transform={`rotate(${r.a})`} />
+        ))}
+      </g>
+      <circle r="16.5" fill={c.rim} opacity=".5" filter="url(#sun-softer)" />
+      <g filter="url(#sun-soft)">
+        {BOIL.map((b, i) => (
+          <g key={i} transform={`rotate(${b.a})`}>
+            <g className="boil" style={{ animationDuration: `${Math.abs(b.t)}s`, animationDirection: b.t < 0 ? 'reverse' : 'normal' }}>
+              <circle cx={b.d} r={b.r} fill={c.limb} />
+            </g>
+          </g>
+        ))}
+      </g>
+      <circle r="12.4" fill="url(#sun-body)" />
+      <circle r="5.5" fill={c.heart} opacity=".55" filter="url(#sun-soft)" />
+    </g>
+  );
 }
 
 export function SkyView({ times, now, place, nextKey }: { times: Record<PrayerKey, Date>; now: Date; place: { lat: number; lon: number }; nextKey: PrayerKey | null }) {
@@ -121,16 +181,6 @@ export function SkyView({ times, now, place, nextKey }: { times: Record<PrayerKe
           <stop offset="1" stopColor="#fff" stopOpacity="0" />
         </linearGradient>
         <mask id="sky-fade"><rect x="0" y="-60" width={W} height={H + 120} fill="url(#sky-sides)" /></mask>
-        <radialGradient id="sky-sun-core">
-          <stop offset="0" stopColor="#ffffff" />
-          <stop offset=".55" stopColor={tint.core} />
-          <stop offset="1" stopColor={tint.edge} />
-        </radialGradient>
-        <radialGradient id="sky-sun-halo">
-          <stop offset="0" stopColor={tint.glow} stopOpacity=".55" />
-          <stop offset=".35" stopColor={tint.glow} stopOpacity=".18" />
-          <stop offset="1" stopColor={tint.glow} stopOpacity="0" />
-        </radialGradient>
         <radialGradient id="sky-horizon-glow">
           <stop offset="0" stopColor={tint.glow} stopOpacity=".6" />
           <stop offset="1" stopColor={tint.glow} stopOpacity="0" />
@@ -147,13 +197,12 @@ export function SkyView({ times, now, place, nextKey }: { times: Record<PrayerKe
           </g>
         )}
         {sun && (
-          <g transform={`translate(${sun.x.toFixed(1)} ${sun.y.toFixed(1)})`} className="sky-sun">
-            <circle r="46" fill="url(#sky-sun-halo)" className="halo" />
-            <circle r="9.5" fill="url(#sky-sun-core)" />
+          <g transform={`translate(${sun.x.toFixed(1)} ${sun.y.toFixed(1)})`}>
+            <Sun alt={sun.alt} />
           </g>
         )}
       </g>
-      {sun && horizonGlow > 0 && <ellipse cx={sun.x} cy={yH} rx="92" ry="17" fill="url(#sky-horizon-glow)" opacity={horizonGlow} />}
+      {sun && horizonGlow > 0 && <ellipse cx={sun.x} cy={yH} rx="120" ry="20" fill="url(#sky-horizon-glow)" opacity={horizonGlow} />}
 
       {/* the ground, a small skyline, and the horizon */}
       <g mask="url(#sky-fade)"><rect x="0" y={yH} width={W} height={H - yH} fill="url(#sky-ground)" /></g>
@@ -163,7 +212,7 @@ export function SkyView({ times, now, place, nextKey }: { times: Record<PrayerKe
       {(['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'] as PrayerKey[]).map((k) => {
         const p = onPath(times[k].getTime());
         const past = times[k].getTime() <= now.getTime();
-        return <circle key={k} cx={p.x} cy={p.y} r={k === 'sunrise' ? 2 : k === nextKey ? 5 : 3.2} className={`sky-bead${k === nextKey ? ' next' : ''}${past ? ' past' : ''}${p.alt < -2 ? ' below' : ''}${k === 'sunrise' ? ' minor' : ''}`} />;
+        return <circle key={k} cx={p.x} cy={p.y} r={k === 'sunrise' ? 1.6 : k === nextKey ? 3.6 : 2.6} className={`sky-bead${k === nextKey ? ' next' : ''}${past ? ' past' : ''}${p.alt < -2 ? ' below' : ''}${k === 'sunrise' ? ' minor' : ''}`} />;
       })}
     </svg>
   );

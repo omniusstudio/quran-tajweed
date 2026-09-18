@@ -946,8 +946,12 @@ button.word { position: relative; }
 .sky-bead.past { fill: var(--gold); }
 .sky-bead.below { opacity: .55; }
 .sky-bead.minor { stroke-width: 1; opacity: .6; }
-.sky-bead.next { fill: var(--cream); stroke-width: 2; opacity: 1; animation: ambPulse 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-.sky-sun .halo { animation: ambBreathe 6s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+.sky-bead.next { fill: var(--sky-a); stroke: var(--cream); stroke-width: 1.8; opacity: 1; animation: ambPulse 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.sky-sun .bloom { animation: sunBloom 7s ease-in-out infinite alternate; transform-origin: 0 0; }
+.sky-sun .rays { animation: sunTurn 160s linear infinite; transform-origin: 0 0; }
+.sky-sun .boil { animation: sunTurn 20s linear infinite; transform-origin: 0 0; }
+@keyframes sunTurn { to { transform: rotate(360deg); } }
+@keyframes sunBloom { from { transform: scale(.94); opacity: .85; } to { transform: scale(1.06); opacity: 1; } }
 .amb-moon { display: flex !important; align-items: center; gap: 6px; margin-block-start: 2px; }
 .amb-arcwrap { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: clamp(8px, 1.4vw, 22px); }
 .amb-next { display: grid; justify-items: start; gap: 0; text-align: start; padding-block-end: 8%; }
