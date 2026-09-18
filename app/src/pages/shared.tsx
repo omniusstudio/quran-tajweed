@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { loadAlignment, playSpan } from '../audio/alignment';
 import { DEFAULT_RECITER, audioUrl } from '../audio/quran';
 import type { Example } from '../content/lessons';
@@ -9,6 +9,7 @@ import { ArticulationViewer } from '../viewer/ArticulationViewer';
 import { Controls } from '../viewer/Controls';
 import { useClock } from '../viewer/useClock';
 import { Icon } from '../ui/icons';
+import { hadith } from '../content/occasions';
 
 const AR_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 export const arNum = (n: number | null | undefined) => (n == null ? '—' : String(n).replace(/\d/g, (d) => AR_DIGITS[Number(d)]));
@@ -119,5 +120,55 @@ export function LetterViewer({ id, autoplay = true }: { id: string; autoplay?: b
       <ArticulationViewer art={art} t={clock.t} />
       <Controls clock={clock} />
     </div>
+  );
+}
+
+
+/** ▶ for a run of verses (Baṣrī numbers) in the reciter's voice; the same button stops it. Renders nothing without an alignment. */
+export function PlayRange({ surah, verses, reciter = DEFAULT_RECITER, label = 'اسمع' }: { surah: number; verses: number[]; reciter?: string; label?: string }) {
+  const a = loadAlignment(reciter, surah);
+  const first = a?.verses.find((x) => x.basri === verses[0]);
+  const last = a?.verses.find((x) => x.basri === verses[verses.length - 1]);
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => () => audio.current?.pause(), []);
+  if (!first || !last || !(last.end > first.start)) return null;
+  const from = playSpan(first)[0];
+  const to = playSpan(last)[1];
+  const toggle = () => {
+    if (!audio.current) {
+      const el = new Audio(audioUrl(reciter, surah));
+      (el as HTMLAudioElement & { preservesPitch: boolean }).preservesPitch = true;
+      el.addEventListener('timeupdate', () => { if (el.currentTime >= to) el.pause(); });
+      el.addEventListener('pause', () => setPlaying(false));
+      el.addEventListener('play', () => setPlaying(true));
+      audio.current = el;
+    }
+    const el = audio.current;
+    if (!el.paused) return el.pause();
+    el.currentTime = from;
+    void el.play();
+  };
+  return (
+    <button className="play-chip" onClick={toggle} aria-pressed={playing}>
+      <span className="dot"><Icon name={playing ? 'pause' : 'play'} size={12} /></span>
+      {playing ? 'إيقاف' : label}
+    </button>
+  );
+}
+
+/** A hadith passage with its source; passages not checked against an edition carry the يُراجع badge. */
+export function HadithQuote({ id }: { id: string }) {
+  const h = hadith(id);
+  if (!h) return null;
+  return (
+    <blockquote className="hadith">
+      <p>{h.text}</p>
+      <footer>
+        {h.source}
+        {h.grade ? ` · ${h.grade}` : ''}
+        {h.review && <span className="badge review">يُراجع</span>}
+      </footer>
+    </blockquote>
   );
 }

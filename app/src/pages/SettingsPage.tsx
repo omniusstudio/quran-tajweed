@@ -5,6 +5,7 @@ import { useSettings, type Settings, type Theme, type Motion } from '../ui/setti
 import { sfx } from '../ui/sound';
 import { onSyncStatus, syncNow, syncStatus } from '../ui/sync';
 import { arNum } from './shared';
+import { PrayerSettings } from './PrayerSettings';
 
 function Segment<T extends string | number>({ value, options, onChange }: { value: T; options: { v: T; label: string; icon?: IconName }[]; onChange: (v: T) => void }) {
   return (
@@ -242,6 +243,8 @@ export function SettingsPage({ go }: { go: (hash: string) => void }) {
           <Segment<number> value={s.dailyGoal} onChange={(v) => set('dailyGoal', v)} options={[{ v: 5, label: arNum(5) }, { v: 10, label: arNum(10) }, { v: 20, label: arNum(20) }]} />
         </div>
       </div>
+
+      <PrayerSettings />
 
       <PhoneAccess />
       <AwayAccessFromLan />

@@ -8,6 +8,7 @@ import { Icon } from '../ui/icons';
 import { arNum } from './shared';
 import { VerseDrill } from './VerseDrill';
 import { DuaCard } from './DuaCard';
+import { DayStrip, TodayChecklist } from './TodayCard';
 import { challenges, currentChallenge, dueReviews, hifzState, versesMemorized } from '../content/hifz';
 import { todayPortion, wirdState, wirdStreak } from '../content/wird';
 
@@ -80,6 +81,7 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
 
   return (
     <div className="page home">
+      <DayStrip go={go} />
       <DuaCard go={go} />
       <section className="today-panel">
         <div className="today-grid">
@@ -132,6 +134,7 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
       </section>
 
       <div className="home-grid">
+        <TodayChecklist go={go} />
         <section className="journey-card span">
           <div className="section-head">
             <h3>رحلة الدروس</h3>

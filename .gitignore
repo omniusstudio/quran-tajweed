@@ -8,3 +8,4 @@ app/public/audio/*/
 .claude/
 app/.local/
 data/hafs_audio/
+data/hadith_cache/

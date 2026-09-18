@@ -180,6 +180,42 @@ range, a key word) resolved against the bundled muṣḥaf; the test checks ever
 reference lands on verses containing its key word. Playable in the reciter's
 voice, opens in follow-along, closable for the day.
 
+### The day: Hijri calendar, checklist, adhkār, prayer times and the adhān
+
+- **Hijri calendar** (`#/calendar`, `content/hijri.ts`, `content/occasions.ts`): the date comes
+  from the browser's own Umm al-Qura calendar (`Intl`), with a ±2-day adjustment for a local
+  sighting. `occasionsOn()` says what a day is (the two ʿĪds, tashrīq, ʿArafah, the ten days,
+  ʿĀshūrāʾ and Tāsūʿāʾ, Ramaḍān and the odd nights of its last ten, six of Shawwāl, Shaʿbān,
+  Muḥarram, the white days, Monday and Thursday, Friday), whether it is fasted, what to do, and
+  which hadith say why. Days whose observance is disputed are left out on purpose.
+- **Hadith wording is never typed by hand.** `scripts/fetch_hadith.py` cuts each passage out of
+  the Arabic editions of the open hadith-api dataset (by collection, number, first and last words)
+  into `content/hadith.json` with its source line. The one narration outside those collections
+  (al-Kahf on Friday) is typed in `occasions.ts` and carries the يُراجع badge. The "what to do"
+  lines are common practice stated briefly: `TODO(scholar)`.
+- **Daily checklist** (`content/daily.ts`, home page): morning adhkār, the wird, the memorization
+  challenge, the practice goal, evening adhkār, al-Mulk and the sleep adhkār; al-Kahf and ṣalawāt
+  on Friday; the day's fast when there is one (voluntary fasts do not block completion). Items the
+  app can see tick themselves; the rest are ticked by hand, each with its hadith behind the quote
+  button. Ticks live in the progress store (`todos`, latest change per item wins in the merge), so
+  they sync. Completing the list is worth 5 points and has its own streak. An evening reminder
+  fires in the app and, from the local server, as a macOS notification with the app closed.
+- **Adhkār** (`#/adhkar/<morning|evening|sleep|waking>`): wording exactly as in Ḥiṣn al-Muslim,
+  fetched by `scripts/fetch_adhkar.py` into `content/adhkar.json`; Qur'anic items are references
+  into the muṣḥaf, shown in the Dūrī text and playable in the reciter's voice. A tap counter per
+  dhikr; finishing a list ticks the checklist.
+- **Prayer times** (`server/prayer.mjs`, shared by the app and the server, no dependencies):
+  standard solar formulas, seven calculation methods, both ʿaṣr rules, a middle-of-the-night rule
+  for high latitudes. Checked against a published timetable in `day.test.ts`. The place is set once
+  (geolocation on the Mac, or typed) and syncs to the other devices; it never leaves them.
+- **Adhān**: the launchd server checks every 15 s and plays the learner's own recording with
+  `afplay` at each enabled prayer (a separate fajr recording is optional), app open or closed, plus
+  a notification. The recording is uploaded from Settings (`PUT /__adhan/file?slot=adhan|fajr`,
+  kept in `.local/adhan/`); `POST /__adhan/test` and `/__adhan/stop`. On a phone the page plays
+  the same file while it is open. No recording ships with the app.
+- **Bookmark button**: the header, the sidebar and the top of the home page jump to the saved
+  follow-along verse.
+
 ### Interface (`app/src/ui/`)
 
 - `settings.ts`: local preferences (theme system/light/dark, interface sounds, haptics,

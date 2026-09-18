@@ -1,0 +1,97 @@
+import { describe, expect, it } from 'vitest';
+import { mergeProgress } from '../../server/merge.mjs';
+import { prayerTimes } from '../../server/prayer.mjs';
+import { adhkar, resolveRef } from './adhkar';
+import { monthDays, shiftMonth, toHijri } from './hijri';
+import { fastingOn, hadith, occasionsOn, upcoming } from './occasions';
+
+describe('Hijri calendar', () => {
+  it('converts known dates (Umm al-Qura)', () => {
+    expect(toHijri(new Date(2026, 8, 18))).toEqual({ year: 1448, month: 4, day: 7 });
+    expect(toHijri(new Date(2026, 2, 20))).toMatchObject({ month: 10, day: 1 }); // ʿĪd al-Fiṭr 1447
+    expect(toHijri(new Date(2026, 4, 27))).toMatchObject({ month: 12, day: 10 }); // ʿĪd al-Aḍḥā 1447
+  });
+  it('follows a local sighting through the offset', () => {
+    const d = new Date(2026, 8, 18);
+    expect(toHijri(d, 1).day).toBe(8);
+    expect(toHijri(d, -1).day).toBe(6);
+  });
+  it('lists a whole month of 29 or 30 days starting on day 1, and moves between months', () => {
+    const days = monthDays(new Date(2026, 8, 18));
+    expect(days[0].hijri.day).toBe(1);
+    expect([29, 30]).toContain(days.length);
+    expect(days.every((d) => d.hijri.month === 4)).toBe(true);
+    expect(toHijri(shiftMonth(new Date(2026, 8, 18), 1)).month).toBe(5);
+    expect(toHijri(shiftMonth(new Date(2026, 8, 18), -1)).month).toBe(3);
+  });
+});
+
+describe('occasions', () => {
+  it('marks the two ʿĪds and the days of tashrīq as days that are not fasted, even on a Monday', () => {
+    for (const h of [{ year: 1447, month: 10, day: 1 }, { year: 1447, month: 12, day: 10 }, { year: 1447, month: 12, day: 12 }]) {
+      const list = occasionsOn(h, 1);
+      expect(fastingOn(list)).toBe('forbidden');
+      expect(list.some((o) => o.id === 'monday')).toBe(false);
+    }
+  });
+  it('knows ʿArafah, ʿĀshūrāʾ, the white days, Monday, Thursday and Friday', () => {
+    expect(occasionsOn({ year: 1447, month: 12, day: 9 }, 2)[0].id).toBe('arafah');
+    expect(occasionsOn({ year: 1448, month: 1, day: 10 }, 2)[0].id).toBe('ashura');
+    expect(occasionsOn({ year: 1448, month: 4, day: 14 }, 2).map((o) => o.id)).toContain('white');
+    expect(occasionsOn({ year: 1448, month: 4, day: 7 }, 1).map((o) => o.id)).toEqual(['monday']);
+    expect(occasionsOn({ year: 1448, month: 4, day: 7 }, 5).map((o) => o.id)).toEqual(['friday']);
+    expect(occasionsOn({ year: 1447, month: 12, day: 13 }, 2).map((o) => o.id)).not.toContain('white'); // 13 Dhū al-Ḥijjah is tashrīq
+  });
+  it('makes Ramaḍān obligatory and flags the odd nights of the last ten the evening before', () => {
+    expect(fastingOn(occasionsOn({ year: 1447, month: 9, day: 5 }, 1))).toBe('obligatory');
+    expect(occasionsOn({ year: 1447, month: 9, day: 26 }, 3).map((o) => o.id)).toContain('qadr'); // the night of the 27th
+    expect(occasionsOn({ year: 1447, month: 9, day: 27 }, 4).map((o) => o.id)).not.toContain('qadr');
+  });
+  it('points every occasion at hadith passages that exist', () => {
+    for (let m = 1; m <= 12; m++) for (let d = 1; d <= 30; d++) for (let w = 0; w < 7; w++) {
+      for (const o of occasionsOn({ year: 1448, month: m, day: d }, w)) for (const id of o.hadith) expect(hadith(id), `${o.id}: ${id}`).toBeTruthy();
+    }
+  });
+  it('lists what is coming, nearest first, each once', () => {
+    const up = upcoming(new Date(2026, 1, 10), 60);
+    expect(up.map((u) => u.occasion.id)).toContain('ramadan');
+    expect(new Set(up.map((u) => u.occasion.id)).size).toBe(up.length);
+    expect(up.every((u, i) => i === 0 || u.inDays >= up[i - 1].inDays)).toBe(true);
+  });
+});
+
+describe('adhkār', () => {
+  it('splits the morning and evening lists and resolves the Qur’anic items against the muṣḥaf', () => {
+    const morning = adhkar('morning');
+    const evening = adhkar('evening');
+    expect(morning.length).toBeGreaterThan(18);
+    expect(morning.some((d) => d.when === 'evening')).toBe(false);
+    expect(evening.some((d) => d.when === 'morning')).toBe(false);
+    const kursi = resolveRef(morning[0].quran![0])!;
+    expect(kursi.text).toContain('هُوَ');
+    expect(kursi.text.split(' ').length).toBe(50);
+    expect(kursi.verses).toHaveLength(1);
+    expect(resolveRef({ surah: 112 })!.verses).toEqual([1, 2, 3, 4]);
+    expect(adhkar('sleep').length).toBeGreaterThan(8);
+  });
+});
+
+describe('prayer times', () => {
+  it('matches a published timetable within two minutes (Khartoum, Egyptian method, 18 Sep 2026)', () => {
+    const t = prayerTimes(new Date(2026, 8, 18), { lat: 15.5007, lon: 32.5599 }, { method: 'egypt' });
+    const utc = (d: Date) => d.getUTCHours() * 60 + d.getUTCMinutes();
+    const want = { fajr: 2 * 60 + 21, dhuhr: 9 * 60 + 44, asr: 13 * 60 + 5, maghrib: 15 * 60 + 49, isha: 16 * 60 + 59 }; // Khartoum is UTC+2
+    for (const [k, v] of Object.entries(want)) expect(Math.abs(utc(t[k]) - v), k).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('checklist merge', () => {
+  it('lets the latest tick or untick of an item win on either device', () => {
+    const a = { done: {}, days: {}, todos: { '2026-09-18': { adhkar_morning: { d: 1, at: 10 }, sleep: { d: 1, at: 10 } } } };
+    const b = { done: {}, days: {}, todos: { '2026-09-18': { sleep: { d: 0, at: 20 }, adhkar_evening: { d: 1, at: 5 } } } };
+    const m = mergeProgress(a, b) as { todos: Record<string, Record<string, { d: number }>> };
+    expect(m.todos['2026-09-18'].adhkar_morning.d).toBe(1);
+    expect(m.todos['2026-09-18'].sleep.d).toBe(0);
+    expect(m.todos['2026-09-18'].adhkar_evening.d).toBe(1);
+  });
+});

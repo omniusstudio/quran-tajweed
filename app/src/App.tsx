@@ -17,6 +17,10 @@ import { PracticePage } from './pages/PracticePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { HifzPage } from './pages/HifzPage';
 import { WirdPage } from './pages/WirdPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { AdhkarPage } from './pages/AdhkarPage';
+import { setForNow, type AdhkarSet } from './content/adhkar';
+import { AdhanBanner } from './ui/AdhanBanner';
 import { SURAH_BY_NUMBER } from './audio/quran';
 import { BY_ID, CONTRAST_PAIRS } from './viewer/articulations';
 import { Celebrations } from './ui/celebrate';
@@ -31,6 +35,8 @@ type Route =
   | { tab: 'settings' }
   | { tab: 'hifz' }
   | { tab: 'wird' }
+  | { tab: 'calendar' }
+  | { tab: 'adhkar'; set: AdhkarSet }
   | { tab: 'lessons'; id?: string }
   | { tab: 'letters'; id: string }
   | { tab: 'contrast'; id: string }
@@ -51,6 +57,8 @@ function parseHash(): Route {
   if (tab === 'settings') return { tab: 'settings' };
   if (tab === 'hifz') return { tab: 'hifz' };
   if (tab === 'wird') return { tab: 'wird' };
+  if (tab === 'calendar') return { tab: 'calendar' };
+  if (tab === 'adhkar') return { tab: 'adhkar', set: (['morning', 'evening', 'sleep', 'waking'] as const).includes(id as AdhkarSet) ? (id as AdhkarSet) : setForNow() };
   if (tab === 'letters') return { tab: 'letters', id: id && BY_ID[id] ? id : 'qaf' };
   if (tab === 'contrast') return { tab: 'contrast', id: id && CONTRAST_PAIRS.some((p) => p.id === id) ? id : CONTRAST_PAIRS[0].id };
   if (tab === 'dictionary') return { tab: 'dictionary', id: id && RULES[id] ? id : undefined };
@@ -95,6 +103,8 @@ const NAV: NavItem[] = [
   { tab: 'practice', label: 'التدريب', hash: '#/practice', icon: 'target', covers: ['practice', 'exercises', 'drills', 'follow', 'contrast', 'hifz', 'wird'] },
 ];
 const MORE: NavItem[] = [
+  { tab: 'calendar', label: 'التقويم الهجري', hash: '#/calendar', icon: 'crescent', hint: 'الأعياد وأيام الصيام، ولماذا، وماذا تفعل' },
+  { tab: 'adhkar', label: 'الأذكار', hash: '#/adhkar', icon: 'sunrise', hint: 'الصباح والمساء والنوم والاستيقاظ، بعدّاد' },
   { tab: 'wird', label: 'الورد اليومي', hash: '#/wird', icon: 'calendar', hint: 'ربع أو حزب أو جزء كل يوم، حتى الختمة' },
   { tab: 'hifz', label: 'تحدي الحفظ', hash: '#/hifz', icon: 'star', hint: 'خمس آيات كل يوم، والمراجعة في وقتها' },
   { tab: 'reference', label: 'المرجع', hash: '#/reference', icon: 'library', hint: 'الدوري وحفص، الأصول والفرش' },
@@ -105,7 +115,7 @@ const MORE: NavItem[] = [
   { tab: 'recorder', label: 'تسجيل المعلم', hash: '#/recorder', icon: 'mic', hint: 'أداة المطوّر: مقاطع الحروف' },
   { tab: 'checklist', label: 'الجاهزية', hash: '#/checklist', icon: 'clipboard', hint: 'أداة المطوّر: ما اكتمل وما لم يكتمل' },
 ];
-const MORE_TABS = new Set<Route['tab']>(['reference', 'dictionary', 'settings', 'align', 'recorder', 'checklist']);
+const MORE_TABS = new Set<Route['tab']>(['calendar', 'adhkar', 'reference', 'dictionary', 'settings', 'align', 'recorder', 'checklist']);
 
 export default function App() {
   const [route, go] = useRoute();
@@ -179,6 +189,11 @@ export default function App() {
             </span>
           </button>
           <div className="side-actions">
+            {settings.bookmark && (
+              <button className="icon-btn" onClick={() => nav(`#/follow/${settings.bookmark!.surah}/${settings.bookmark!.basri}`)} aria-label="اذهب إلى علامتي" title={`علامتي: ${SURAH_BY_NUMBER[settings.bookmark.surah]?.name ?? ''}، الآية ${arNum(settings.bookmark.basri)}`}>
+                <Icon name="bookmark" />
+              </button>
+            )}
             <button className="icon-btn" onClick={toggleTheme} aria-label={dark ? 'الوضع الفاتح' : 'الوضع الداكن'} title={dark ? 'الوضع الفاتح' : 'الوضع الداكن'}>
               <Icon name={dark ? 'sun' : 'moon'} />
             </button>
@@ -208,6 +223,11 @@ export default function App() {
           </button>
         </nav>
         <div className="actions">
+          {settings.bookmark && (
+            <button className="icon-btn" onClick={() => nav(`#/follow/${settings.bookmark!.surah}/${settings.bookmark!.basri}`)} aria-label="اذهب إلى علامتي" title={`علامتي: ${SURAH_BY_NUMBER[settings.bookmark.surah]?.name ?? ''}، الآية ${arNum(settings.bookmark.basri)}`}>
+              <Icon name="bookmark" />
+            </button>
+          )}
           <button className="icon-btn" onClick={toggleTheme} aria-label={dark ? 'الوضع الفاتح' : 'الوضع الداكن'} title={dark ? 'الوضع الفاتح' : 'الوضع الداكن'}>
             <Icon name={dark ? 'sun' : 'moon'} />
           </button>
@@ -244,6 +264,8 @@ export default function App() {
         {route.tab === 'settings' && <SettingsPage go={go} />}
         {route.tab === 'hifz' && <HifzPage go={go} />}
         {route.tab === 'wird' && <WirdPage go={go} />}
+        {route.tab === 'calendar' && <CalendarPage go={go} />}
+        {route.tab === 'adhkar' && <AdhkarPage set={route.set} go={go} />}
         {route.tab === 'lessons' && (route.id ? <LessonScreen ruleId={route.id} go={go} /> : <LessonsIndex go={go} />)}
         {route.tab === 'letters' && <LettersPage id={route.id} go={go} />}
         {route.tab === 'contrast' && <ContrastPage id={route.id} go={go} />}
@@ -256,6 +278,7 @@ export default function App() {
         {route.tab === 'drills' && <DrillsPage drillId={route.id} go={go} />}
         {route.tab === 'checklist' && <ChecklistPage />}
       </main>
+      <AdhanBanner />
       <Celebrations />
     </div>
   );

@@ -13,6 +13,8 @@ export interface DayStats {
   drills: number;
   challenges?: number;
   wird?: number;
+  /** 1 once the day's checklist (content/daily.ts) was completed. */
+  todos?: number;
 }
 export interface Progress {
   done: Record<string, true>;
@@ -25,11 +27,13 @@ export interface Progress {
   hifz?: { done: Record<string, { at: number; reviews: number; due: number }>; updatedAt?: number };
   /** The daily wird (see content/wird.ts). */
   wird?: unknown;
+  /** The daily checklist: what was ticked, per day (see content/daily.ts). */
+  todos?: Record<string, Record<string, { d: 0 | 1; at: number }>>;
 }
 
-export type Activity = 'lesson' | 'correct' | 'wrong' | 'drill' | 'challenge' | 'wird';
+export type Activity = 'lesson' | 'correct' | 'wrong' | 'drill' | 'challenge' | 'wird' | 'todos';
 /** Practice points per activity; the daily goal is measured in these. */
-export const POINTS: Record<Activity, number> = { lesson: 3, correct: 1, wrong: 1, drill: 2, challenge: 5, wird: 5 };
+export const POINTS: Record<Activity, number> = { lesson: 3, correct: 1, wrong: 1, drill: 2, challenge: 5, wird: 5, todos: 5 };
 
 export function dayKey(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -78,7 +82,7 @@ export function readProgress(): Progress {
 
 export function points(d: DayStats | undefined): number {
   if (!d) return 0;
-  return d.lessons * POINTS.lesson + d.answers * POINTS.correct + d.drills * POINTS.drill + (d.challenges ?? 0) * POINTS.challenge + (d.wird ?? 0) * POINTS.wird;
+  return d.lessons * POINTS.lesson + d.answers * POINTS.correct + d.drills * POINTS.drill + (d.challenges ?? 0) * POINTS.challenge + (d.wird ?? 0) * POINTS.wird + (d.todos ?? 0) * POINTS.todos;
 }
 
 /** Consecutive days with activity ending today (or yesterday, so a streak survives until tonight). */
@@ -115,6 +119,7 @@ export function logActivity(kind: Activity): { before: number; after: number; da
   else if (kind === 'drill') day.drills++;
   else if (kind === 'challenge') day.challenges = (day.challenges ?? 0) + 1;
   else if (kind === 'wird') day.wird = (day.wird ?? 0) + 1;
+  else if (kind === 'todos') day.todos = 1;
   else {
     day.answers++;
     if (kind === 'correct') day.correct++;
@@ -126,6 +131,14 @@ export function logActivity(kind: Activity): { before: number; after: number; da
   write(cur);
   notify();
   return { before, after: points(day), day };
+}
+
+/** Change the stored progress in place (used by the stores that live inside it: hifz, wird, todos). */
+export function mutateProgress(fn: (p: Progress) => void) {
+  const cur = read();
+  fn(cur);
+  write(cur);
+  notify();
 }
 
 export function resetProgress() {

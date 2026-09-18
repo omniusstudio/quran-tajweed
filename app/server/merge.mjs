@@ -14,7 +14,7 @@ export function mergeProgress(a, b) {
   for (const src of [a.days || {}, b.days || {}]) {
     for (const [k, d] of Object.entries(src)) {
       const cur = days[k] || { lessons: 0, answers: 0, correct: 0, drills: 0 };
-      days[k] = { lessons: Math.max(cur.lessons, num(d.lessons)), answers: Math.max(cur.answers, num(d.answers)), correct: Math.max(cur.correct, num(d.correct)), drills: Math.max(cur.drills, num(d.drills)), challenges: Math.max(num(cur.challenges), num(d.challenges)), wird: Math.max(num(cur.wird), num(d.wird)) };
+      days[k] = { lessons: Math.max(cur.lessons, num(d.lessons)), answers: Math.max(cur.answers, num(d.answers)), correct: Math.max(cur.correct, num(d.correct)), drills: Math.max(cur.drills, num(d.drills)), challenges: Math.max(num(cur.challenges), num(d.challenges)), wird: Math.max(num(cur.wird), num(d.wird)), todos: Math.max(num(cur.todos), num(d.todos)) };
     }
   }
   const newer = num(b.updatedAt) >= num(a.updatedAt) ? b : a;
@@ -40,7 +40,15 @@ export function mergeProgress(a, b) {
     }
     wird = { pace: latest.pace, ramadan: !!latest.ramadan, reminder: latest.reminder ?? null, pos: ahead.pos ?? null, posQ: num(ahead.posQ), khatms: Math.max(num(a.wird.khatms), num(b.wird.khatms)), days: wdays, updatedAt: Math.max(num(a.wird.updatedAt), num(b.wird.updatedAt)) };
   }
-  return { done, days, last: newer.last ?? a.last ?? b.last, hifz, wird, updatedAt: Math.max(num(a.updatedAt), num(b.updatedAt)) };
+  // the daily checklist: each item follows its latest change, so a tick (or an untick) on either device wins
+  const todos = {};
+  for (const src of [a.todos || {}, b.todos || {}]) {
+    for (const [k, d] of Object.entries(src)) {
+      const day = todos[k] || (todos[k] = {});
+      for (const [id, tick] of Object.entries(d)) if (!day[id] || num(tick.at) > num(day[id].at)) day[id] = tick;
+    }
+  }
+  return { done, days, last: newer.last ?? a.last ?? b.last, hifz, wird, todos, updatedAt: Math.max(num(a.updatedAt), num(b.updatedAt)) };
 }
 
 export function mergeDeck(a, b) {

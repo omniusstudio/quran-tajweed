@@ -27,11 +27,22 @@ export interface Settings {
   positions: Record<string, number>;
   /** The ribbon: the verse to pick up from. Set on every stop unless pinned by hand. */
   bookmark?: { surah: number; basri: number; pinned: boolean; at: number };
+  /** Days to add to the computed (Umm al-Qura) Hijri date, to follow a local moon sighting: -2 … 2. */
+  hijriOffset?: number;
+  /** Where prayer times are computed for. */
+  place?: { lat: number; lon: number; name?: string };
+  /** Calculation method (see server/prayer.mjs METHODS) and the ʿaṣr shadow rule. */
+  prayerMethod?: string;
+  asrMethod?: 'standard' | 'hanafi';
+  /** The call to prayer: on/off and which prayers. The Mac's local server plays it even with the app closed. */
+  adhan?: { enabled: boolean; prayers: Record<string, boolean> };
+  /** Evening nudge (HH:MM) when the day's checklist is not finished; null = off. */
+  todoReminder?: string | null;
   /** Last local change, for merging between devices. */
   updatedAt?: number;
 }
 
-export const DEFAULTS: Settings = { theme: 'system', sound: true, haptics: true, quranScale: 1, motion: 'system', dailyGoal: 10, reciter: 'nourin_siddig', lastSurah: 1, playMode: 'continuous', positions: {} };
+export const DEFAULTS: Settings = { theme: 'system', sound: true, haptics: true, quranScale: 1, motion: 'system', dailyGoal: 10, reciter: 'nourin_siddig', lastSurah: 1, playMode: 'continuous', positions: {}, hijriOffset: 0, prayerMethod: 'mwl', asrMethod: 'standard', todoReminder: '20:30' };
 
 function read(): Settings {
   try {

@@ -8,7 +8,7 @@
 //
 // GET /__lan answers with the addresses to type on the phone and a QR code for the settings page.
 
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync, spawn } from 'node:child_process';
 import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
@@ -19,11 +19,13 @@ import { dirname, extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import QRCode from 'qrcode';
 import { mergeState } from './merge.mjs';
+import { PRAYERS, PRAYER_NAMES, nextPrayer, prayerTimes } from './prayer.mjs';
 
 const APP = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(APP, 'dist');
 const PUBLIC = join(APP, 'public');
-const LOCAL = join(APP, '.local');
+const LOCAL = process.env.NUTQ_LOCAL || join(APP, '.local');
+const QUIET = !!process.env.NUTQ_QUIET; // tests: log instead of sounding the adhān or posting notifications
 const PORT = Number(process.env.PORT || 7373);
 const TLS_PORT = Number(process.env.TLS_PORT || PORT + 1);
 
@@ -126,6 +128,132 @@ function clipsHandler(req, res, url) {
   }
   res.writeHead(405, json);
   res.end('{}');
+}
+
+// ---------------------------------------------------------------------------
+// The call to prayer. This server runs all day as a launchd agent, so it (not the browser) sounds
+// the adhān on the Mac at each prayer time, with the app open or closed. Place, method and which
+// prayers come from the synced settings; the recording is the learner's own file, uploaded from
+// the settings page (PUT /__adhan/file?slot=adhan|fajr) and kept in .local/adhan/.
+const ADHAN_DIR = join(LOCAL, 'adhan');
+const ADHAN_SLOTS = ['adhan', 'fajr'];
+const ADHAN_TYPES = { 'audio/mpeg': '.mp3', 'audio/mp3': '.mp3', 'audio/mp4': '.m4a', 'audio/x-m4a': '.m4a', 'audio/aac': '.m4a', 'audio/wav': '.wav', 'audio/x-wav': '.wav', 'audio/ogg': '.ogg' };
+let adhanProc = null;
+const adhanPlayed = new Set();
+
+function adhanFile(slot) {
+  for (const ext of new Set(Object.values(ADHAN_TYPES))) {
+    const f = join(ADHAN_DIR, `${slot}${ext}`);
+    if (existsSync(f)) return f;
+  }
+  return null;
+}
+function adhanSettings() {
+  const st = readState();
+  const s = (st && st.settings) || {};
+  const place = s.place && Number.isFinite(s.place.lat) && Number.isFinite(s.place.lon) ? s.place : null;
+  return { place, opts: { method: s.prayerMethod, asr: s.asrMethod }, adhan: s.adhan || { enabled: false, prayers: {} } };
+}
+function stopAdhan() {
+  if (adhanProc) { try { adhanProc.kill(); } catch { /* gone */ } adhanProc = null; }
+}
+function notifyMac(title, body) {
+  if (process.platform !== 'darwin' || QUIET) return;
+  execFile('osascript', ['-e', `display notification ${JSON.stringify(body)} with title ${JSON.stringify(title)}`], () => {});
+}
+function playAdhan(key) {
+  const file = (key === 'fajr' && adhanFile('fajr')) || adhanFile('adhan');
+  if (!file || process.platform !== 'darwin') return false;
+  if (QUIET) return true;
+  stopAdhan();
+  adhanProc = spawn('afplay', [file], { stdio: 'ignore' });
+  adhanProc.on('exit', () => { adhanProc = null; });
+  return true;
+}
+function adhanTick() {
+  const { place, opts, adhan } = adhanSettings();
+  if (!place || !adhan.enabled) return;
+  const now = new Date();
+  const times = prayerTimes(now, place, opts);
+  for (const k of PRAYERS) {
+    if (adhan.prayers && adhan.prayers[k] === false) continue;
+    const late = now - times[k];
+    const id = `${now.toDateString()} ${k}`;
+    if (late < 0 || late > 90_000 || adhanPlayed.has(id)) continue;
+    adhanPlayed.add(id);
+    const played = playAdhan(k);
+    notifyMac('نُطق', `حان الآن وقت صلاة ${PRAYER_NAMES[k]}`);
+    console.log(`${now.toISOString()} adhan ${k}${played ? '' : ' (no recording: notification only)'}`);
+  }
+  if (adhanPlayed.size > 40) adhanPlayed.clear();
+}
+setInterval(adhanTick, 15_000);
+
+// The evening nudge for the day's checklist, as a macOS notification (so it arrives with the app closed).
+// Mirrors content/daily.ts: three lists the learner ticks, three items read from the day's stats.
+let todoNotified = '';
+function todoTick() {
+  const st = readState();
+  const s = (st && st.settings) || {};
+  const at = s.todoReminder === undefined ? '20:30' : s.todoReminder;
+  if (!at || !st || !st.progress) return;
+  const now = new Date();
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  if (hhmm !== at || todoNotified === day) return;
+  todoNotified = day;
+  const ticks = (st.progress.todos && st.progress.todos[day]) || {};
+  const stats = (st.progress.days && st.progress.days[day]) || {};
+  const pts = (stats.lessons || 0) * 3 + (stats.answers || 0) + (stats.drills || 0) * 2 + (stats.challenges || 0) * 5 + (stats.wird || 0) * 5;
+  const items = [['adhkar_morning', 'أذكار الصباح'], ['wird', 'ورد القرآن', (stats.wird || 0) > 0], ['hifz', 'تحدي الحفظ', (stats.challenges || 0) > 0], ['practice', 'هدف التدريب', pts >= (s.dailyGoal || 10)], ['adhkar_evening', 'أذكار المساء'], ['sleep', 'سورة الملك وأذكار النوم']];
+  if (now.getDay() === 5) items.push(['kahf', 'سورة الكهف'], ['salawat', 'الصلاة على النبي ﷺ']);
+  const left = items.filter(([id, , auto]) => !(auto || (ticks[id] && ticks[id].d === 1))).map(([, title]) => title);
+  if (left.length) notifyMac('بقي من مهام يومك', left.join('، '));
+}
+setInterval(todoTick, 30_000);
+
+function adhanHandler(req, res, url) {
+  const json = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
+  const [path, query = ''] = url.split('?');
+  const slot = new URLSearchParams(query).get('slot') || 'adhan';
+  const rest = path.slice('/__adhan'.length).replace(/^\//, '');
+  const status = () => {
+    const { place, opts, adhan } = adhanSettings();
+    const nxt = place ? nextPrayer(new Date(), place, opts) : null;
+    return { mac: process.platform === 'darwin', files: Object.fromEntries(ADHAN_SLOTS.map((k) => [k, !!adhanFile(k)])), enabled: !!adhan.enabled, playing: !!adhanProc, next: nxt ? { key: nxt.key, at: nxt.at.getTime() } : null };
+  };
+  if (!rest) { res.writeHead(200, json); return res.end(JSON.stringify(status())); }
+  if (rest.startsWith('audio/')) {
+    const f = adhanFile(rest.slice(6) === 'fajr' ? 'fajr' : 'adhan') || adhanFile('adhan');
+    return f ? serveFile(req, res, f) : notFound(res);
+  }
+  if (!ADHAN_SLOTS.includes(slot)) { res.writeHead(400, json); return res.end('{"error":"bad slot"}'); }
+  if (rest === 'file' && req.method === 'PUT') {
+    const ext = ADHAN_TYPES[(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase()];
+    if (!ext) { res.writeHead(415, json); return res.end('{"error":"audio files only (mp3, m4a, wav, ogg)"}'); }
+    return readBinary(req, 40 * 1024 * 1024)
+      .then((buf) => {
+        mkdirSync(ADHAN_DIR, { recursive: true });
+        for (const e of new Set(Object.values(ADHAN_TYPES))) { try { unlinkSync(join(ADHAN_DIR, `${slot}${e}`)); } catch { /* none */ } }
+        writeFileSync(join(ADHAN_DIR, `${slot}${ext}`), buf);
+        res.writeHead(200, json); res.end(JSON.stringify(status()));
+      })
+      .catch((e) => { res.writeHead(400, json); res.end(JSON.stringify({ error: String(e) })); });
+  }
+  if (rest === 'file' && req.method === 'DELETE') {
+    const f = adhanFile(slot);
+    if (f) { try { unlinkSync(f); } catch { /* ignore */ } }
+    res.writeHead(200, json); return res.end(JSON.stringify(status()));
+  }
+  if (rest === 'test' && req.method === 'POST') {
+    const ok = playAdhan(slot === 'fajr' ? 'fajr' : 'dhuhr');
+    res.writeHead(200, json); return res.end(JSON.stringify({ ...status(), played: ok }));
+  }
+  if (rest === 'stop' && req.method === 'POST') {
+    stopAdhan();
+    res.writeHead(200, json); return res.end(JSON.stringify(status()));
+  }
+  res.writeHead(405, json); res.end('{}');
 }
 
 // Reciter servers (copied next to this file by the installer; falls back to the source tree).
@@ -324,6 +452,7 @@ function handler(req, res) {
     return;
   }
   if (url.startsWith('/__clips')) return clipsHandler(req, res, url);
+  if (url.startsWith('/__adhan')) return adhanHandler(req, res, url);
   if (url.startsWith('/__audio/')) return audioStatus(req, res, url.split('?')[0]);
   if (url.startsWith('/__state')) {
     const headers = { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' };
