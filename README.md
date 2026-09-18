@@ -219,7 +219,7 @@ voice, opens in follow-along, closable for the day.
   leave on a second display. A sky that follows the prayer times (dawn, day, afternoon, dusk,
   night), a slow rotation of well-known āyāt, the Qur'anic supplications and the shorter hadith
   (āyāt are references resolved against the muṣḥaf, checked by a test), the Hijri date and clock,
-  the next prayer on an arc of the day, today's or the next occasion, the next fast, and the
+  the next prayer beside a sky view (`ui/SkyView.tsx`: the sun's true path for the place and date from `sunPosition()`, a sun that rises out of and sets behind the horizon, the moon at its real position and phase from `moonState()`, both in `server/prayer.mjs` and tested against known events), today's or the next occasion, the next fast, and the
   checklist's progress. It starts by itself after 2, 5 or 10 quiet minutes (Settings → شاشة
   السكون; never while audio plays, `ui/activity.ts` + `ui/useIdle.ts`), keeps the display awake
   where the browser allows it, drifts a few pixels against burn-in, and leaves on Esc or a click.

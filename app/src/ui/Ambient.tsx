@@ -14,6 +14,8 @@ import { PlayRange, arNum } from '../pages/shared';
 import { Icon } from './icons';
 import { Mark } from './Mark';
 import { useSettings } from './settings';
+import { MoonDisc, SkyView } from './SkyView';
+import { moonState } from '../../server/prayer.mjs';
 
 const ROTATE_MS = 45000;
 const KIND_LABEL: Record<AmbientItem['kind'], string> = { ayah: 'آية', dua: 'دعاء من القرآن', hadith: 'من السنة' };
@@ -29,38 +31,6 @@ function countdown(ms: number) {
 }
 function inDays(n: number) {
   return n === 0 ? 'اليوم' : n === 1 ? 'غداً' : n === 2 ? 'بعد غد' : `بعد ${arNum(n)} ${n <= 10 ? 'أيام' : 'يوماً'}`;
-}
-
-/** The day from fajr (right) to ʿishāʾ (left) as an arc, the prayers as beads, the present as a light. */
-function DayArc({ times, now, nextKey }: { times: Record<PrayerKey, Date>; now: Date; nextKey: PrayerKey | null }) {
-  const a = times.fajr.getTime();
-  const b = times.isha.getTime();
-  const at = (t: number) => Math.min(1, Math.max(0, (t - a) / (b - a)));
-  const pt = (f: number) => ({ x: 200 + 180 * Math.cos(Math.PI * f), y: 104 - 88 * Math.sin(Math.PI * f) });
-  const f = at(now.getTime());
-  const inside = now.getTime() >= a && now.getTime() <= b;
-  const me = pt(f);
-  return (
-    <svg className="amb-arc" viewBox="0 0 400 124" aria-hidden focusable="false">
-      <path d="M380 104 A180 88 0 0 0 20 104" pathLength={1} className="track" />
-      {inside && <path d="M380 104 A180 88 0 0 0 20 104" pathLength={1} className="done" strokeDasharray={`${f} 1`} />}
-      <line x1="8" y1="104" x2="392" y2="104" className="horizon" />
-      {(['fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'] as PrayerKey[]).map((k) => {
-        const p = pt(at(times[k].getTime()));
-        return <circle key={k} cx={p.x} cy={p.y} r={k === 'sunrise' ? 2.2 : k === nextKey ? 5.5 : 3.6} className={`bead${k === nextKey ? ' next' : ''}${times[k].getTime() <= now.getTime() ? ' past' : ''}${k === 'sunrise' ? ' minor' : ''}`} />;
-      })}
-      {inside ? (
-        <g className="sun">
-          <circle cx={me.x} cy={me.y} r="13" className="halo" />
-          <circle cx={me.x} cy={me.y} r="6" className="core" />
-        </g>
-      ) : (
-        <g className="moon" transform="translate(200 78)">
-          <path d="M6 -14 A15 15 0 1 0 14 8 A11.5 11.5 0 0 1 6 -14 Z" />
-        </g>
-      )}
-    </svg>
-  );
 }
 
 export function Ambient({ onExit }: { onExit: () => void }) {
@@ -141,6 +111,7 @@ export function Ambient({ onExit }: { onExit: () => void }) {
     if (f === 'recommended' || f === 'obligatory') nextFast = { n: i, title: occ.find((o) => o.fasting === f)!.title.replace(/^صيام /, '').replace(/ \(.*\)$/, '') };
   }
   const sum = summary(todosFor(now, progress).todos);
+  const moon = moonState(now, settings.place ?? { lat: 21.42, lon: 39.83 });
   const item = list[idx];
   const old = prev !== null ? list[prev] : null;
   const hm = clock(now, Intl.DateTimeFormat().resolvedOptions().timeZone).split(' ');
@@ -160,6 +131,10 @@ export function Ambient({ onExit }: { onExit: () => void }) {
             <div>
               <strong>{HIJRI_MONTHS[hijri.month - 1]} {arNum(hijri.year)}</strong>
               <small>{WEEKDAYS[now.getDay()]} · {formatGregorian(now)}</small>
+              <small className="amb-moon">
+                <svg viewBox="-12 -12 24 24" width="18" height="18" aria-hidden><MoonDisc r={7} lit={moon.lit} waxing={moon.waxing} south={(settings.place?.lat ?? 1) < 0} id="hdr-moon" halo={false} /></svg>
+                القمر {arNum(Math.round(moon.lit * 100))}٪ {moon.lit > 0.97 ? '· بدر' : moon.lit < 0.03 ? '· محاق' : moon.waxing ? '· يزداد' : '· ينقص'}
+              </small>
             </div>
           </div>
           <div className="amb-clock" aria-label="الساعة">{hm[0]}<small>{hm[1]}</small></div>
@@ -186,12 +161,13 @@ export function Ambient({ onExit }: { onExit: () => void }) {
             {times && nxt ? (
               <>
                 <div className="amb-arcwrap">
-                  <DayArc times={times} now={now} nextKey={nxt.key} />
                   <div className="amb-next">
                     <small>الصلاة القادمة</small>
                     <strong>{PRAYER_NAMES[nxt.key]}</strong>
-                    <span>{clock(nxt.at)} · بعد {countdown(nxt.at.getTime() - now.getTime())}</span>
+                    <span>{clock(nxt.at)}</span>
+                    <span className="in">بعد {countdown(nxt.at.getTime() - now.getTime())}</span>
                   </div>
+                  <SkyView times={times} now={now} place={settings.place!} nextKey={nxt.key} />
                 </div>
                 <div className="amb-times">
                   {(PRAYERS as PrayerKey[]).map((k) => <span key={k} className={k === nxt.key ? 'next' : times[k].getTime() <= now.getTime() ? 'past' : ''}><small>{PRAYER_NAMES[k]}</small>{clock(times[k])}</span>)}

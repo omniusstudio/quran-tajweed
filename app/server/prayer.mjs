@@ -88,6 +88,65 @@ export function prayerTimes(date, place, opts = {}) {
   return out;
 }
 
+// ---- where the sun and the moon are in the sky (for the ambient screen's sky view) ----
+const J2000 = 2451545.0;
+const jdOf = (date) => date.getTime() / 86400000 + 2440587.5;
+
+/** Equatorial → horizontal. RA and Dec in degrees; returns { az (from north, clockwise), alt } in degrees. */
+function horizontal(ra, dec, jd, place) {
+  const d = jd - J2000;
+  const lst = fix(280.46061837 + 360.98564736629 * d + place.lon, 360);
+  const H = rad(fix(lst - ra + 180, 360) - 180);
+  const phi = rad(place.lat), de = rad(dec);
+  const alt = Math.asin(Math.sin(phi) * Math.sin(de) + Math.cos(phi) * Math.cos(de) * Math.cos(H));
+  const az = Math.atan2(Math.sin(H), Math.cos(H) * Math.sin(phi) - Math.tan(de) * Math.cos(phi)) + Math.PI;
+  return { az: fix(deg(az), 360), alt: deg(alt) };
+}
+
+/** Ecliptic longitude/latitude (degrees) → RA/Dec (degrees). */
+function equatorial(lambda, beta, jd) {
+  const e = rad(23.439 - 0.00000036 * (jd - J2000));
+  const l = rad(lambda), b = rad(beta);
+  const ra = Math.atan2(Math.sin(l) * Math.cos(e) - Math.tan(b) * Math.sin(e), Math.cos(l));
+  const dec = Math.asin(Math.sin(b) * Math.cos(e) + Math.cos(b) * Math.sin(e) * Math.sin(l));
+  return { ra: fix(deg(ra), 360), dec: deg(dec) };
+}
+
+function sunLongitude(jd) {
+  const D = jd - J2000;
+  const g = fix(357.529 + 0.98560028 * D, 360);
+  const q = fix(280.459 + 0.98564736 * D, 360);
+  return fix(q + 1.915 * Math.sin(rad(g)) + 0.02 * Math.sin(rad(2 * g)), 360);
+}
+
+/** The sun in the sky of a place at an instant: { az, alt } in degrees (no refraction). */
+export function sunPosition(date, place) {
+  const jd = jdOf(date);
+  const { ra, dec } = equatorial(sunLongitude(jd), 0, jd);
+  return horizontal(ra, dec, jd, place);
+}
+
+/** Low-precision lunar theory (Astronomical Almanac): ecliptic longitude and latitude, good to about half a degree. */
+function moonEcliptic(jd) {
+  const T = (jd - J2000) / 36525;
+  const s = (a, b) => Math.sin(rad(a + b * T));
+  const lambda = 218.32 + 481267.881 * T + 6.29 * s(135.0, 477198.87) - 1.27 * s(259.3, -413335.36) + 0.66 * s(235.7, 890534.22) + 0.21 * s(269.9, 954397.74) - 0.19 * s(357.5, 35999.05) - 0.11 * s(186.5, 966404.03);
+  const beta = 5.13 * s(93.3, 483202.02) + 0.28 * s(228.2, 960400.89) - 0.28 * s(318.3, 6003.15) - 0.17 * s(217.6, -407332.21);
+  return { lambda: fix(lambda, 360), beta };
+}
+
+/**
+ * The moon at an instant: where it is in the sky of a place, how much of it is lit (0 new … 1 full),
+ * and whether it is waxing. `age` is days since the new moon.
+ */
+export function moonState(date, place) {
+  const jd = jdOf(date);
+  const m = moonEcliptic(jd);
+  const elong = fix(m.lambda - sunLongitude(jd), 360);
+  const { ra, dec } = equatorial(m.lambda, m.beta, jd);
+  return { ...horizontal(ra, dec, jd, place), lit: (1 - Math.cos(rad(elong))) / 2, waxing: elong < 180, age: (elong / 360) * 29.530588853 };
+}
+
 /** Minutes east of UTC for an IANA zone at an instant. */
 export function tzOffsetMinutes(tz, at = new Date()) {
   const p = new Intl.DateTimeFormat('en-US-u-nu-latn', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric' }).formatToParts(at);

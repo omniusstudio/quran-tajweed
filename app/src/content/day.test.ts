@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mergeProgress } from '../../server/merge.mjs';
-import { placeTz, prayerTimes, timesAt } from '../../server/prayer.mjs';
+import { moonState, placeTz, prayerTimes, sunPosition, timesAt } from '../../server/prayer.mjs';
 import { CITIES } from './cities';
 import { clock } from './prayer';
 import { adhkar, resolveRef } from './adhkar';
@@ -142,5 +142,31 @@ describe('ambient screen content', () => {
     const order = playlist(items, 7);
     expect(order[0].kind).not.toBe('hadith');
     expect(order.some((x, i) => i > 0 && x.kind === 'hadith' && order[i - 1].kind === 'hadith')).toBe(false);
+  });
+});
+
+describe('the sky view follows the real sun and moon', () => {
+  const dallas = { lat: 32.78, lon: -96.8 };
+  it('puts the sun at the horizon at sunrise and maghrib, 15° under it at fajr and ʿishāʾ (ISNA), due south at dhuhr', () => {
+    const t = prayerTimes(new Date(2026, 8, 18), dallas, { method: 'isna' });
+    expect(sunPosition(t.sunrise, dallas).alt).toBeCloseTo(-0.83, 0);
+    expect(sunPosition(t.maghrib, dallas).alt).toBeCloseTo(-0.83, 0);
+    expect(sunPosition(t.fajr, dallas).alt).toBeCloseTo(-15, 0);
+    expect(sunPosition(t.isha, dallas).alt).toBeCloseTo(-15, 0);
+    const noon = sunPosition(t.dhuhr, dallas);
+    expect(Math.abs(noon.az - 180)).toBeLessThan(1);
+    expect(noon.alt).toBeGreaterThan(55);
+    expect(sunPosition(t.sunrise, dallas).az).toBeLessThan(95); // rises in the east …
+    expect(sunPosition(t.maghrib, dallas).az).toBeGreaterThan(265); // … sets in the west
+  });
+  it('knows the moon\'s phase: dark at a known new moon, full at a known full moon, waxing in between', () => {
+    expect(moonState(new Date(Date.UTC(2026, 8, 11, 3, 27)), dallas).lit).toBeLessThan(0.01);
+    const full = moonState(new Date(Date.UTC(2026, 8, 26, 16, 49)), dallas);
+    expect(full.lit).toBeGreaterThan(0.99);
+    const week = moonState(new Date(Date.UTC(2026, 8, 18, 17)), dallas);
+    expect(week.waxing).toBe(true);
+    expect(week.lit).toBeGreaterThan(0.4);
+    expect(week.lit).toBeLessThan(0.6);
+    expect(Math.round(week.age)).toBe(7); // and it is the 7th of the Hijri month
   });
 });

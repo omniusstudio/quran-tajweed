@@ -10,3 +10,5 @@ export function deviceTz(): string;
 export function placeTz(place: Place | null | undefined, at?: Date): string;
 export function placeDay(at: Date, tz: string, addDays?: number): Date;
 export function timesAt(now: Date, place: Place, opts?: PrayerOptions): Record<string, Date>;
+export function sunPosition(date: Date, place: Place): { az: number; alt: number };
+export function moonState(date: Date, place: Place): { az: number; alt: number; lit: number; waxing: boolean; age: number };

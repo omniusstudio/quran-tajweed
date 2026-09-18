@@ -937,24 +937,26 @@ button.word { position: relative; }
 .amb-bottom { display: grid; gap: clamp(12px, 2vw, 28px); grid-template-columns: minmax(0, 1fr); align-items: end; }
 @media (min-width: 900px) { .amb-bottom { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); } }
 .amb-prayer { position: relative; display: grid; gap: 6px; }
-.amb-arc { width: 100%; max-height: 24vh; overflow: visible; }
-.amb-arc .track { fill: none; stroke: var(--hair); stroke-width: 1.5; stroke-dasharray: .006 .012; }
-.amb-arc .done { fill: none; stroke: var(--gold); stroke-width: 2; stroke-linecap: round; }
-.amb-arc .horizon { stroke: var(--hair); stroke-width: 1; }
-.amb-arc .bead { fill: var(--sky-b); stroke: var(--gold); stroke-width: 1.5; }
-.amb-arc .bead.past { fill: var(--gold); }
-.amb-arc .bead.minor { stroke-width: 1; opacity: .7; }
-.amb-arc .bead.next { fill: var(--cream); stroke: var(--gold); stroke-width: 2; animation: ambPulse 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-.amb-arc .sun .halo { fill: var(--gold); opacity: .22; animation: ambBreathe 5s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
-.amb-arc .sun .core { fill: var(--cream); filter: drop-shadow(0 0 8px var(--gold)); }
-.amb-arc .moon path { fill: var(--cream); filter: drop-shadow(0 0 10px rgba(200, 220, 255, .7)); }
-.amb-arcwrap { position: relative; }
-.amb-arcwrap .amb-arc { display: block; }
-.amb-next { position: absolute; inset-inline: 0; inset-block-end: 17%; display: grid; justify-items: center; gap: 0; text-align: center; pointer-events: none; }
+.amb-sky-view { display: block; width: 100%; max-height: 30vh; overflow: visible; }
+.sky-path { fill: none; stroke: var(--gold); stroke-width: 1.4; stroke-linecap: round; opacity: .9; filter: drop-shadow(0 0 3px rgba(230, 201, 130, .35)); }
+.is-night .sky-path { opacity: .38; filter: none; }
+.sky-path.under { stroke-width: 1; stroke-dasharray: 2 4; opacity: .32; filter: none; }
+.sky-city { fill: #05080c; opacity: .72; }
+.sky-bead { fill: var(--sky-b); stroke: var(--gold); stroke-width: 1.4; }
+.sky-bead.past { fill: var(--gold); }
+.sky-bead.below { opacity: .55; }
+.sky-bead.minor { stroke-width: 1; opacity: .6; }
+.sky-bead.next { fill: var(--cream); stroke-width: 2; opacity: 1; animation: ambPulse 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.sky-sun .halo { animation: ambBreathe 6s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+.amb-moon { display: flex !important; align-items: center; gap: 6px; margin-block-start: 2px; }
+.amb-arcwrap { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: clamp(8px, 1.4vw, 22px); }
+.amb-next { display: grid; justify-items: start; gap: 0; text-align: start; padding-block-end: 8%; }
 .amb-next small { color: var(--dim); font-size: clamp(.7rem, .9vw, .9rem); }
 .amb-next strong { font-family: var(--display); font-size: clamp(1.5rem, 2.6vw, 2.5rem); line-height: 1.25; color: var(--gold); }
-.amb-next span { font-size: clamp(.85rem, 1.1vw, 1.1rem); color: var(--cream); }
-.amb-times { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.amb-next span { font-size: clamp(.95rem, 1.25vw, 1.3rem); color: var(--cream); font-weight: 700; }
+.amb-next span.in { font-weight: 400; color: var(--dim); font-size: clamp(.78rem, .95vw, .98rem); }
+.amb-times { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; direction: ltr; /* fajr on the east (left) side, like the sky above it */ }
+.amb-times span { direction: rtl; }
 .amb-times span { display: grid; justify-items: center; gap: 1px; padding: 6px 2px; border-radius: 10px; font-size: clamp(.78rem, 1vw, 1rem); font-weight: 700; white-space: nowrap; border: 1px solid transparent; }
 .amb-times small { font-weight: 400; color: var(--dim); font-size: .78em; }
 .amb-times .past { opacity: .5; }
@@ -984,11 +986,23 @@ button.word { position: relative; }
 
 @media (max-width: 899px), (max-height: 620px) {
   .amb-inner { overflow: hidden; }
+  .amb-arcwrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .amb-next { grid-auto-flow: column; justify-content: center; align-items: baseline; gap: 8px; padding: 0; }
   .amb-next small { display: none; }
-  .amb-next strong { font-size: 1.35rem; line-height: 1.15; }
-  .amb-next span { font-size: .8rem; }
-  .amb-arc { max-height: 15vh; }
-  .amb-cards { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .amb-next strong { font-size: 1.3rem; line-height: 1.2; }
+  .amb-next span { font-size: .85rem; }
+  .amb-sky-view { max-height: 18vh; }
+  .amb-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .amb-cards .amb-card:nth-child(3):last-child, .amb-cards .amb-card:only-child { grid-column: 1 / -1; }
+  .amb-card strong { font-size: .92rem; }
+  .amb-item { gap: 6px; }
+  .amb-item blockquote { line-height: 1.85; }
+  .amb-item.xl blockquote { font-size: clamp(1.7rem, 7.4vw, 2.6rem); }
+  .amb-item.lg blockquote { font-size: clamp(1.35rem, 5.6vw, 2rem); }
+  .amb-item.md blockquote { font-size: clamp(1.15rem, 4.6vw, 1.6rem); }
+  .amb-item.sm blockquote { font-size: clamp(1.05rem, 4.2vw, 1.4rem); line-height: 1.8; }
+  .amb-bottom { gap: 8px; }
+  .amb-times span { padding: 4px 2px; }
   .amb-card span:not(.amb-bar) { display: none; }
   .amb-card { padding: 8px 12px; align-items: center; }
 }
