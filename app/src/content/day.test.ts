@@ -131,3 +131,16 @@ describe('checklist merge', () => {
     expect(m.todos['2026-09-18'].adhkar_evening.d).toBe(1);
   });
 });
+
+describe('ambient screen content', () => {
+  it('resolves every listed āyah against the muṣḥaf (the key word is found)', async () => {
+    const { AYAT, resolveAyah, ambientItems, playlist } = await import('./ambient');
+    const missing = AYAT.filter((r) => !resolveAyah(r)).map((r) => `${r.surah}:${r.from} ${r.key}`);
+    expect(missing).toEqual([]);
+    const items = ambientItems();
+    expect(items.filter((i) => i.kind === 'hadith').length).toBeGreaterThan(8);
+    const order = playlist(items, 7);
+    expect(order[0].kind).not.toBe('hadith');
+    expect(order.some((x, i) => i > 0 && x.kind === 'hadith' && order[i - 1].kind === 'hadith')).toBe(false);
+  });
+});

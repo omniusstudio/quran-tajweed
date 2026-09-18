@@ -21,6 +21,8 @@ import { CalendarPage } from './pages/CalendarPage';
 import { AdhkarPage } from './pages/AdhkarPage';
 import { setForNow, type AdhkarSet } from './content/adhkar';
 import { AdhanBanner } from './ui/AdhanBanner';
+import { Ambient } from './ui/Ambient';
+import { useIdle } from './ui/useIdle';
 import { SURAH_BY_NUMBER } from './audio/quran';
 import { BY_ID, CONTRAST_PAIRS } from './viewer/articulations';
 import { Celebrations } from './ui/celebrate';
@@ -36,6 +38,7 @@ type Route =
   | { tab: 'hifz' }
   | { tab: 'wird' }
   | { tab: 'calendar' }
+  | { tab: 'ambient' }
   | { tab: 'adhkar'; set: AdhkarSet }
   | { tab: 'lessons'; id?: string }
   | { tab: 'letters'; id: string }
@@ -58,6 +61,7 @@ function parseHash(): Route {
   if (tab === 'hifz') return { tab: 'hifz' };
   if (tab === 'wird') return { tab: 'wird' };
   if (tab === 'calendar') return { tab: 'calendar' };
+  if (tab === 'ambient') return { tab: 'ambient' };
   if (tab === 'adhkar') return { tab: 'adhkar', set: (['morning', 'evening', 'sleep', 'waking'] as const).includes(id as AdhkarSet) ? (id as AdhkarSet) : setForNow() };
   if (tab === 'letters') return { tab: 'letters', id: id && BY_ID[id] ? id : 'qaf' };
   if (tab === 'contrast') return { tab: 'contrast', id: id && CONTRAST_PAIRS.some((p) => p.id === id) ? id : CONTRAST_PAIRS[0].id };
@@ -103,6 +107,7 @@ const NAV: NavItem[] = [
   { tab: 'practice', label: 'التدريب', hash: '#/practice', icon: 'target', covers: ['practice', 'exercises', 'drills', 'follow', 'contrast', 'hifz', 'wird'] },
 ];
 const MORE: NavItem[] = [
+  { tab: 'ambient', label: 'شاشة السكون', hash: '#/ambient', icon: 'monitor', hint: 'آيات وأدعية والتاريخ والصلاة القادمة، تُترك على الشاشة' },
   { tab: 'calendar', label: 'التقويم الهجري', hash: '#/calendar', icon: 'crescent', hint: 'الأعياد وأيام الصيام، ولماذا، وماذا تفعل' },
   { tab: 'adhkar', label: 'الأذكار', hash: '#/adhkar', icon: 'sunrise', hint: 'الصباح والمساء والنوم والاستيقاظ، بعدّاد' },
   { tab: 'wird', label: 'الورد اليومي', hash: '#/wird', icon: 'calendar', hint: 'ربع أو حزب أو جزء كل يوم، حتى الختمة' },
@@ -139,6 +144,14 @@ export default function App() {
     addEventListener('keydown', key);
     return () => removeEventListener('keydown', key);
   }, [more]);
+
+  // the ambient screen: opened by hand (#/ambient) or by itself after a quiet spell
+  const [autoAmbient, setAutoAmbient] = useState(false);
+  useIdle(settings.ambientAfter ?? 5, route.tab !== 'ambient' && !autoAmbient && route.tab !== 'align' && route.tab !== 'recorder', () => setAutoAmbient(true));
+  const exitAmbient = () => {
+    setAutoAmbient(false);
+    if (route.tab === 'ambient') go('#/');
+  };
 
   const isCurrent = (n: NavItem) => (n.covers ?? [n.tab]).includes(route.tab);
   const [progress] = useProgress();
@@ -259,7 +272,7 @@ export default function App() {
       )}
 
       <main id="main" className="app-main" tabIndex={-1}>
-        {route.tab === 'home' && <HomePage go={go} />}
+        {(route.tab === 'home' || route.tab === 'ambient') && <HomePage go={go} />}
         {route.tab === 'practice' && <PracticePage go={go} />}
         {route.tab === 'settings' && <SettingsPage go={go} />}
         {route.tab === 'hifz' && <HifzPage go={go} />}
@@ -278,6 +291,7 @@ export default function App() {
         {route.tab === 'drills' && <DrillsPage drillId={route.id} go={go} />}
         {route.tab === 'checklist' && <ChecklistPage />}
       </main>
+      {(autoAmbient || route.tab === 'ambient') && <Ambient onExit={exitAmbient} />}
       <AdhanBanner />
       <Celebrations />
     </div>

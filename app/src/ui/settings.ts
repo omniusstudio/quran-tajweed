@@ -36,13 +36,15 @@ export interface Settings {
   asrMethod?: 'standard' | 'hanafi';
   /** The call to prayer: on/off and which prayers. The Mac's local server plays it even with the app closed. */
   adhan?: { enabled: boolean; prayers: Record<string, boolean> };
+  /** Minutes without interaction before the ambient screen takes over (0 = never). */
+  ambientAfter?: number;
   /** Evening nudge (HH:MM) when the day's checklist is not finished; null = off. */
   todoReminder?: string | null;
   /** Last local change, for merging between devices. */
   updatedAt?: number;
 }
 
-export const DEFAULTS: Settings = { theme: 'system', sound: true, haptics: true, quranScale: 1, motion: 'system', dailyGoal: 10, reciter: 'nourin_siddig', lastSurah: 1, playMode: 'continuous', positions: {}, hijriOffset: 0, prayerMethod: 'mwl', asrMethod: 'standard', todoReminder: '20:30' };
+export const DEFAULTS: Settings = { theme: 'system', sound: true, haptics: true, quranScale: 1, motion: 'system', dailyGoal: 10, reciter: 'nourin_siddig', lastSurah: 1, playMode: 'continuous', positions: {}, hijriOffset: 0, prayerMethod: 'mwl', asrMethod: 'standard', todoReminder: '20:30', ambientAfter: 5 };
 
 function read(): Settings {
   try {

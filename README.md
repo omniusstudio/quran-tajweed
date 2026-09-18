@@ -215,6 +215,15 @@ voice, opens in follow-along, closable for the day.
   the same file while it is open. No recording ships with the app.
 - **Bookmark button**: the header, the sidebar and the top of the home page jump to the saved
   follow-along verse.
+- **Ambient screen** (`#/ambient`, `ui/Ambient.tsx`, `content/ambient.ts`): something calm to
+  leave on a second display. A sky that follows the prayer times (dawn, day, afternoon, dusk,
+  night), a slow rotation of well-known āyāt, the Qur'anic supplications and the shorter hadith
+  (āyāt are references resolved against the muṣḥaf, checked by a test), the Hijri date and clock,
+  the next prayer on an arc of the day, today's or the next occasion, the next fast, and the
+  checklist's progress. It starts by itself after 2, 5 or 10 quiet minutes (Settings → شاشة
+  السكون; never while audio plays, `ui/activity.ts` + `ui/useIdle.ts`), keeps the display awake
+  where the browser allows it, drifts a few pixels against burn-in, and leaves on Esc or a click.
+  Space shows the next item, F toggles full screen.
 
 ### Interface (`app/src/ui/`)
 

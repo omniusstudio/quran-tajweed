@@ -1,3 +1,4 @@
+import { setBusy } from '../ui/activity';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type PlaySpeed = 0.5 | 0.75 | 1;
@@ -95,8 +96,10 @@ export function usePlayer(src: string | null): Player {
       setReady(true);
     };
     const onErr = () => setError('تعذر تحميل التلاوة. تأكد من الاتصال بالإنترنت في المرة الأولى، أو شغّل scripts/fetch_audio.py.');
-    const onPlay = () => setPlaying(true);
+    const busyKey = `player:${Math.random().toString(36).slice(2)}`;
+    const onPlay = () => { setPlaying(true); setBusy(busyKey, true); };
     const onPause = () => {
+      setBusy(busyKey, false);
       setPlaying(false);
       if (rangeRef.current) {
         rangeRef.current.resolve(false);
@@ -134,6 +137,7 @@ export function usePlayer(src: string | null): Player {
       audio.removeEventListener('timeupdate', check);
       audio.removeEventListener('loadedmetadata', onMeta);
       audio.removeEventListener('error', onErr);
+      setBusy(busyKey, false);
       audio.removeEventListener('play', onPlay);
       audio.removeEventListener('pause', onPause);
       audio.removeEventListener('ended', onPause);

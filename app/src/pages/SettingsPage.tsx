@@ -244,6 +244,21 @@ export function SettingsPage({ go }: { go: (hash: string) => void }) {
         </div>
       </div>
 
+      <div className="card">
+        <h3>شاشة السكون</h3>
+        <div className="setting">
+          <span className="label">
+            <Icon name="monitor" />
+            <span>
+              تبدأ وحدها بعد
+              <small>آيات وأدعية تتبدل بهدوء، والتاريخ الهجري، والصلاة القادمة، وما يأتي من المناسبات. لا تبدأ أثناء الاستماع.</small>
+            </span>
+          </span>
+          <Segment<number> value={s.ambientAfter ?? 5} onChange={(v) => set('ambientAfter', v)} options={[{ v: 0, label: 'إيقاف' }, { v: 2, label: `${arNum(2)} د` }, { v: 5, label: `${arNum(5)} د` }, { v: 10, label: `${arNum(10)} د` }]} />
+        </div>
+        <button className="toggle" onClick={() => go('#/ambient')}><Icon name="monitor" size={18} /> افتحها الآن</button>
+      </div>
+
       <PrayerSettings />
 
       <PhoneAccess />
