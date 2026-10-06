@@ -215,6 +215,11 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
             <strong>الحروف</strong>
             <small>شاهد الفم من ثلاث جهات</small>
           </button>
+          <button className="tile" onClick={() => go('#/tahsin')}>
+            <Icon name="home" />
+            <strong>تحصين البيت</strong>
+            <small>آية الكرسي وخاتمة البقرة والمعوذات، تُتلى في البيت</small>
+          </button>
           <button className="tile" onClick={() => go('#/drills')}>
             <Icon name="zap" />
             <strong>تدريبات الدوري</strong>

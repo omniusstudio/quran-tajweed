@@ -51,6 +51,7 @@ export function todosFor(date = new Date(), p: Progress = readProgress()): { tod
     { id: 'hifz', slot: 'day', title: 'تحدي الحفظ', detail: 'خمس آيات، أو مراجعة ما حان وقته', link: '#/hifz', auto: true },
     { id: 'practice', slot: 'day', title: 'هدف التدريب', detail: 'درس أو تمرين حتى تبلغ هدف اليوم', link: '#/practice', auto: true },
     { id: 'adhkar_evening', slot: 'evening', title: 'أذكار المساء', detail: 'ومعها آية الكرسي، والإخلاص والمعوذتان ثلاثاً', link: '#/adhkar/evening', hadith: ['quls_morning_evening'] },
+    { id: 'tahsin', slot: 'evening', title: 'تحصين البيت', detail: 'آية الكرسي وخاتمة البقرة والمعوذات تُتلى في البيت', link: '#/tahsin', hadith: ['baqarah_home', 'kursi_sleep'], optional: true },
     { id: 'sleep', slot: 'night', title: 'سورة الملك وأذكار النوم', detail: 'الملك، وآخر آيتين من البقرة، وآية الكرسي، والإخلاص والمعوذتان', link: '#/adhkar/sleep', hadith: ['mulk', 'baqarah_last_two', 'kursi_sleep', 'quls_sleep'] },
   ];
   if (date.getDay() === 5) {

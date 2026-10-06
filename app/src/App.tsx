@@ -19,6 +19,7 @@ import { HifzPage } from './pages/HifzPage';
 import { WirdPage } from './pages/WirdPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { AdhkarPage } from './pages/AdhkarPage';
+import { TahsinPage } from './pages/TahsinPage';
 import { setForNow, type AdhkarSet } from './content/adhkar';
 import { AdhanBanner } from './ui/AdhanBanner';
 import { Ambient } from './ui/Ambient';
@@ -39,6 +40,7 @@ type Route =
   | { tab: 'wird' }
   | { tab: 'calendar' }
   | { tab: 'ambient' }
+  | { tab: 'tahsin' }
   | { tab: 'adhkar'; set: AdhkarSet }
   | { tab: 'lessons'; id?: string }
   | { tab: 'letters'; id: string }
@@ -62,6 +64,7 @@ function parseHash(): Route {
   if (tab === 'wird') return { tab: 'wird' };
   if (tab === 'calendar') return { tab: 'calendar' };
   if (tab === 'ambient') return { tab: 'ambient' };
+  if (tab === 'tahsin') return { tab: 'tahsin' };
   if (tab === 'adhkar') return { tab: 'adhkar', set: (['morning', 'evening', 'sleep', 'waking'] as const).includes(id as AdhkarSet) ? (id as AdhkarSet) : setForNow() };
   if (tab === 'letters') return { tab: 'letters', id: id && BY_ID[id] ? id : 'qaf' };
   if (tab === 'contrast') return { tab: 'contrast', id: id && CONTRAST_PAIRS.some((p) => p.id === id) ? id : CONTRAST_PAIRS[0].id };
@@ -109,6 +112,7 @@ const NAV: NavItem[] = [
 const MORE: NavItem[] = [
   { tab: 'ambient', label: 'شاشة السكون', hash: '#/ambient', icon: 'monitor', hint: 'آيات وأدعية والتاريخ والصلاة القادمة، تُترك على الشاشة' },
   { tab: 'calendar', label: 'التقويم الهجري', hash: '#/calendar', icon: 'crescent', hint: 'الأعياد وأيام الصيام، ولماذا، وماذا تفعل' },
+  { tab: 'tahsin', label: 'تحصين البيت', hash: '#/tahsin', icon: 'home', hint: 'سور التحصين وآياته من السنة، تُتلى في البيت' },
   { tab: 'adhkar', label: 'الأذكار', hash: '#/adhkar', icon: 'sunrise', hint: 'الصباح والمساء والنوم والاستيقاظ، بعدّاد' },
   { tab: 'wird', label: 'الورد اليومي', hash: '#/wird', icon: 'calendar', hint: 'ربع أو حزب أو جزء كل يوم، حتى الختمة' },
   { tab: 'hifz', label: 'تحدي الحفظ', hash: '#/hifz', icon: 'star', hint: 'خمس آيات كل يوم، والمراجعة في وقتها' },
@@ -120,7 +124,7 @@ const MORE: NavItem[] = [
   { tab: 'recorder', label: 'تسجيل المعلم', hash: '#/recorder', icon: 'mic', hint: 'أداة المطوّر: مقاطع الحروف' },
   { tab: 'checklist', label: 'الجاهزية', hash: '#/checklist', icon: 'clipboard', hint: 'أداة المطوّر: ما اكتمل وما لم يكتمل' },
 ];
-const MORE_TABS = new Set<Route['tab']>(['calendar', 'adhkar', 'reference', 'dictionary', 'settings', 'align', 'recorder', 'checklist']);
+const MORE_TABS = new Set<Route['tab']>(['calendar', 'adhkar', 'tahsin', 'reference', 'dictionary', 'settings', 'align', 'recorder', 'checklist']);
 
 export default function App() {
   const [route, go] = useRoute();
@@ -279,6 +283,7 @@ export default function App() {
         {route.tab === 'wird' && <WirdPage go={go} />}
         {route.tab === 'calendar' && <CalendarPage go={go} />}
         {route.tab === 'adhkar' && <AdhkarPage set={route.set} go={go} />}
+        {route.tab === 'tahsin' && <TahsinPage go={go} />}
         {route.tab === 'lessons' && (route.id ? <LessonScreen ruleId={route.id} go={go} /> : <LessonsIndex go={go} />)}
         {route.tab === 'letters' && <LettersPage id={route.id} go={go} />}
         {route.tab === 'contrast' && <ContrastPage id={route.id} go={go} />}

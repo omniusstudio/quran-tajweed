@@ -213,6 +213,14 @@ voice, opens in follow-along, closable for the day.
   a notification. The recording is uploaded from Settings (`PUT /__adhan/file?slot=adhan|fajr`,
   kept in `.local/adhan/`); `POST /__adhan/test` and `/__adhan/stop`. On a phone the page plays
   the same file while it is open. No recording ships with the app.
+- **تحصين البيت** (`#/tahsin`, `content/tahsin.ts`, `pages/TahsinPage.tsx`): the sūrahs and āyāt
+  the Sunnah ties to a protected home, read aloud in sequence in the reciter's voice. Two programs:
+  the daily one (Āyat al-Kursī, the last two verses of al-Baqarah, al-Ikhlāṣ and the two
+  muʿawwidhāt three times each, about ten minutes) and the whole of Sūrat al-Baqarah (about two
+  hours). Each item shows the narration behind it (Muslim 780 and 2018, al-Bukhārī 2311 and
+  5009, Abū Dāwūd 5082); nothing without a text is included. A loop switch keeps it going in the
+  house; finishing a program ticks the optional checklist item. The dhikr on entering the home
+  comes from Ḥiṣn al-Muslim (chapter 11 in `adhkar.json`).
 - **Bookmark button**: the header, the sidebar and the top of the home page jump to the saved
   follow-along verse.
 - **Ambient screen** (`#/ambient`, `ui/Ambient.tsx`, `content/ambient.ts`): something calm to

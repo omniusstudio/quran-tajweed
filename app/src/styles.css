@@ -1027,3 +1027,15 @@ button.word { position: relative; }
 @keyframes ambPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
 :root[data-motion="reduced"] .ambient *, :root[data-motion="reduced"] .ambient { animation: none !important; }
 .adhan-banner { z-index: 80; }
+
+/* ---------- تحصين البيت ---------- */
+.tahsin-tabs { display: flex; width: 100%; margin-block: 8px 12px; }
+.tahsin-tabs button { flex: 1; justify-content: center; }
+.player-row { margin-block-start: 6px; }
+.player-card .bar { margin-block: 12px 6px; }
+.tahsin-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.tahsin-item { margin: 0; transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease); }
+.tahsin-item.now { border-color: var(--primary); background: color-mix(in srgb, var(--primary-soft) 45%, var(--surface)); }
+.tahsin-item.passed { opacity: .72; }
+.tahsin-n { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font-size: .85rem; margin-inline-end: 4px; }
+.tahsin-item h3 { display: flex; align-items: center; gap: 8px; }

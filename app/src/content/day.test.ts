@@ -170,3 +170,20 @@ describe('the sky view follows the real sun and moon', () => {
     expect(Math.round(week.age)).toBe(7); // and it is the 7th of the Hijri month
   });
 });
+
+describe('تحصين البيت', () => {
+  it('resolves every item against the muṣḥaf and points at narrations that exist', async () => {
+    const { PROGRAMS, resolveItem, ENTER_HOME } = await import('./tahsin');
+    for (const p of PROGRAMS) for (const it of p.items) {
+      const r = resolveItem(it);
+      expect(r, it.id).toBeTruthy();
+      for (const h of it.hadith) expect(hadith(h), `${it.id}: ${h}`).toBeTruthy();
+    }
+    const kursi = resolveItem(PROGRAMS[0].items[0])!;
+    expect(kursi.verses).toEqual([253]);
+    expect(kursi.text.split(' ').length).toBe(50);
+    expect(resolveItem(PROGRAMS[0].items[1])!.verses).toEqual([284, 285]);
+    expect(ENTER_HOME.body).toContain('وَلَجْنَا');
+    expect(hadith(ENTER_HOME.hadith)).toBeTruthy();
+  });
+});

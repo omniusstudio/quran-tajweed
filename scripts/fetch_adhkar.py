@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / 'app' / 'src' / 'content' / 'adhkar.json'
 API = 'https://www.hisnmuslim.com/api/ar/{}.json'
-CHAPTERS = {'day': 27, 'sleep': 28, 'waking': 1}
+CHAPTERS = {'day': 27, 'sleep': 28, 'waking': 1, 'home': 11}
 # Qur'anic items by their id in the book: (sūrah, Kūfī from, Kūfī to); a whole sūrah is (n, None, None)
 QURAN = {
     75: [(2, 255, 255)], 76: [(112, None, None), (113, None, None), (114, None, None)],
@@ -36,7 +36,8 @@ def split(text):
     t = re.sub(r'\s+', ' ', text).strip()
     m = re.match(r'^\(\((.*?)\)\)\s*\.?\s*(.*)$', t)
     if not m:
-        return t.strip('() '), []
+        m1 = re.match(r'^\(\s*(.*?)\s*\)\s*\.?\s*$', t)     # some chapters use single parentheses
+        return (m1.group(1) if m1 else t.strip('() .')), []
     body, rest = m.group(1).strip(), m.group(2).strip()
     if rest and not rest.strip(') .'):      # the body itself ended with a parenthesis: «… (أربعاً وثلاثين)))»
         body, rest = body + ')', ''
