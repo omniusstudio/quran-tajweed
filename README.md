@@ -213,6 +213,14 @@ voice, opens in follow-along, closable for the day.
   a notification. The recording is uploaded from Settings (`PUT /__adhan/file?slot=adhan|fajr`,
   kept in `.local/adhan/`); `POST /__adhan/test` and `/__adhan/stop`. On a phone the page plays
   the same file while it is open. No recording ships with the app.
+- **The muṣḥaf** (`#/read/<sūrah>/<verse>`, `pages/ReadPage.tsx`, `content/pages.ts`): reading
+  the way a printed copy reads. One page at a time (the 604 pages from `mushaf.json`), continuous
+  justified text with the verse numbers inline in small rosettes, a sūrah band and the basmalah
+  where a sūrah begins, the sūrah name and juzʾ in the header and the page number in the footer.
+  Pages turn with the side buttons, the arrow keys or a swipe. Press play (or tap a verse) and the
+  recitation runs on, lighting each word and turning the page by itself; it continues into the next
+  sūrah when the recording ends. The bookmark can be pinned from here, the last page is remembered
+  and synced, and reading forward (or listening) counts toward the day's wird.
 - **تحصين البيت** (`#/tahsin`, `content/tahsin.ts`, `pages/TahsinPage.tsx`): the sūrahs and āyāt
   the Sunnah ties to a protected home, read aloud in sequence in the reciter's voice. Two programs:
   the daily one (Āyat al-Kursī, the last two verses of al-Baqarah, al-Ikhlāṣ and the two

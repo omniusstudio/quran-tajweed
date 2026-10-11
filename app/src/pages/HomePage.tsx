@@ -200,6 +200,11 @@ export function HomePage({ go }: { go: (hash: string) => void }) {
         </div>
 
         <div className="tiles">
+          <button className="tile" onClick={() => go(settings.lastPage ? '#/read' : '#/read/1')}>
+            <Icon name="book" />
+            <strong>المصحف</strong>
+            <small>{settings.lastPage ? `تابع من الصفحة ${arNum(settings.lastPage)}` : 'اقرأ صفحةً صفحة، أو استمع وتابع'}</small>
+          </button>
           <button className="tile" onClick={() => go('#/exercises')}>
             <Icon name="target" />
             <strong>التمارين</strong>

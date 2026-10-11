@@ -36,6 +36,8 @@ export interface Settings {
   asrMethod?: 'standard' | 'hanafi';
   /** The call to prayer: on/off and which prayers. The Mac's local server plays it even with the app closed. */
   adhan?: { enabled: boolean; prayers: Record<string, boolean> };
+  /** The muṣḥaf page last open in the reading view. */
+  lastPage?: number;
   /** Minutes without interaction before the ambient screen takes over (0 = never). */
   ambientAfter?: number;
   /** Evening nudge (HH:MM) when the day's checklist is not finished; null = off. */

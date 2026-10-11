@@ -187,3 +187,27 @@ describe('تحصين البيت', () => {
     expect(hadith(ENTER_HOME.hadith)).toBeTruthy();
   });
 });
+
+describe('the muṣḥaf pages', () => {
+  it('covers 604 pages, every verse once, in order, with sūrah starts marked', async () => {
+    const { PAGE_COUNT, pageSegments, pageOf, firstVerseOnPage, juzOfPage } = await import('./pages');
+    let count = 0;
+    let lastSurah = 0, lastIdx = -1;
+    for (let p = 1; p <= PAGE_COUNT; p++) {
+      const segs = pageSegments(p);
+      expect(segs.length, `page ${p}`).toBeGreaterThan(0);
+      for (const g of segs) {
+        count += g.to - g.from + 1;
+        expect(g.surah.number > lastSurah || (g.surah.number === lastSurah && g.from === lastIdx + 1)).toBe(true);
+        expect(g.starts).toBe(g.from === 0);
+        lastSurah = g.surah.number; lastIdx = g.to;
+      }
+    }
+    expect(count).toBe(6218);
+    expect(pageOf(1, 1)).toBe(1);
+    expect(pageOf(2, 1)).toBe(2);
+    expect(firstVerseOnPage(604)).toEqual({ surah: 112, basri: 1 });
+    expect(juzOfPage(1)).toBe(1);
+    expect(juzOfPage(604)).toBe(30);
+  });
+});
