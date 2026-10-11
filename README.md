@@ -225,7 +225,12 @@ voice, opens in follow-along, closable for the day.
   al-Fātiḥah is ①, الم is ① of al-Baqarah), placed by `scripts/kufi_marks.py` which aligns every
   Kūfī ayah of `data/quran.json` to the Dūrī words and stores `kufiEnds` per verse (6236 marks,
   76 of them inside a Baṣrī verse); Settings can switch the view to the Baṣrī count the Dūrī
-  prints and the lessons use. Run `kufi_marks.py` after `extract_mushaf.py`.
+  prints and the lessons use. The same script sets every verse's real Madani page, juzʾ and
+  ḥizb quarter from the Kūfī ayah holding its last word, so pages begin and end where the printed
+  muṣḥaf's do (page 2 is al-Baqarah 1–5, page 50 opens Āl ʿImrān), and each sūrah's Kūfī verse
+  count for the heading. The heading is the printed one redrawn in SVG (`ui/SurahBand.tsx`): a
+  green ornamental band, the name in a cartouche, medallions with آياتها and ترتيبها. Run
+  `kufi_marks.py` after `extract_mushaf.py`.
 - **تحصين البيت** (`#/tahsin`, `content/tahsin.ts`, `pages/TahsinPage.tsx`): the sūrahs and āyāt
   the Sunnah ties to a protected home, read aloud in sequence in the reciter's voice. Two programs:
   the daily one (Āyat al-Kursī, the last two verses of al-Baqarah, al-Ikhlāṣ and the two

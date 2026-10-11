@@ -21,6 +21,8 @@ export interface Surah {
   verses: Verse[];
   /** al-Fātiḥah: its basmalah is Kūfī verse 1. */
   headerKufi?: number;
+  /** Verses by the Kūfī count (the number printed in the muṣḥaf's heading). */
+  kufiCount?: number;
 }
 export interface Reciter {
   id: string;

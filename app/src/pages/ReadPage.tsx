@@ -5,6 +5,7 @@ import { usePlayer } from '../audio/usePlayer';
 import { PAGE_COUNT, firstVerseOnPage, juzOfPage, pageOf, pageSegments } from '../content/pages';
 import { inPortionAhead, markRead, wirdState } from '../content/wird';
 import { Icon } from '../ui/icons';
+import { SurahBand } from '../ui/SurahBand';
 import { rewardWird } from '../ui/rewards';
 import { useSettings } from '../ui/settings';
 import { sfx } from '../ui/sound';
@@ -169,7 +170,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
                 <section key={s.number} className="mp-surah">
                   {g.starts && (
                     <>
-                      <div className="surah-band"><i /><h2>{s.name}</h2><i /></div>
+                      <SurahBand name={s.name} order={s.number} count={s.kufiCount ?? s.verses.length} />
                       {s.header && <p className="basmalah">{s.header}{kufi && s.headerKufi ? <> <span className="aya-n">{arNum(s.headerKufi)}</span></> : null}</p>}
                     </>
                   )}

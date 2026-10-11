@@ -7,8 +7,10 @@ The muṣḥaf is split by the Baṣrī count (the Dūrī prints). Ḥafṣ mu�
 ends verses in a few other places (الم is a verse of its own in al-Baqarah; al-Fātiḥah's basmalah
 is verse 1; some Baṣrī ends are not Kūfī ends). This aligns the Ḥafṣ text of every Kūfī ayah
 (data/quran.json) to the Dūrī words of the sūrah and writes, for each Baṣrī verse, `kufiEnds`:
-[[wordsBefore, kufiNumber], …] — a marker after that many words of the verse. Run after
-extract_mushaf.py.
+[[wordsBefore, kufiNumber], …] — a marker after that many words of the verse. It also sets, for
+every Baṣrī verse, the `kufi` ayah holding its last word and that ayah's real Madani `page`, `juz`
+and ḥizb quarter `q` (so pages turn exactly where the printed muṣḥaf does), and each sūrah's Kūfī
+verse count `kufiCount` for the header medallion. Run after extract_mushaf.py.
 """
 import difflib, json, sys
 from pathlib import Path
@@ -49,6 +51,16 @@ def main():
                 else: break
             return min(best, len(duri))
         for v in s['verses']: v['kufiEnds'] = []
+        s['kufiCount'] = len(QURAN[n]['ayahs'])
+        ayahs = {a['numberInSurah']: a for a in QURAN[n]['ayahs']}
+        # the Kūfī ayah holding each Baṣrī verse's last word → its real page, juzʾ and ḥizb quarter
+        cum = 0
+        dends = [(hpos, k) for hpos, k in ends]
+        for v in s['verses']:
+            cum += len(v['words'])
+            k = next((k for hpos, k in dends if to_duri(hpos) >= cum), dends[-1][1])
+            a = ayahs[k]
+            v['kufi'], v['page'], v['juz'], v['q'] = k, a['page'], a['juz'], a['hizbQuarter']
         for hpos, k in ends:
             dpos = to_duri(hpos)                  # number of Dūrī words before the marker
             if dpos <= 0: continue
