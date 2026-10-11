@@ -127,6 +127,13 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
   };
   const current = pos && align ? { surah: playSurah, basri: align.verses[pos.verse].basri, word: pos.word } : null;
   const headerSurah = segs[segs.length - 1]?.surah;
+  const kufi = (settings.numbering ?? 'kufi') === 'kufi';
+  /** The verse number to announce for a position, in the chosen count. */
+  const shownNumber = (sn: number, basri: number, word: number) => {
+    const v = SURAH_BY_NUMBER[sn].verses.find((x) => x.basri === basri)!;
+    if (!kufi) return basri;
+    return v.kufiEnds?.find((e) => e[0] > word)?.[1] ?? v.kufi ?? basri;
+  };
 
   return (
     <div className="page read">
@@ -163,7 +170,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
                   {g.starts && (
                     <>
                       <div className="surah-band"><i /><h2>{s.name}</h2><i /></div>
-                      {s.header && <p className="basmalah">{s.header}</p>}
+                      {s.header && <p className="basmalah">{s.header}{kufi && s.headerKufi ? <> <span className="aya-n">{arNum(s.headerKufi)}</span></> : null}</p>}
                     </>
                   )}
                   <p className="mp-text">
@@ -173,12 +180,15 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
                       const canPlay = !!a?.verses.find((x) => x.basri === v.basri);
                       return (
                         <span key={v.basri} className={`aya${isCur ? ' on' : ''}${marked ? ' marked' : ''}`} onClick={() => canPlay && startAt(s.number, v.basri)} role={canPlay ? 'button' : undefined} title={canPlay ? `اسمع من الآية ${arNum(v.basri)}` : undefined}>
-                          {v.words.map((w, wi) => (
-                            <span key={wi}>
-                              <span className={`w${isCur && wordsTrusted && current!.word === wi ? ' on' : ''}`}>{w}</span>{' '}
-                            </span>
-                          ))}
-                          <span className="aya-n" aria-label={`الآية ${arNum(v.basri)}`}>{arNum(v.basri)}</span>{' '}
+                          {v.words.map((w, wi) => {
+                            const mark = kufi ? v.kufiEnds?.find((e) => e[0] === wi + 1)?.[1] : wi === v.words.length - 1 ? v.basri : undefined;
+                            return (
+                              <span key={wi}>
+                                <span className={`w${isCur && wordsTrusted && current!.word === wi ? ' on' : ''}`}>{w}</span>
+                                {mark !== undefined && <> <span className="aya-n" aria-label={`الآية ${arNum(mark)}`}>{arNum(mark)}</span></>}{' '}
+                              </span>
+                            );
+                          })}
                         </span>
                       );
                     })}
@@ -198,7 +208,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
         </button>
         <div className="read-status">
           {player.playing && current ? (
-            <><strong>{SURAH_BY_NUMBER[current.surah].name.replace(/^سُورَةُ\s*/, '')} · الآية {arNum(current.basri)}</strong><small>{RECITERS.find((r) => r.id === reciter)?.nameAr}</small></>
+            <><strong>{SURAH_BY_NUMBER[current.surah].name.replace(/^سُورَةُ\s*/, '')} · الآية {arNum(shownNumber(current.surah, current.basri, current.word))}</strong><small>{RECITERS.find((r) => r.id === reciter)?.nameAr}</small></>
           ) : player.loading !== null ? (
             <><strong>جارٍ جلب التلاوة…</strong><small>{arNum(Math.round(player.loading * 100))}٪</small></>
           ) : !align && !loadAlignment(reciter, firstVerseOnPage(page).surah) ? (

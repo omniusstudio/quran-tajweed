@@ -196,6 +196,16 @@ export function SettingsPage({ go }: { go: (hash: string) => void }) {
         <div className="ayah" dir="rtl" style={{ textAlign: 'center' }}>بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div>
         <div className="setting">
           <span className="label">
+            <Icon name="book" />
+            <span>
+              ترقيم الآيات في المصحف
+              <small>الكوفي هو ترقيم مصاحف حفص المعروفة (البسملة آية ١ في الفاتحة، والٓمٓ آية ١). البصري هو ترقيم مصاحف رواية الدوري، وبه تُرقَّم الآيات في الدروس.</small>
+            </span>
+          </span>
+          <Segment<'kufi' | 'basri'> value={s.numbering ?? 'kufi'} onChange={(v) => set('numbering', v)} options={[{ v: 'kufi', label: 'الكوفي (حفص)' }, { v: 'basri', label: 'البصري (الدوري)' }]} />
+        </div>
+        <div className="setting">
+          <span className="label">
             <Icon name="motion" />
             <span>
               الحركة

@@ -1071,8 +1071,8 @@ button.word { position: relative; }
 .mp-text .aya.on { background: color-mix(in srgb, var(--hl) 55%, transparent); }
 .mp-text .w { border-radius: 3px; padding: 0 1px; transition: background var(--dur-fast) var(--ease); }
 .mp-text .w.on { background: var(--hl); box-shadow: 0 0 0 2px var(--hl); }
-.mp-text .aya-n { display: inline-grid; place-items: center; min-width: 1.5em; height: 1.5em; font-family: var(--display); font-size: .5em; line-height: 1; color: var(--accent-strong); border: 1px solid var(--rule); border-radius: 50%; margin: 0 .15em; vertical-align: middle; position: relative; background: var(--paper); }
-.mp-text .aya-n::before { content: ''; position: absolute; inset: 2px; border: 1px solid var(--rule-soft); border-radius: 50%; }
+.mp-text .aya-n, .basmalah .aya-n { display: inline-grid; place-items: center; min-width: 1.5em; height: 1.5em; font-family: var(--display); font-size: .5em; line-height: 1; color: var(--accent-strong); border: 1px solid var(--rule); border-radius: 50%; margin: 0 .15em; vertical-align: middle; position: relative; background: var(--paper); }
+.mp-text .aya-n::before, .basmalah .aya-n::before { content: ''; position: absolute; inset: 2px; border: 1px solid var(--rule-soft); border-radius: 50%; }
 .mp-text .aya.marked .aya-n { background: var(--accent); color: var(--on-primary); border-color: var(--accent); }
 .read-player { position: sticky; inset-block-end: calc(var(--nav-h) + 10px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; margin: 14px auto 0; max-width: 680px; padding: 8px 10px; border-radius: 7px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); border: 1px solid var(--line); box-shadow: var(--shadow-2); }
 @media (min-width: 1024px) { .read-player { inset-block-end: 12px; } }

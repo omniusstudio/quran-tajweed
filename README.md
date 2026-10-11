@@ -221,6 +221,11 @@ voice, opens in follow-along, closable for the day.
   recitation runs on, lighting each word and turning the page by itself; it continues into the next
   sūrah when the recording ends. The bookmark can be pinned from here, the last page is remembered
   and synced, and reading forward (or listening) counts toward the day's wird.
+  Verse numbers follow the Kūfī count of the familiar Ḥafṣ muṣḥafs by default (the basmalah of
+  al-Fātiḥah is ①, الم is ① of al-Baqarah), placed by `scripts/kufi_marks.py` which aligns every
+  Kūfī ayah of `data/quran.json` to the Dūrī words and stores `kufiEnds` per verse (6236 marks,
+  76 of them inside a Baṣrī verse); Settings can switch the view to the Baṣrī count the Dūrī
+  prints and the lessons use. Run `kufi_marks.py` after `extract_mushaf.py`.
 - **تحصين البيت** (`#/tahsin`, `content/tahsin.ts`, `pages/TahsinPage.tsx`): the sūrahs and āyāt
   the Sunnah ties to a protected home, read aloud in sequence in the reciter's voice. Two programs:
   the daily one (Āyat al-Kursī, the last two verses of al-Baqarah, al-Ikhlāṣ and the two

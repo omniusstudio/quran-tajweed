@@ -4,6 +4,8 @@ import recitersJson from '../content/reciters.json';
 export interface Verse {
   basri: number;
   kufi: number | null;
+  /** Where Kūfī (Ḥafṣ-muṣḥaf) verse ends fall: [[words before the marker, Kūfī number], …] (scripts/kufi_marks.py). */
+  kufiEnds?: [number, number][];
   /** Juzʾ (1–30), ḥizb quarter (1–240) and muṣḥaf page (1–604) of the Ḥafṣ ayah this verse maps to. */
   juz: number | null;
   q: number | null;
@@ -17,6 +19,8 @@ export interface Surah {
   name: string;
   header: string | null;
   verses: Verse[];
+  /** al-Fātiḥah: its basmalah is Kūfī verse 1. */
+  headerKufi?: number;
 }
 export interface Reciter {
   id: string;

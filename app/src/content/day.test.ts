@@ -211,3 +211,16 @@ describe('the muṣḥaf pages', () => {
     expect(juzOfPage(604)).toBe(30);
   });
 });
+
+describe('Kūfī numbering marks', () => {
+  it('has 6236 Kūfī verse ends placed like a Ḥafṣ muṣḥaf', async () => {
+    const { SURAHS, SURAH_BY_NUMBER } = await import('../audio/quran');
+    const total = SURAHS.reduce((n, s) => n + s.verses.reduce((m, v) => m + (v.kufiEnds?.length ?? 0), 0), 0) + (SURAH_BY_NUMBER[1].headerKufi ? 1 : 0);
+    expect(total).toBe(6236);
+    expect(SURAH_BY_NUMBER[1].headerKufi).toBe(1);
+    expect(SURAH_BY_NUMBER[1].verses[5].kufiEnds).toEqual([]); // أنعمت عليهم: no Kūfī end
+    expect(SURAH_BY_NUMBER[1].verses[6].kufiEnds).toEqual([[5, 7]]);
+    expect(SURAH_BY_NUMBER[2].verses[0].kufiEnds).toEqual([[1, 1], [8, 2]]); // الٓمٓ ① … للمتقين ②
+    for (const s of SURAHS) for (const v of s.verses) for (const [after] of v.kufiEnds ?? []) expect(after >= 1 && after <= v.words.length).toBe(true);
+  });
+});
