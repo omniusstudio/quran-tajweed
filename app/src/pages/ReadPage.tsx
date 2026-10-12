@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { WORD_SOURCES, loadAlignment, locate, playSpan, type SurahAlign } from '../audio/alignment';
+import { WORD_SOURCES, loadAlignment, locate, playSpan, type SurahAlign, startTime } from '../audio/alignment';
 import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl } from '../audio/quran';
 import { usePlayer } from '../audio/usePlayer';
 import { PAGE_COUNT, firstVerseOnPage, juzOfPage, pageLines, pageOf, pageSegments } from '../content/pages';
@@ -79,8 +79,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
     const v = a?.verses.find((x) => x.basri === basri);
     if (!a || !v) return;
     sfx('tap');
-    // a sūrah starts with its basmalah when the reciter reads one
-    const at = v === a.verses[0] && a.header ? a.header[0] : playSpan(v)[0];
+    const at = startTime(a, v);   // a sūrah starts with its basmalah when the reciter reads one
     if (s !== playSurah) { pendingStart.current = at; setPlaySurah(s); return; }
     lastVerse.current = a.verses.indexOf(v);
     player.seek(at);

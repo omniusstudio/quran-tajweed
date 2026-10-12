@@ -44,6 +44,11 @@ export function verseSpan(reciter: string, surah: number, basri: number): Span |
 }
 
 /** Playback span for a verse entry (safe when present). */
+/** Where playback starts for a verse: a sūrah's first verse starts at the basmalah when the reciter reads one. */
+export function startTime(a: SurahAlign, v: VerseAlign): number {
+  return v === a.verses[0] && a.header ? a.header[0] : playSpan(v)[0];
+}
+
 export function playSpan(v: VerseAlign): Span {
   return v.safe ?? [v.start, v.end];
 }

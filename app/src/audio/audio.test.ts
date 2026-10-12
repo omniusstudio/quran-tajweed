@@ -144,3 +144,14 @@ describe('teacher clip manifest', () => {
     expect(lettersOf('ٱلنَّاسِ').map((l) => l.id)).toEqual(['alif_madd', 'lam', 'nun', 'sin']);
   });
 });
+
+describe('where playback starts', () => {
+  it('starts a sūrah at its basmalah and other verses at their own span', async () => {
+    const { loadAlignment, startTime, playSpan } = await import('./alignment');
+    const a = loadAlignment('nourin_siddig', 11)!;
+    expect(a.header).toBeDefined();
+    expect(startTime(a, a.verses[0])).toBe(a.header![0]);
+    expect(startTime(a, a.verses[0])).toBeLessThan(playSpan(a.verses[0])[0]);
+    expect(startTime(a, a.verses[1])).toBe(playSpan(a.verses[1])[0]);
+  });
+});
