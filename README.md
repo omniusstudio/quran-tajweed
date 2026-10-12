@@ -235,7 +235,10 @@ voice, opens in follow-along, closable for the day.
   line of every word and stores `lines` per verse; `pageLines()` in `content/pages.ts` builds the
   fifteen slots (heading and basmalah take the lines above a sūrah's first text line; a verse that
   runs over a page break is split between the two pages), and the view justifies every line to
-  the page width, shrinking the page's font just enough that no line overflows. A cloth ribbon
+  the page width: the page's font shrinks just enough that no line overflows, then each line's
+  slack becomes kashida strokes inside a few of its words (`content/kashida.ts`, at a join and
+  preferably before the last letter, never splitting لا), so the letters stretch as in the print
+  instead of the words drifting apart. A cloth ribbon
   (`ui/Ribbon.tsx`) hangs on the page that holds the bookmark: red and unpinned, it follows where
   you read or stopped listening; tap it (or the bookmark button) to pin it green.
   Run `kufi_marks.py`, then `fetch_lines.py`, after `extract_mushaf.py`.

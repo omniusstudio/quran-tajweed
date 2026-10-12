@@ -14,7 +14,7 @@ export function kashidaPoint(word: string): number {
     if (LETTER.test(ch)) letters.push({ ch, end: i + 1 });
     else if (MARK.test(ch) && letters.length) letters[letters.length - 1].end = i + 1;
   }
-  if (letters.length < 2) return -1;
+  if (letters.length < 3) return -1; // particles like ما and في keep their shape
   for (let k = letters.length - 2; k >= 0; k--) {
     const a = letters[k], b = letters[k + 1];
     if (NON_JOINING.has(a.ch)) continue;
@@ -40,7 +40,7 @@ export function planKashida(words: { text: string; width: number }[], lineWidth:
   const natural = words.reduce((n, w) => n + w.width, 0) + gap * Math.max(0, words.length - 1);
   let slack = lineWidth - natural;
   if (slack <= strokeWidth || strokeWidth <= 0) return counts;
-  const able = words.map((w, i) => ({ i, len: w.text.replace(/[^ء-يٱ-ۓ]/g, '').length })).filter((x) => kashidaPoint(words[x.i].text) >= 0 && x.len >= 2);
+  const able = words.map((w, i) => ({ i, len: w.text.replace(/[^ء-يٱ-ۓ]/g, '').length })).filter((x) => kashidaPoint(words[x.i].text) >= 0 && x.len >= 3); // particles like ما and في keep their shape
   if (!able.length) return counts;
   // leave a little of the slack for the gaps, as the print does
   let strokes = Math.floor((slack * 0.82) / strokeWidth);

@@ -1099,8 +1099,13 @@ button.word { position: relative; }
 .wrd .aya-n { margin-inline-start: .3em; }
 @media (max-width: 480px) { .mp-body { --line: 6.9cqw; padding: 0 1cqw; } }
 
-.ribbon { position: absolute; inset-block-start: -2px; inset-inline-start: 7%; z-index: 2; width: 28px; height: 120px; padding: 0; border: none; background: none; cursor: pointer; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .25)); transform-origin: top center; transition: transform var(--dur) var(--ease-spring), filter var(--dur) var(--ease); }
-.ribbon:hover { transform: translateY(2px) rotate(-1.5deg); }
+.ribbon { position: absolute; inset-block-start: -2px; inset-inline-start: 5px; z-index: 2; width: 28px; height: 120px; padding: 0; border: none; background: none; cursor: pointer; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .25)); transform-origin: top center; animation: ribbonDrop 1100ms cubic-bezier(.22, .9, .3, 1) both, ribbonSway 7s ease-in-out 1100ms infinite; }
+.ribbon:hover { animation-play-state: paused; transform: translateY(2px) rotate(-1.5deg); }
+.ribbon.pinned { animation: ribbonTug 500ms var(--ease-spring) both, ribbonSway 7s ease-in-out 500ms infinite; }
+@keyframes ribbonDrop { 0% { transform: translateY(-105%) rotate(0); } 55% { transform: translateY(0) rotate(-4deg); } 72% { transform: translateY(-3px) rotate(3deg); } 86% { transform: translateY(0) rotate(-1.5deg); } 100% { transform: translateY(0) rotate(0); } }
+@keyframes ribbonSway { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(1.2deg); } }
+@keyframes ribbonTug { 0% { transform: translateY(0); } 40% { transform: translateY(6px) rotate(-2deg); } 100% { transform: translateY(0) rotate(0); } }
+:root[data-motion="reduced"] .ribbon { animation: none; }
 .ribbon .rib-shadow { fill: rgba(0, 0, 0, .18); transform: translate(2px, 2px); }
 .ribbon .rib-body { fill: #b8323f; }
 .ribbon .rib-edge { fill: #7d1f2a; opacity: .75; }
@@ -1108,7 +1113,7 @@ button.word { position: relative; }
 .ribbon.pinned .rib-edge { fill: #0f4a2c; }
 .ribbon .rib-sheen { fill: #fff; opacity: .22; }
 .ribbon:not(.pinned) { opacity: .92; }
-@media (max-width: 480px) { .ribbon { width: 22px; height: 94px; } .ribbon svg { width: 22px; height: 94px; } }
+@media (max-width: 640px) { .ribbon { width: 16px; height: 80px; inset-inline-start: 1px; } .ribbon svg { width: 16px; height: 80px; } }
 .read-player { position: sticky; inset-block-end: calc(var(--nav-h) + 10px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; margin: 14px auto 0; max-width: 680px; padding: 8px 10px; border-radius: 7px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px); border: 1px solid var(--line); box-shadow: var(--shadow-2); }
 @media (min-width: 1024px) { .read-player { inset-block-end: 12px; } }
 .read-player .play { width: 48px; height: 48px; border-radius: 50%; border: none; background: var(--primary); color: var(--on-primary); display: grid; place-items: center; flex: none; box-shadow: 0 2px 0 var(--primary-strong); }
