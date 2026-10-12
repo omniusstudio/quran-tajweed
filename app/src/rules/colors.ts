@@ -60,7 +60,6 @@ const isLetter = (c: string) => /[ء-غف-يٱ]/.test(c);
 const SHADDA = 'ّ';
 const SILENT_ALIF = '۟';
 const SUN = new Set('تثدذرزسشصضطظلن');
-const NON_JOINING = new Set('اأإآٱدذرزوؤةىءٲٳ');
 export const ZWJ = '\u200d';
 
 export interface Piece {
@@ -228,14 +227,7 @@ export function colourVerse(words: string[], hafs: (string | null)[] | undefined
       if (last && last.tone === tone[i]) last.text += u;
       else pieces.push({ text: u, tone: tone[i] });
     });
-    // each piece is shaped on its own by the browser, which would break the cursive joins at a colour
-    // boundary: a zero-width joiner on both sides of every join keeps the letters connected
-    for (let i = 0; i + 1 < pieces.length; i++) {
-      const lastLetter = pieces[i].text.replace(/[^ء-غف-يٱ]/g, '').slice(-1);
-      const nextLetter = pieces[i + 1].text.replace(/[^ء-غف-يٱ]/g, '').slice(0, 1);
-      // the hamzah on the line joins nothing: a joiner before it would give شَيۡءٍ a medial yāʾ
-      if (lastLetter && !NON_JOINING.has(lastLetter) && nextLetter && nextLetter !== 'ء') { pieces[i].text += ZWJ; pieces[i + 1].text = ZWJ + pieces[i + 1].text; }
-    }
+    // the pieces are inline spans inside one word, so the browser shapes them together (no joiners needed)
     return pieces;
   });
 }

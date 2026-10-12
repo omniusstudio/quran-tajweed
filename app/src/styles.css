@@ -34,7 +34,7 @@
   --danger-soft: #fbe7e4;
   --info: #1d63b5;
   --info-soft: #e4eefb;
-  --hl: #fff1b8; --hl-aya: #fbf0c9; --hl-word: #ffd86a;
+  --hl: #fff1b8; --hl-aya: #fdf4d8; --hl-word: #ffe9a0;
   --hl-ring: #f2d27a;
   --scrim: rgba(31, 38, 34, .45);
   --shadow-1: 0 1px 2px rgba(31, 38, 34, .05), 0 1px 4px rgba(31, 38, 34, .04);
@@ -74,7 +74,7 @@
     --accent: #e0b054; --accent-strong: #f0c97e; --accent-soft: #3a2f14;
     --pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%2362cf97' stroke-opacity='.12' stroke-width='1'%3E%3Crect x='24' y='24' width='48' height='48'/%3E%3Crect x='24' y='24' width='48' height='48' transform='rotate(45 48 48)'/%3E%3Ccircle cx='48' cy='48' r='7'/%3E%3Ccircle cx='0' cy='0' r='7'/%3E%3Ccircle cx='96' cy='0' r='7'/%3E%3Ccircle cx='0' cy='96' r='7'/%3E%3Ccircle cx='96' cy='96' r='7'/%3E%3C/g%3E%3C/svg%3E");
     --danger: #f08577; --danger-soft: #402320; --info: #86b6f2; --info-soft: #1c2e47;
-    --hl: #5a4d1a; --hl-aya: #3c3419; --hl-word: #6f5a1c; --hl-ring: #8a7630; --scrim: rgba(0, 0, 0, .6);
+    --hl: #5a4d1a; --hl-aya: #34301e; --hl-word: #574a1f; --hl-ring: #8a7630; --scrim: rgba(0, 0, 0, .6);
     --shadow-1: 0 1px 2px rgba(0, 0, 0, .3); --shadow-2: 0 6px 18px rgba(0, 0, 0, .35); --shadow-3: 0 18px 48px rgba(0, 0, 0, .5);
   }
 }
@@ -85,7 +85,7 @@
   --accent: #e0b054; --accent-strong: #f0c97e; --accent-soft: #3a2f14;
   --pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96' viewBox='0 0 96 96'%3E%3Cg fill='none' stroke='%2362cf97' stroke-opacity='.12' stroke-width='1'%3E%3Crect x='24' y='24' width='48' height='48'/%3E%3Crect x='24' y='24' width='48' height='48' transform='rotate(45 48 48)'/%3E%3Ccircle cx='48' cy='48' r='7'/%3E%3Ccircle cx='0' cy='0' r='7'/%3E%3Ccircle cx='96' cy='0' r='7'/%3E%3Ccircle cx='0' cy='96' r='7'/%3E%3Ccircle cx='96' cy='96' r='7'/%3E%3C/g%3E%3C/svg%3E");
   --danger: #f08577; --danger-soft: #402320; --info: #86b6f2; --info-soft: #1c2e47;
-  --hl: #5a4d1a; --hl-aya: #3c3419; --hl-word: #6f5a1c; --hl-ring: #8a7630; --scrim: rgba(0, 0, 0, .6);
+  --hl: #5a4d1a; --hl-aya: #34301e; --hl-word: #574a1f; --hl-ring: #8a7630; --scrim: rgba(0, 0, 0, .6);
   --shadow-1: 0 1px 2px rgba(0, 0, 0, .3); --shadow-2: 0 6px 18px rgba(0, 0, 0, .35); --shadow-3: 0 18px 48px rgba(0, 0, 0, .5);
 }
 
@@ -1085,7 +1085,6 @@ button.word { position: relative; }
 /* the recitation's place: a highlighter band along the verse's lines, and a marker that slides under the current word */
 .aya-band { position: absolute; z-index: 0; box-sizing: content-box; padding: .1em .3em; margin: -.1em -.3em; background: var(--hl-aya); border-radius: 5px; pointer-events: none; }
 .word-marker { position: absolute; z-index: 0; box-sizing: content-box; padding: .06em .18em; margin: -.06em -.18em; background: var(--hl-word); border-radius: 4px; pointer-events: none; transition: left 180ms var(--ease), top 180ms var(--ease), width 180ms var(--ease), height 180ms var(--ease); }
-.word-marker::after { content: ''; position: absolute; inset-inline: .25em; inset-block-end: -.14em; height: .16em; border-radius: 2px; background: var(--primary); }
 @media (prefers-reduced-motion: reduce) { .word-marker { transition: none; } }
 .mp-line { min-width: 0; height: var(--line); display: flex; align-items: center; }
 /* the print's first two pages: a small centred frame */
@@ -1102,10 +1101,11 @@ button.word { position: relative; }
 .band-line.compact .surah-band { max-height: calc(var(--line) * .52); }
 .basmalah.small { font-size: calc(3cqw * var(--quran-scale)); margin-block-start: -1px; }
 .basmalah { font-family: var(--quran); font-size: calc(3.9cqw * var(--quran-scale)); line-height: 1; color: var(--ink-q); white-space: nowrap; }
-.wrd { display: inline-flex; align-items: center; border-radius: 3px; padding: .35em .05em; transition: background var(--dur-fast) var(--ease); }
+.wrd { display: inline-block; border-radius: 3px; padding: .35em .05em; transition: background var(--dur-fast) var(--ease); }   /* inline content, so the browser shapes the coloured pieces as one word */
+.wrd .tj { display: inline; }
 .wrd[role="button"] { cursor: pointer; }
 /* .wrd.in-aya and .wrd.on carry no paint of their own: the band and the marker are drawn beneath the line */
-.aya-n { display: inline-grid; place-items: center; min-width: 1.55em; height: 1.55em; font-family: var(--display); font-size: .48em; line-height: 1; color: var(--accent-strong); border: 1px solid var(--rule); border-radius: 50%; margin: 0 .25em; position: relative; background: var(--paper); flex: none; }
+.aya-n { display: inline-grid; vertical-align: middle; place-items: center; min-width: 1.55em; height: 1.55em; font-family: var(--display); font-size: .48em; line-height: 1; color: var(--accent-strong); border: 1px solid var(--rule); border-radius: 50%; margin: 0 .25em; position: relative; background: var(--paper); flex: none; }
 .aya-n::before { content: ''; position: absolute; inset: 2px; border: 1px solid var(--rule-soft); border-radius: 50%; }
 .aya-n.marked { background: var(--accent); color: var(--on-primary); border-color: var(--accent); }
 .wrd .aya-n { margin-inline-start: .3em; }
