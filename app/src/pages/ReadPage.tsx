@@ -4,6 +4,7 @@ import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl } from '..
 import { usePlayer } from '../audio/usePlayer';
 import { PAGE_COUNT, firstVerseOnPage, juzOfPage, pageLines, pageOf, pageSegments } from '../content/pages';
 import { planKashida, withKashida } from '../content/kashida';
+import { TONES, colourVerse, type Piece } from '../rules/colors';
 import { Ribbon } from '../ui/Ribbon';
 import { inPortionAhead, markRead, wirdState } from '../content/wird';
 import { Icon } from '../ui/icons';
@@ -185,6 +186,34 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
     if (ratio < 1) { const cur = parseFloat(el.style.getPropertyValue('--fit') || '1'); el.style.setProperty('--fit', String(Math.max(0.6, cur * ratio * 0.99))); }
   }, [kashida, layoutKey]);
   const strokes = kashida.key === layoutKey ? kashida.counts : [];
+  const colours = settings.tajweedColors !== false;
+  // the shown text of every word on the page (with its kashida), then the coloured pieces per verse
+  const shownWords = useMemo(() => {
+    const m = new Map<string, string>();
+    lines.forEach((slot, li) => { if (slot.kind === 'text') slot.words.forEach((w, i) => m.set(`${w.surah.number}:${w.vi}:${w.wi}`, withKashida(w.surah.verses[w.vi].words[w.wi], strokes[li]?.[i] ?? 0))); });
+    return m;
+  }, [lines, strokes]);
+  const pieces = useMemo(() => {
+    const out = new Map<string, Piece[][]>();
+    if (!colours) return out;
+    for (const slot of lines) {
+      if (slot.kind !== 'text') continue;
+      for (const w of slot.words) {
+        const key = `${w.surah.number}:${w.vi}`;
+        if (out.has(key)) continue;
+        const v = w.surah.verses[w.vi];
+        const shown = v.words.map((t, wi) => shownWords.get(`${w.surah.number}:${w.vi}:${wi}`) ?? t);
+        out.set(key, colourVerse(v.words, v.hafs, w.surah.verses[w.vi + 1]?.words[0] ?? null, shown));
+      }
+    }
+    return out;
+  }, [lines, shownWords, colours]);
+  const renderWord = (sn: number, vi: number, wi: number) => {
+    const text = shownWords.get(`${sn}:${vi}:${wi}`) ?? SURAH_BY_NUMBER[sn].verses[vi].words[wi];
+    const ps = pieces.get(`${sn}:${vi}`)?.[wi];
+    if (!ps) return text;
+    return ps.map((p, i) => (p.tone ? <span key={i} className={`tj tj-${p.tone}`}>{p.text}</span> : p.text));
+  };
   const bmOnPage = !!bm && pageOf(bm.surah, bm.basri) === page;
   // an unpinned ribbon follows the reader: the page just opened, or the verse where listening stopped
   const remember = useCallback((v: { surah: number; basri: number }) => {
@@ -221,6 +250,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
         <span className="row">
           <button className={`icon-btn${bm?.pinned && bmOnPage ? ' on' : ''}`} onClick={bookmarkHere} aria-label="علامة هنا" title={bm?.pinned && bmOnPage ? 'فكّ العلامة' : 'ثبّت العلامة هنا'}><Icon name="bookmark" /></button>
           {bm && !bmOnPage && <button className="icon-btn" onClick={() => { sfx('tap'); setPage(pageOf(bm.surah, bm.basri)); }} aria-label="اذهب إلى العلامة" title={`العلامة: صفحة ${arNum(pageOf(bm.surah, bm.basri))}`}><Icon name="arrowLeft" /></button>}
+          <button className={`icon-btn${colours ? ' on' : ''}`} onClick={() => { updateSettings({ tajweedColors: !colours }); sfx('toggle'); }} aria-pressed={colours} aria-label="ألوان التجويد" title={colours ? 'أطفئ ألوان التجويد' : 'لوّن الحروف بأحكام التجويد'}><Icon name="sparkles" /></button>
           <button className="icon-btn" onClick={() => go(`#/follow/${current?.surah ?? firstVerseOnPage(page).surah}/${current?.basri ?? firstVerseOnPage(page).basri}`)} aria-label="افتح في المتابعة" title="المتابعة آيةً آية"><Icon name="headphones" /></button>
         </span>
       </div>
@@ -237,7 +267,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
             {lines.map((slot, li) => {
               if (slot.kind === 'band') return (
                 <div key={li} className={`mp-line band-line${slot.compact ? ' compact' : ''}`}>
-                  <SurahBand name={slot.surah.name} order={slot.surah.number} count={slot.surah.kufiCount ?? slot.surah.verses.length} />
+                  <SurahBand name={slot.surah.name} order={slot.surah.number} count={slot.surah.kufiCount ?? slot.surah.verses.length} revelation={slot.surah.revelation} />
                   {slot.compact && <span className="basmalah small">{slot.surah.header}</span>}
                 </div>
               );
@@ -245,14 +275,14 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
               if (slot.kind === 'empty') return <div key={li} className="mp-line" />;
               return (
                 <div key={li} className={`mp-line text${slot.centred ? ' centred' : ''}`}>
-                  {slot.words.map((w, wiOnLine) => {
+                  {slot.words.map((w) => {
                     const v = w.surah.verses[w.vi];
                     const isCur = current?.surah === w.surah.number && current.basri === v.basri;
                     const canPlay = !!loadAlignment(reciter, w.surah.number)?.verses.find((x) => x.basri === v.basri);
                     const marked = bm?.surah === w.surah.number && bm.basri === v.basri && w.mark !== undefined;
                     return (
                       <span key={`${w.surah.number}:${w.vi}:${w.wi}`} data-word={v.words[w.wi]} className={`wrd${isCur ? ' in-aya' : ''}${isCur && wordsTrusted && current!.word === w.wi ? ' on' : ''}`} onClick={() => canPlay && startAt(w.surah.number, v.basri)} role={canPlay ? 'button' : undefined} title={canPlay ? `اسمع من الآية ${arNum(shownNumber(w.surah.number, v.basri, w.wi))}` : undefined}>
-                        {withKashida(v.words[w.wi], strokes[li]?.[wiOnLine] ?? 0)}
+                        {renderWord(w.surah.number, w.vi, w.wi)}
                         {w.mark !== undefined && <span className={`aya-n${marked ? ' marked' : ''}`} aria-label={`الآية ${arNum(w.mark)}`}>{arNum(w.mark)}</span>}
                       </span>
                     );
@@ -261,7 +291,16 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
               );
             })}
           </div>
-          <footer className="mp-foot">{arNum(page)}</footer>
+          <footer className="mp-foot">
+            <span>الجزء {arNum(juz)}</span>
+            <span className="mp-range">{(() => { const w = lines.flatMap((s) => (s.kind === 'text' ? s.words : [])); if (!w.length) return ''; const a = w[0], b = w[w.length - 1]; const n = (x: typeof a) => shownNumber(x.surah.number, x.surah.verses[x.vi].basri, x.wi); return `${b.surah.name.replace(/^سُورَةُ\s*/, '')} ${arNum(n(a))}–${arNum(n(b))}`; })()}</span>
+            <span>{arNum(page)}</span>
+          </footer>
+          {colours && (
+            <ul className="tj-legend" aria-label="دليل الألوان">
+              {TONES.map((t) => <li key={t.id}><i style={{ background: t.color }} /> {t.label}</li>)}
+            </ul>
+          )}
         </article>
         <button className="page-turn next" onClick={() => turn(1)} disabled={page >= PAGE_COUNT} aria-label="الصفحة التالية"><Icon name="chevronLeft" /></button>
       </div>

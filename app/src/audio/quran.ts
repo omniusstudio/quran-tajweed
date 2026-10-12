@@ -25,6 +25,7 @@ export interface Surah {
   headerKufi?: number;
   /** Verses by the Kūfī count (the number printed in the muṣḥaf's heading). */
   kufiCount?: number;
+  revelation?: 'makki' | 'madani';
 }
 export interface Reciter {
   id: string;

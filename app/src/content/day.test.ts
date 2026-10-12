@@ -268,3 +268,24 @@ describe('kashida', () => {
     expect(plan[2] + plan[3]).toBe(plan.reduce((a, b) => a + b, 0));
   });
 });
+
+describe('tajwīd colours', () => {
+  it('colours the governed letters of a verse and keeps the text intact', async () => {
+    const { colourVerse } = await import('../rules/colors');
+    const { SURAH_BY_NUMBER } = await import('../audio/quran');
+    const v = SURAH_BY_NUMBER[2].verses[2]; // ٱلَّذِينَ يُؤۡمِنُونَ بِٱلۡغَيۡبِ … — ikhfāʾ, qalqalah, madd
+    const pieces = colourVerse(v.words, v.hafs, SURAH_BY_NUMBER[2].verses[3].words[0], v.words);
+    expect(pieces).toHaveLength(v.words.length);
+    pieces.forEach((ps, i) => expect(ps.map((p) => p.text).join('')).toBe(v.words[i]));
+    const tones = new Set(pieces.flat().map((p) => p.tone).filter(Boolean));
+    expect(tones.size).toBeGreaterThan(1);
+    // the silent alif of a plural wāw is greyed, and nothing breaks with a kashida in the shown text
+    const w = SURAH_BY_NUMBER[2].verses[5].words; // … قَالُواْ ءَامَنَّا …
+    const i = w.findIndex((x) => x.startsWith('قَالُوا'));
+    if (i >= 0) {
+      const ps = colourVerse(w, SURAH_BY_NUMBER[2].verses[5].hafs, null, w.map((x, k) => (k === i ? x.replace('قَالُ', 'قَالُــ') : x)))[i];
+      expect(ps.map((p) => p.text).join('')).toContain('ــ');
+      expect(ps.some((p) => p.tone === 'silent')).toBe(true);
+    }
+  });
+});

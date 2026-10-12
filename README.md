@@ -243,7 +243,16 @@ voice, opens in follow-along, closable for the day.
   under the Complex's end-user licence embedded in the font; it covers every character of the
   Dūrī text, tatweel included), with Scheherazade as the fallback. The per-page QCF fonts the
   Complex publishes exist only for Ḥafṣ and Warsh, so they are not used: they would show the
-  Ḥafṣ text. The first two pages are set in the print's small centred frame. A cloth ribbon
+  Ḥafṣ text. The first two pages are set in the print's small centred frame.
+  **Tajwīd colours** (`rules/colors.ts`, on by default, toggled from the page's toolbar or
+  Settings): every letter the tagger puts a rule on takes the colour of its family, in the
+  palette of the colour-coded prints — madd by length (lāzim purple, muttaṣil pink, munfaṣil
+  and ʿāriḍ orange, ṣilah ochre), ghunnah and ikhfāʾ green, iqlāb light green, idghām and
+  silent letters grey (the alif after wāw al-jamāʿah, the lām of a sun-letter ال), qalqalah
+  light blue, and heavy rāʾ and lām of الله dark blue (a plain rule stated in the colour layer,
+  flagged يُراجع in the legend). The legend sits under the page like the print's; the heading
+  adds مكية/مدنية and the verse count, and the footer the juzʾ, the page's verse range and the
+  page number. Lines are set with the print's wider leading. A cloth ribbon
   (`ui/Ribbon.tsx`) hangs on the page that holds the bookmark: red and unpinned, it follows where
   you read or stopped listening; tap it (or the bookmark button) to pin it green.
   Run `kufi_marks.py`, then `fetch_lines.py`, after `extract_mushaf.py`.

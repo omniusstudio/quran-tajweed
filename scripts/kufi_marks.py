@@ -52,6 +52,7 @@ def main():
             return min(best, len(duri))
         for v in s['verses']: v['kufiEnds'] = []
         s['kufiCount'] = len(QURAN[n]['ayahs'])
+        s['revelation'] = 'makki' if QURAN[n]['revelationType'] == 'Meccan' else 'madani'
         ayahs = {a['numberInSurah']: a for a in QURAN[n]['ayahs']}
         # the Kūfī ayah holding each Baṣrī verse's last word → its real page, juzʾ and ḥizb quarter
         cum = 0

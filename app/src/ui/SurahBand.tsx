@@ -32,7 +32,7 @@ function Medallion({ x, top, value }: { x: number; top: string; value: string })
   );
 }
 
-export function SurahBand({ name, order, count }: { name: string; order: number; count: number }) {
+export function SurahBand({ name, order, count, revelation }: { name: string; order: number; count: number; revelation?: 'makki' | 'madani' }) {
   const W = 600;
   return (
     <svg className="surah-band" viewBox={`0 0 ${W} 46`} role="img" aria-label={`${name}، آياتها ${arNum(count)}، ترتيبها ${arNum(order)}`}>
@@ -44,7 +44,8 @@ export function SurahBand({ name, order, count }: { name: string; order: number;
       <Vine x={428} w={110} flip />
       <path d={`M${W / 2 - 100} 23 l12 -14 h176 l12 14 l-12 14 h-176 z`} className="cartouche" />
       <path d={`M${W / 2 - 93} 23 l9.5 -11 h167 l9.5 11 l-9.5 11 h-167 z`} className="cartouche-inner" />
-      <text x={W / 2} y="29.5" className="band-name">{name}</text>
+      <text x={W / 2} y={revelation ? 27 : 29.5} className="band-name">{name}</text>
+      {revelation && <text x={W / 2} y="39.5" className="band-sub">{revelation === 'makki' ? 'مَكِّيَّة' : 'مَدَنِيَّة'} · آياتها {arNum(count)}</text>}
       <Medallion x={W - 30} top="آياتها" value={arNum(count)} />
       <Medallion x={30} top="ترتيبها" value={arNum(order)} />
     </svg>

@@ -38,6 +38,8 @@ export interface Settings {
   adhan?: { enabled: boolean; prayers: Record<string, boolean> };
   /** Verse numbering shown in the muṣḥaf: the Kūfī count of Ḥafṣ prints (default) or the Baṣrī count of the Dūrī prints. */
   numbering?: 'kufi' | 'basri';
+  /** Colour the letters by their tajwīd rule in the muṣḥaf, like the colour-coded prints. */
+  tajweedColors?: boolean;
   /** The muṣḥaf page last open in the reading view. */
   lastPage?: number;
   /** Minutes without interaction before the ambient screen takes over (0 = never). */
@@ -48,7 +50,7 @@ export interface Settings {
   updatedAt?: number;
 }
 
-export const DEFAULTS: Settings = { theme: 'system', sound: true, haptics: true, quranScale: 1, motion: 'system', dailyGoal: 10, reciter: 'nourin_siddig', lastSurah: 1, playMode: 'continuous', positions: {}, hijriOffset: 0, prayerMethod: 'mwl', asrMethod: 'standard', todoReminder: '20:30', ambientAfter: 5, numbering: 'kufi' };
+export const DEFAULTS: Settings = { theme: 'system', sound: true, haptics: true, quranScale: 1, motion: 'system', dailyGoal: 10, reciter: 'nourin_siddig', lastSurah: 1, playMode: 'continuous', positions: {}, hijriOffset: 0, prayerMethod: 'mwl', asrMethod: 'standard', todoReminder: '20:30', ambientAfter: 5, numbering: 'kufi', tajweedColors: true };
 
 function read(): Settings {
   try {

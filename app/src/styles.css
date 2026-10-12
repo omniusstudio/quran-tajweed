@@ -1061,7 +1061,8 @@ button.word { position: relative; }
 .mushaf-page { position: relative; max-width: 680px; margin: 0 auto; width: 100%; background: var(--paper); color: var(--ink-q); border: 1px solid var(--rule-soft); border-radius: 4px; padding: 14px 18px 12px; box-shadow: var(--shadow-2), inset 0 0 0 4px var(--paper), inset 0 0 0 5px var(--rule-soft); user-select: none; touch-action: pan-y; animation: fadeUp var(--dur) var(--ease) both; }
 @media (min-width: 640px) { .mushaf-page { padding: 22px 34px 18px; } }
 .mp-head { display: flex; justify-content: space-between; gap: 8px; padding-inline-start: 38px; font-family: var(--display); font-size: .95rem; color: var(--accent-strong); padding: 0 6px 8px; border-block-end: 1px solid var(--rule-soft); margin-block-end: 10px; }
-.mp-foot { text-align: center; font-family: var(--display); color: var(--accent-strong); padding-block-start: 8px; margin-block-start: 10px; border-block-start: 1px solid var(--rule-soft); font-variant-numeric: tabular-nums; }
+.mp-foot { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-family: var(--display); color: var(--accent-strong); padding: 8px 6px 0; margin-block-start: 10px; border-block-start: 1px solid var(--rule-soft); font-variant-numeric: tabular-nums; font-size: .95rem; }
+.mp-range { color: var(--muted); }
 .surah-band { display: block; width: 100%; max-width: 560px; margin: 10px auto 6px; overflow: visible; }
 .surah-band .band-bg { fill: #1f6a3a; }
 .surah-band .band-light { fill: #2f7f49; }
@@ -1071,20 +1072,21 @@ button.word { position: relative; }
 .surah-band .leaf { fill: #8fd19a; stroke: #e9d08a; stroke-width: .5; }
 .surah-band .cartouche { fill: var(--paper); stroke: #b8923a; stroke-width: 1.2; }
 .surah-band .cartouche-inner { fill: none; stroke: #b8923a; stroke-width: .6; opacity: .7; }
-.surah-band .band-name { font-family: var(--display); font-size: 19px; font-weight: 700; fill: var(--ink-q); text-anchor: middle; }
+.surah-band .band-name { font-family: var(--display); font-size: 17px; font-weight: 700; fill: var(--ink-q); text-anchor: middle; }
+.surah-band .band-sub { font-family: var(--display); font-size: 8px; fill: var(--accent-strong); text-anchor: middle; }
 .surah-band .med-ring { fill: #16512c; stroke: #e9d08a; stroke-width: 1.4; }
 .surah-band .med-face { fill: var(--paper); stroke: #b8923a; stroke-width: .7; }
 .surah-band .med-pips { fill: #b8923a; }
 .surah-band .med-top { font-family: var(--display); font-size: 7px; fill: var(--accent-strong); text-anchor: middle; }
 .surah-band .med-value { font-family: var(--display); font-size: 12px; font-weight: 700; fill: var(--ink-q); text-anchor: middle; }
 .mushaf-page { container-type: inline-size; }
-.mp-body { --line: 6.55cqw; --fit: 1; display: grid; grid-template-rows: repeat(15, var(--line)); align-items: center; padding: 0 2cqw; }
+.mp-body { --line: 7.4cqw; --fit: 1; display: grid; grid-template-rows: repeat(15, var(--line)); align-items: center; padding: 0 2cqw; }
 .mp-line { min-width: 0; height: var(--line); display: flex; align-items: center; }
 /* the print's first two pages: a small centred frame */
 .mushaf-page.framed .mp-body { min-height: calc(15 * var(--line)); align-content: center; padding: 0 17cqw; }
 .mushaf-page.framed .mp-body::before { content: ''; position: absolute; inset-block: 8%; inset-inline: 12%; border: 1px solid var(--rule-soft); border-radius: 6px; box-shadow: inset 0 0 0 4px var(--paper), inset 0 0 0 5px var(--rule-soft); pointer-events: none; }
 .mushaf-page.framed .mp-body { position: relative; }
-.mp-line.text { justify-content: space-between; gap: 0; white-space: nowrap; font-family: var(--quran); font-size: calc(4.15cqw * var(--quran-scale) * var(--fit)); line-height: 1; color: var(--ink-q); }
+.mp-line.text { justify-content: space-between; gap: 0; white-space: nowrap; font-family: var(--quran); font-size: calc(4.3cqw * var(--quran-scale) * var(--fit)); line-height: 1; color: var(--ink-q); }
 .mp-line.text.centred { justify-content: center; gap: .38em; }
 .mp-body.measuring .mp-line.text { justify-content: flex-start; gap: .38em; }
 .wrd.probe { position: absolute; visibility: hidden; }
@@ -1103,7 +1105,7 @@ button.word { position: relative; }
 .aya-n::before { content: ''; position: absolute; inset: 2px; border: 1px solid var(--rule-soft); border-radius: 50%; }
 .aya-n.marked { background: var(--accent); color: var(--on-primary); border-color: var(--accent); }
 .wrd .aya-n { margin-inline-start: .3em; }
-@media (max-width: 480px) { .mp-body { --line: 6.9cqw; padding: 0 1cqw; } }
+@media (max-width: 480px) { .mp-body { --line: 7.7cqw; padding: 0 1cqw; } }
 
 .ribbon { position: absolute; inset-block-start: -2px; inset-inline-start: 5px; z-index: 2; width: 28px; height: 120px; padding: 0; border: none; background: none; cursor: pointer; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .25)); transform-origin: top center; animation: ribbonDrop 1100ms cubic-bezier(.22, .9, .3, 1) both, ribbonSway 7s ease-in-out 1100ms infinite; }
 .ribbon:hover { animation-play-state: paused; transform: translateY(2px) rotate(-1.5deg); }
@@ -1129,3 +1131,17 @@ button.word { position: relative; }
 .read-status small { color: var(--muted); font-size: .8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .read-reciter { flex: none; max-width: 11em; font-size: .85rem; min-height: 36px; }
 @media (max-width: 480px) { .read-reciter { display: none; } }
+
+/* tajwīd colours (the colour-coded print's palette) */
+.tj-madd6 { color: #7b1fa2; }
+.tj-madd4 { color: #d81b60; }
+.tj-madd24 { color: #ef6c00; }
+.tj-madd1 { color: #b8860b; }
+.tj-ghunnah { color: #2e7d32; }
+.tj-iqlab { color: #7cb342; }
+.tj-silent { color: #9e9e9e; }
+.tj-qalqalah { color: #039be5; }
+.tj-heavy { color: #1565c0; }
+.tj-legend { list-style: none; margin: 8px 0 0; padding: 6px 8px 0; border-block-start: 1px solid var(--rule-soft); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 3px 14px; font-size: .74rem; color: var(--ink-2); }
+.tj-legend li { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tj-legend i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
