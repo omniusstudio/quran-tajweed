@@ -18,6 +18,7 @@ export function kashidaPoint(word: string): number {
   for (let k = letters.length - 2; k >= 0; k--) {
     const a = letters[k], b = letters[k + 1];
     if (NON_JOINING.has(a.ch)) continue;
+    if (b.ch === 'ء') continue;   // the hamzah joins nothing: a stroke before it would turn شَيۡءٍ's yāʾ into its medial form
     if (a.ch === 'ل' && 'اأإآٱ'.includes(b.ch)) continue;
     return a.end;
   }

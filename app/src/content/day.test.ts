@@ -418,3 +418,14 @@ describe('Dūrī marks: imālah, taqlīl, the hamzah', () => {
     expect(h.t.some((t) => t.word === iHa && t.rule === 'isqat' && t.unit === bare(h.v.words[iHa]).length - 1)).toBe(true);
   });
 });
+
+describe('kashida never breaks a letter form', () => {
+  it('puts no stroke before a hamzah on the line', async () => {
+    const { kashidaPoint, withKashida } = await import('./kashida');
+    const { SURAH_BY_NUMBER } = await import('../audio/quran');
+    const w = SURAH_BY_NUMBER[11].verses.flatMap((v) => v.words).find((x) => x.replace(/[^ء-يٱ]/g, '') === 'شيء')!;
+    expect(w).toBeDefined();
+    expect(withKashida(w, 2)).toBe(w.slice(0, kashidaPoint(w)) + 'ــ' + w.slice(kashidaPoint(w)));
+    expect(withKashida(w, 2).replace(/[^ء-يٱـ]/g, '')).toBe('شــيء');   // the stroke sits between shīn and yāʾ
+  });
+});

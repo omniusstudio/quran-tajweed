@@ -186,6 +186,32 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
     if (ratio < 1) { const cur = parseFloat(el.style.getPropertyValue('--fit') || '1'); el.style.setProperty('--fit', String(Math.max(0.6, cur * ratio * 0.99))); }
   }, [kashida, layoutKey]);
   const strokes = kashida.key === layoutKey ? kashida.counts : [];
+  // the recitation's place on the page: one continuous band per line of the current verse, and a marker
+  // that slides from word to word (both are measured from the laid-out words, so kashida and justification
+  // are included, and they sit under the ink rather than boxing each word)
+  type Box = { left: number; top: number; width: number; height: number };
+  const [hl, setHl] = useState<{ bands: Box[]; word: Box | null }>({ bands: [], word: null });
+  const curKey = current ? `${current.surah}:${current.basri}:${current.word}` : '';
+  useLayoutEffect(() => {
+    const el = body.current;
+    if (!el) return;
+    const measure = () => {
+      const b = el.getBoundingClientRect();
+      const box = (r: { left: number; top: number; right: number; bottom: number }): Box => ({ left: r.left - b.left, top: r.top - b.top, width: r.right - r.left, height: r.bottom - r.top });
+      const bands: Box[] = [];
+      for (const line of el.querySelectorAll<HTMLElement>('.mp-line.text')) {
+        const rs = [...line.querySelectorAll<HTMLElement>('.wrd.in-aya')].map((w) => w.getBoundingClientRect());
+        if (!rs.length) continue;
+        bands.push(box({ left: Math.min(...rs.map((r) => r.left)), right: Math.max(...rs.map((r) => r.right)), top: Math.min(...rs.map((r) => r.top)), bottom: Math.max(...rs.map((r) => r.bottom)) }));
+      }
+      const on = el.querySelector<HTMLElement>('.wrd.on');
+      setHl({ bands, word: on ? box(on.getBoundingClientRect()) : null });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [curKey, kashida, page]);
   const colours = settings.tajweedColors !== false;
   // the shown text of every word on the page (with its kashida), then the coloured pieces per verse
   const shownWords = useMemo(() => {
@@ -265,6 +291,8 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
             <span>الجزء {JUZ_NAMES[juz]}</span>
           </header>
           <div className="mp-body" ref={body} style={{ gridTemplateRows: `repeat(${lines.length}, var(--line))` }}>
+            {hl.bands.map((b, i) => <div key={i} className="aya-band" style={b} aria-hidden />)}
+            {hl.word && <div className="word-marker" style={hl.word} aria-hidden />}
             {lines.map((slot, li) => {
               if (slot.kind === 'band') return (
                 <div key={li} className={`mp-line band-line${slot.compact ? ' compact' : ''}`}>
