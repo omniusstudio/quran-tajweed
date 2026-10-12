@@ -289,3 +289,33 @@ describe('tajwīd colours', () => {
     }
   });
 });
+
+describe('heavy rāʾ and the lām of الله', () => {
+  it('follows the rule with the Dūrī marks', async () => {
+    const { isHeavy } = await import('../rules/colors');
+    const r = (w: string) => [...w].filter((c) => /[ء-غف-يٱ]/.test(c)).indexOf('ر');
+    expect(isHeavy('مُسۡتَكۡبِرٗا', r('مُسۡتَكۡبِرٗا'))).toBe(true);     // فتحتان
+    expect(isHeavy('كَبِيرًا', r('كَبِيرًا'))).toBe(true);
+    expect(isHeavy('فِرۡعَوۡنَ', r('فِرۡعَوۡنَ'))).toBe(false);          // ساكنة بعد كسرة أصلية
+    expect(isHeavy('قِرۡطَاسٖ', r('قِرۡطَاسٖ'))).toBe(true);           // بعدها حرف استعلاء مفتوح
+    expect(isHeavy('مِرۡصَادٗا', r('مِرۡصَادٗا'))).toBe(true);
+    expect(isHeavy('فِرۡقَةٖ', r('فِرۡقَةٖ'))).toBe(true);
+    expect(isHeavy('اُ۪رۡجِعِيٓ', r('اُ۪رۡجِعِيٓ'))).toBe(true);        // بعد كسرة همزة الوصل العارضة
+    expect(isHeavy('اِ۪رۡحَمۡهُمَا', r('اِ۪رۡحَمۡهُمَا'))).toBe(true);
+    expect(isHeavy('بُشۡر۪يٰ', r('بُشۡر۪يٰ'))).toBe(false);             // ألف ممالة بعدها
+    expect(isHeavy('ذِكۡر۪يٰ', r('ذِكۡر۪يٰ'))).toBe(false);
+    expect(isHeavy('اَ۬لۡمَرۡءِ', r('اَ۬لۡمَرۡءِ'))).toBe(true);          // ساكنة بعد فتحة
+    expect(isHeavy('خَيۡرٞ', r('خَيۡرٞ'))).toBe(true);                // مفتوحة وصلاً
+    expect(isHeavy('خَيۡرٞ', r('خَيۡرٞ'), undefined, true)).toBe(true); // ٞ is fatḥatān: heavy even at a stop? no — at stop the tanwīn drops
+    expect(isHeavy('اُ۬لنّ۪ارِ', r('اُ۬لنّ۪ارِ'), 'أَصۡحَٰبُ', true)).toBe(false); // ممالة عند الوقف
+    expect(isHeavy('وَٱلۡفَجۡرِ', r('وَٱلۡفَجۡرِ'), undefined, true)).toBe(true); // ساكن قبله فتحة عند الوقف
+    expect(isHeavy('ٱلۡفَجۡرِ', r('ٱلۡفَجۡرِ'))).toBe(false);          // مكسورة وصلاً
+    const lam = (w: string) => [...w].filter((c) => /[ء-غف-يٱ]/.test(c)).length - 3;
+    expect(isHeavy('اَ۬للَّهُ', lam('اَ۬للَّهُ'), 'خَتَمَ')).toBe(true);
+    expect(isHeavy('اِ۬للَّهِ', lam('اِ۬للَّهِ'), 'دُونِ')).toBe(false);
+    expect(isHeavy('بِاللَّهِ', lam('بِاللَّهِ'), 'ءَامَنَّا')).toBe(false);
+    expect(isHeavy('وَاَللَّهُ', lam('وَاَللَّهُ'), 'قَالُواْ')).toBe(true);
+    expect(isHeavy('تَاَللَّهِ', lam('تَاَللَّهِ'), 'قَالُواْ')).toBe(true);
+    expect(isHeavy('لِلَّهِ', lam('لِلَّهِ'), 'اِ۬لۡحَمۡدُ')).toBe(false);
+  });
+});

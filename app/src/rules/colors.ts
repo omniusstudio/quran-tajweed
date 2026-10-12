@@ -37,7 +37,6 @@ const TONE_OF: Partial<Record<RuleId, Tone>> = {
 };
 
 const isLetter = (c: string) => /[ء-غف-يٱ]/.test(c);
-const KASRA = 'ِ';
 const SHADDA = 'ّ';
 const SILENT_ALIF = '۟';
 const SUN = new Set('تثدذرزسشصضطظلن');
@@ -74,28 +73,75 @@ function silentUnits(units: string[]): Set<number> {
   return s;
 }
 
+const FATHA_LIKE = /[\u064E\u064B\u065E]/;   // فتحة، فتحتان، فتحتان متتابعتان
+const DAMMA_LIKE = /[\u064F\u064C\u0657]/;   // ضمة، ضمتان، ضمتان متتابعتان
+const KASRA_LIKE = /[\u0650\u064D\u0656]/;   // كسرة، كسرتان، كسرتان متتابعتان
+const IMALAH = '\u06EA';                          // the rhombus: imālah of the alif that follows
+const WASL = /[\u06EC\u06EA]/;                  // on a word-initial alif: hamzat al-waṣl
+const ISTILA = new Set('خصضغطقظ');
+const isAlif = (u: string) => u[0] === 'ا' || u[0] === 'ٱ' || u[0] === 'ى';
+const hasHaraka = (u: string) => FATHA_LIKE.test(u) || DAMMA_LIKE.test(u) || KASRA_LIKE.test(u);
+const isWasl = (units: string[], i: number) => i === 0 && (units[0][0] === 'ا' || units[0][0] === 'ٱ') && WASL.test(units[0]);
+
 /**
- * Heavy letters: rāʾ with fatḥah/ḍammah, or sākin after fatḥah/ḍammah; the lām of الله after fatḥah or
- * ḍammah. Plain rules stated briefly — TODO(scholar): the rāʾ's exceptions are not modelled.
+ * The rāʾ: heavy with fatḥah or ḍammah; thin with kasrah or before an imāled alif; sākin, it
+ * follows what precedes it (heavy after fatḥah/ḍammah or the kasrah of hamzat al-waṣl, thin after
+ * an original kasrah unless a letter of istiʿlāʾ follows, thin after a sākin yāʾ). At a verse end
+ * the kasrah drops and the sākin rule applies to the stop. TODO(scholar): review against the Dūrī print.
  */
-function heavyUnits(units: string[], prevWordLast?: string): Set<number> {
+function raaHeavy(units: string[], i: number, prevWordLast: string | undefined, atStop: boolean): boolean {
+  const u = units[i];
+  if (i > 0 && u.includes(IMALAH)) return false;
+  if (FATHA_LIKE.test(u) || DAMMA_LIKE.test(u)) return true;
+  const before = (k: number) => (k >= 0 ? units[k] : prevWordLast);
+  const sakinRule = (): boolean => {
+    const prev = before(i - 1);
+    if (!prev) return true;
+    if (i - 1 === 0 && isWasl(units, 0)) return true;                       // كسرة عارضة
+    if (KASRA_LIKE.test(prev)) {
+      const next = units[i + 1];
+      return !!next && ISTILA.has(next[0]) && (FATHA_LIKE.test(next) || DAMMA_LIKE.test(next));
+    }
+    if (prev[0] === 'ي' && !hasHaraka(prev)) return false;                 // ياء ساكنة
+    if (isAlif(prev) && before(i - 2)?.includes(IMALAH)) return false;      // ألف ممالة قبلها
+    if (!hasHaraka(prev) && !isAlif(prev) && prev[0] !== 'و') {             // ساكن قبله ما يحدد
+      const pp = before(i - 2);
+      return !pp || !KASRA_LIKE.test(pp);
+    }
+    return true;
+  };
+  if (KASRA_LIKE.test(u)) return atStop && i === units.length - 1 ? sakinRule() : false;
+  return sakinRule();
+}
+
+/** The lām of الله: heavy after fatḥah or ḍammah (or at a start), thin after kasrah. */
+function jalalahLam(units: string[], prevWordLast: string | undefined): number {
+  const bare = units.map((u) => u.replace(/[^ء-غف-يٱ]/g, '').replace('ٱ', 'ا'));
+  const tail = bare.join('');
+  if (!tail.endsWith('لله')) return -1;
+  // الله keeps both lāms after its alif; لِلَّهِ drops the first, so the jalālah lām is the one before the hāʾ
+  const lam = tail.endsWith('الله') ? units.length - 3 : units.length - 2;
+  if (lam < 0 || bare[lam] !== 'ل') return -1;
+  let k = lam - 1;
+  let ref = k >= 0 ? units[k] : prevWordLast;
+  if (ref && k >= 0 && isAlif(ref) && !hasHaraka(ref) && k === 0) ref = prevWordLast;   // بِاللَّهِ-style alif without a mark: look past it
+  if (ref && k >= 0 && isAlif(ref) && hasHaraka(ref)) { /* اَ۬للَّهُ: the waṣl alif carries the joining vowel */ }
+  if (ref && k >= 0 && isAlif(ref) && !hasHaraka(ref) && k > 0) ref = units[k - 1];     // وَاَللَّهُ / تَاَللَّهِ: the prefix letter decides
+  const heavy = !ref || !KASRA_LIKE.test(ref);
+  return heavy ? lam : -2;
+}
+
+function heavyUnits(units: string[], prevWordLast: string | undefined, atStop: boolean): Set<number> {
   const s = new Set<number>();
-  const bare = units.map((u) => u.replace(/[^ء-غف-يٱ]/g, ''));
-  units.forEach((u, i) => {
-    const ch = u[0];
-    const prev = i > 0 ? units[i - 1] : prevWordLast;
-    if (ch === 'ر') {
-      if (u.includes(KASRA)) return;
-      if (/[َُ]/.test(u)) { s.add(i); return; }
-      if (prev && !prev.includes(KASRA)) s.add(i);
-    }
-    if (ch === 'ل' && bare.join('') === 'الله' && i === 2) {
-      if (!prev || !prev.includes(KASRA)) s.add(i);
-      const p0 = prevWordLast;
-      if (i === 2 && units[0][0] === 'ا' && p0 && p0.includes(KASRA)) s.delete(i);
-    }
-  });
+  units.forEach((u, i) => { if (u[0] === 'ر' && raaHeavy(units, i, prevWordLast, atStop)) s.add(i); });
+  const lam = jalalahLam(units, prevWordLast);
+  if (lam >= 0) s.add(lam);
   return s;
+}
+
+/** For tests: is the rāʾ (or jalālah lām) at `i` heavy in `word` after `prev`? */
+export function isHeavy(word: string, i: number, prev?: string, atStop = false): boolean {
+  return heavyUnits(split(word), prev ? split(prev).slice(-1)[0] : undefined, atStop).has(i);
 }
 
 /** The pieces of every word of a verse, coloured; `shown` are the words as displayed (kashida included). */
@@ -108,7 +154,7 @@ export function colourVerse(words: string[], hafs: (string | null)[] | undefined
     const tone: (Tone | undefined)[] = units.map(() => undefined);
     const prevLast = wi > 0 ? split(words[wi - 1]).slice(-1)[0] : undefined;
     for (const i of silentUnits(units)) tone[i] = 'silent';
-    for (const i of heavyUnits(units, prevLast)) tone[i] = 'heavy';
+    for (const i of heavyUnits(units, prevLast, wi === words.length - 1)) tone[i] = 'heavy';
     for (const t of byWord[wi]) {
       const tn = TONE_OF[t.rule];
       if (!tn || t.unit >= units.length) continue;
