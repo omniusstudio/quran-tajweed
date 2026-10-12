@@ -79,7 +79,8 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
     const v = a?.verses.find((x) => x.basri === basri);
     if (!a || !v) return;
     sfx('tap');
-    const at = playSpan(v)[0];
+    // a sūrah starts with its basmalah when the reciter reads one
+    const at = v === a.verses[0] && a.header ? a.header[0] : playSpan(v)[0];
     if (s !== playSurah) { pendingStart.current = at; setPlaySurah(s); return; }
     lastVerse.current = a.verses.indexOf(v);
     player.seek(at);
@@ -272,7 +273,11 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
                   {slot.compact && <span className="basmalah small">{slot.surah.header}</span>}
                 </div>
               );
-              if (slot.kind === 'basmalah') return <div key={li} className="mp-line basmalah-line"><span className="basmalah">{slot.surah.header}{kufi && slot.surah.headerKufi ? <> <span className="aya-n">{arNum(slot.surah.headerKufi)}</span></> : null}</span></div>;
+              if (slot.kind === 'basmalah') {
+                const playable = !!loadAlignment(reciter, slot.surah.number);
+                const first = slot.surah.verses[0];
+                return <div key={li} className="mp-line basmalah-line"><span className={`basmalah${playable ? ' wrd' : ''}`} onClick={() => playable && startAt(slot.surah.number, first.basri)} role={playable ? 'button' : undefined} title={playable ? 'اسمع من البسملة' : undefined}>{slot.surah.header}{kufi && slot.surah.headerKufi ? <> <span className="aya-n">{arNum(slot.surah.headerKufi)}</span></> : null}</span></div>;
+              }
               if (slot.kind === 'empty') return <div key={li} className="mp-line" />;
               return (
                 <div key={li} className={`mp-line text${slot.centred ? ' centred' : ''}`}>

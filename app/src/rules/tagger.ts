@@ -325,7 +325,7 @@ export function tagVerse(input: TagInput): Tag[] {
       // ---- Dūrī features --------------------------------------------------------------------
       if (has(u, IMALAH) && !(isAlif(u) && k <= 1 && !us.slice(0, k).some((p) => p.ch !== 'و' && p.ch !== 'ف' && p.ch !== 'ب' && p.ch !== 'ك' && p.ch !== 'ل'))) pushDuri('imalah', k); // the same rhombus sits under a verb's hamzat al-waṣl (اُ۪هۡدِنَا)
       if (lowMeemTaqlil) pushDuri('taqlil', k, { detail: 'علامة في مصحف الدوري تحت ذوات الياء؛ المحتوى يذكر أنها تُنطق ألفاً عادية — يُراجع' });
-      if (has(u, WASL_OR_TASHIL) && isAlif(u) && k > 0) pushDuri('tashil', k, { detail: 'نصف همزة' });
+      if (has(u, WASL_OR_TASHIL) && (isAlif(u) || u.ch === 'و' || u.ch === 'ي') && k > 0) pushDuri('tashil', k, { detail: 'نصف همزة' });
       if (k === 0 && HAMZA.has(u.ch) && has(u, DAGGER) && has(u, ZERO)) pushDuri('tashil', k, { detail: 'نصف همزة مع ألف بينهما' });
       if (HAMZA.has(u.ch) && hasAny(u, SUKUN)) pushDuri('hamza_sakin', k);
       if (u.ch !== 'ه' && has(u, SMALL_YA) && k === last) pushDuri('ya_zaida', k);
@@ -362,7 +362,15 @@ export function tagVerse(input: TagInput): Tag[] {
     const h = hafs?.[wi];
     if (h) {
       if (h.includes(SAKT_HAFS)) pushDuri('no_sakt', last, { detail: 'حفص يسكت هنا؛ الدوري يصل' });
-      if (!duriTagged.has('tashil') && hamzaCount(h) > hamzaCount(words[wi])) pushDuri('isqat', 0, { detail: `حفص: ${h}` });
+      if (!duriTagged.has('tashil') && hamzaCount(h) > hamzaCount(words[wi])) {
+        const first = us[0];
+        const hafsStartsHamza = /^[أإآء]/.test(h.replace(/^[\u06DE]/, ''));
+        if (hafsStartsHamza && isAlif(first) && (has(first, WASL_OR_TASHIL) || has(first, IMALAH)) && wi > 0 && /[ءأإؤئ]/.test(words[wi - 1].replace(/[^ء-ي]/g, '').slice(-1)))
+          pushDuri('tashil', 0, { detail: 'همزتان من كلمتين اختلفت حركتاهما: تُسهَّل الثانية بين بين' });   // ٱلسُّفَهَآءُ اَ۬لَآ
+        else if (/[ءئؤ]$/.test(h.replace(/[\u064B-\u065F\u0670\u06D6-\u06ED]/g, '')))
+          pushDuri('isqat', last, { detail: `همزتان من كلمتين اتفقت حركتاهما: تسقط الأولى (حفص: ${h})` });   // هَٰٓؤُلَآ إِن
+        else pushDuri('isqat', 0, { detail: `حفص: ${h}` });
+      }
       if (!duriTagged.size && (readingForm(h) !== readingForm(words[wi]) || hamzaCount(h) !== hamzaCount(words[wi]))) pushDuri('farsh', 0, { detail: `حفص: ${h}` });
     }
   }

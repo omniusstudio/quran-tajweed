@@ -59,7 +59,7 @@ describe('rule tagger against the lesson examples (PROMPT.md §7.4)', () => {
       }
       expect(matched, report.join(' | ')).toBeGreaterThan(0);
       // most rules: every example matches; the ones with deliberate contrasts are listed here
-      const contrasts = ['s9r6', 's11r2', 's11r4', 's11r5', 's12r1', 's13r1'];
+      const contrasts = ['s9r6', 's10r2', 's11r2', 's11r4', 's11r5', 's12r1', 's13r1'];   // s10r2: ٱلسُّفَهَآءُ أَلَآ differs in vowel → tas-hīl, as the lesson text says
       if (!contrasts.includes(ruleId)) expect(matched, report.join(' | ')).toBe(rule.examples.length);
     });
   }

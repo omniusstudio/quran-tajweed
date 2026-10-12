@@ -388,3 +388,33 @@ describe('madd and qalqalah colours', () => {
     expect(eq.p.slice(-1)[0].some((x) => x.tone === 'qalqalah')).toBe(true);
   });
 });
+
+describe('Dūrī marks: imālah, taqlīl, the hamzah', () => {
+  it('tags and colours them on the letters that carry the marks', async () => {
+    const { colourVerse } = await import('../rules/colors');
+    const { tagVerse } = await import('../rules/tagger');
+    const { SURAH_BY_NUMBER } = await import('../audio/quran');
+    const bare = (w: string) => w.replace(/[^ء-غف-يٱ]/g, '').replace('ٱ', 'ا');
+    // find the first verse of a sūrah holding a word (compared by bare letters), never a typed literal
+    const paint = (sn: number, word: string, after?: string) => { const s = SURAH_BY_NUMBER[sn]; const i = s.verses.findIndex((v) => v.words.some((w, k) => bare(w) === word && (!after || bare(v.words[k - 1] ?? '').startsWith(after)))); const v = s.verses[i]; expect(v, `${word} in ${sn}`).toBeDefined(); return { v, p: colourVerse(v.words, v.hafs, s.verses[i + 1]?.words[0] ?? null, v.words), t: tagVerse({ words: v.words, hafs: v.hafs, nextWord: s.verses[i + 1]?.words[0] ?? null }) }; };
+    const letters = (ps: { text: string; tone?: string }[]) => ps.flatMap((p) => [...p.text.replace(/[^ء-غف-يٱ]/g, '')].map((c) => [c, p.tone] as const));
+    // imālah: ٱلنّ۪اسِ — the nūn and the alif teal
+    const a = paint(2, 'الناس'); const iNas = a.v.words.findIndex((w) => bare(w) === 'الناس');
+    expect(letters(a.p[iNas]).filter(([c]) => c === 'ن' || c === 'ا').slice(-2).map(([, t]) => t)).toEqual(['imalah', 'imalah']);
+    // taqlīl: مُوسَىٰ — the sīn and the alif maqṣūrah lowered
+    const m = paint(2, 'موسي'); const iMusa = m.v.words.findIndex((w) => bare(w) === 'موسي');   // the muṣḥaf writes the lowered alif as yāʾ + dagger alif
+    expect(letters(m.p[iMusa]).slice(-2).map(([, t]) => t)).toEqual(['taqlil', 'taqlil']);
+    // the sākin hamzah of يُؤۡمِنُونَ is an ibdāl for Abū ʿAmr; two hamzahs in one word: ءَٰا۬نذَرۡتَهُمۡ
+    const y = paint(2, 'يؤمنون'); const iYu = y.v.words.findIndex((w) => bare(w) === 'يؤمنون');
+    expect(letters(y.p[iYu]).find(([c]) => c === 'ؤ')?.[1]).toBe('hamza');
+    const n = paint(2, 'ءانذرتهم'); const iAn = n.v.words.findIndex((w) => bare(w) === 'ءانذرتهم');
+    expect(n.t.some((t) => t.word === iAn && t.rule === 'tashil')).toBe(true);
+    expect(n.p[iAn].some((x) => x.tone === 'hamza')).toBe(true);
+    // two hamzahs across words, different vowels: ٱلسُّفَهَآءُ اَ۬لَآ — the second is tas-hīl, not isqāṭ
+    const s13 = paint(2, 'الا', 'السفها'); const iAla = s13.v.words.findIndex((w, k) => bare(w) === 'الا' && bare(s13.v.words[k - 1] ?? '').startsWith('السفها'));
+    expect(s13.t.some((t) => t.word === iAla && t.rule === 'tashil')).toBe(true); expect(s13.t.some((t) => t.word === iAla && t.rule === 'isqat')).toBe(false);
+    // the same vowel: هَٰٓؤُلَآءِ إِن → the first hamzah dropped, marked on the word that lost it
+    const h = paint(2, 'هؤلا'); const iHa = h.v.words.findIndex((w) => bare(w) === 'هؤلا');
+    expect(h.t.some((t) => t.word === iHa && t.rule === 'isqat' && t.unit === bare(h.v.words[iHa]).length - 1)).toBe(true);
+  });
+});

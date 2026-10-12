@@ -5,7 +5,7 @@
 
 import { tagVerse, type RuleId, type Tag } from './tagger';
 
-export type Tone = 'madd6' | 'madd4' | 'madd24' | 'madd1' | 'ghunnah' | 'iqlab' | 'silent' | 'qalqalah' | 'heavy';
+export type Tone = 'madd6' | 'madd4' | 'madd24' | 'madd1' | 'ghunnah' | 'iqlab' | 'silent' | 'qalqalah' | 'heavy' | 'imalah' | 'taqlil' | 'hamza';
 
 export interface ToneInfo {
   id: Tone;
@@ -25,9 +25,12 @@ export const TONES: ToneInfo[] = [
   { id: 'madd1', label: 'مدّ الصلة (حركتان)', color: '#b8860b', lessons: [{ id: 's12r5', text: 'مدّ الصلة (حركتان)' }] },
   { id: 'ghunnah', label: 'غنة وإخفاء', color: '#2e7d32', lessons: [{ id: 's8r1', text: 'غنة' }, { id: 's6r4', text: 'إخفاء' }] },
   { id: 'iqlab', label: 'إقلاب', color: '#7cb342', lessons: [{ id: 's6r3', text: 'إقلاب' }] },
-  { id: 'silent', label: 'إدغام وحروف لا تُنطق', color: '#9e9e9e', lessons: [{ id: 's6r2', text: 'إدغام' }], tail: 'وحروف لا تُنطق' },
+  { id: 'silent', label: 'إدغام وحروف لا تُنطق', color: '#9e9e9e', lessons: [{ id: 's6r2', text: 'إدغام' }, { id: 's12r2', text: 'إدغام الدوري' }], tail: 'وحروف لا تُنطق' },
   { id: 'qalqalah', label: 'قلقلة', color: '#039be5', lessons: [{ id: 's8r2', text: 'قلقلة' }] },
   { id: 'heavy', label: 'تفخيم (الراء ولام الجلالة)', color: '#1565c0', lessons: [{ id: 's5r2', text: 'تفخيم الراء' }, { id: 's5r3', text: 'لام الجلالة' }], review: true },
+  { id: 'imalah', label: 'إمالة', color: '#00897b', lessons: [{ id: 's11r2', text: 'إمالة' }] },
+  { id: 'taqlil', label: 'تقليل (بين بين)', color: '#7bb8a7', lessons: [{ id: 's11r4', text: 'تقليل (بين بين)' }] },
+  { id: 'hamza', label: 'الهمزة: تسهيل وإسقاط وإبدال', color: '#8d6e63', lessons: [{ id: 's10r1', text: 'تسهيل' }, { id: 's10r2', text: 'إسقاط' }, { id: 's10r4', text: 'همزة ساكنة' }] },
 ];
 export const TONE_LABEL: Record<Tone, string> = Object.fromEntries(TONES.map((t) => [t.id, t.label])) as Record<Tone, string>;
 
@@ -46,6 +49,11 @@ const TONE_OF: Partial<Record<RuleId, Tone>> = {
   mim_idgham: 'silent',
   idgham_duri: 'silent',
   qalqalah: 'qalqalah',
+  imalah: 'imalah',
+  taqlil: 'taqlil',
+  tashil: 'hamza',
+  isqat: 'hamza',
+  hamza_sakin: 'hamza',
 };
 
 const isLetter = (c: string) => /[ء-غف-يٱ]/.test(c);
@@ -209,6 +217,8 @@ export function colourVerse(words: string[], hafs: (string | null)[] | undefined
       const atEnd = t.unit === units.length - 1 || (t.unit === units.length - 2 && TANWIN.test(units[t.unit]));
       if (isLastWord && atEnd && NUN_FAMILY.has(t.rule)) continue;
       tone[t.unit] = tn;
+      // the imāled or lowered alif is coloured with the letter that carries the mark
+      if ((t.rule === 'imalah' || t.rule === 'taqlil') && t.unit + 1 < units.length && /^[اٱىي]/.test(units[t.unit + 1]) && !hasHaraka(units[t.unit + 1])) tone[t.unit + 1] = tn;
       if (t.rule === 'idgham_ghunnah' && atEnd) carry = 'ghunnah';
     }
     // merge neighbours of one tone into one piece
