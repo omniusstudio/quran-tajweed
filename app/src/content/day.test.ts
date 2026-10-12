@@ -252,3 +252,18 @@ describe('the 15-line page', () => {
     expect(p604).toEqual(['band', 'basmalah', 'text', 'text', 'band', 'basmalah', 'text', 'text', 'text', 'band', 'basmalah', 'text', 'text', 'text', 'text']);
   });
 });
+
+describe('kashida', () => {
+  it('lengthens the join before the last letter, keeps marks on their letter, never splits لا', async () => {
+    const { kashidaPoint, withKashida, planKashida } = await import('./kashida');
+    expect(withKashida('ٱلۡعَٰلَمِينَ', 2)).toBe('ٱلۡعَٰلَمِيــنَ');
+    expect(withKashida('يُؤۡمِنُونَ', 1)).toBe('يُؤۡمِنُـونَ'); // و does not join forward, so the stroke sits before it
+    expect(kashidaPoint('إِلَّا')).toBe(-1); // nothing to lengthen but the لا ligature
+    expect(withKashida('لَا', 3)).toBe('لَا');
+    expect(withKashida('مَا', 3)).toBe('مَا');
+    const plan = planKashida([{ text: 'قُلۡ', width: 30 }, { text: 'هُوَ', width: 30 }, { text: 'ٱللَّهُ', width: 50 }, { text: 'أَحَدٌ', width: 40 }], 400, 8, 6);
+    expect(plan.reduce((a, b) => a + b, 0)).toBeGreaterThan(0);
+    expect(plan[0]).toBe(0); // قُلۡ: ق joins ل but nothing follows ل
+    expect(plan[2] + plan[3]).toBe(plan.reduce((a, b) => a + b, 0));
+  });
+});

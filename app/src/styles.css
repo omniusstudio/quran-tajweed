@@ -1078,8 +1078,10 @@ button.word { position: relative; }
 .mushaf-page { container-type: inline-size; }
 .mp-body { --line: 6.55cqw; --fit: 1; display: grid; grid-template-rows: repeat(15, var(--line)); align-items: center; padding: 0 2cqw; }
 .mp-line { min-width: 0; height: var(--line); display: flex; align-items: center; }
-.mp-line.text { justify-content: space-between; white-space: nowrap; font-family: var(--quran); font-size: calc(4.15cqw * var(--quran-scale) * var(--fit)); line-height: 1; color: var(--ink-q); }
-.mp-line.text.centred { justify-content: center; gap: .5em; }
+.mp-line.text { justify-content: space-between; gap: 0; white-space: nowrap; font-family: var(--quran); font-size: calc(4.15cqw * var(--quran-scale) * var(--fit)); line-height: 1; color: var(--ink-q); }
+.mp-line.text.centred { justify-content: center; gap: .38em; }
+.mp-body.measuring .mp-line.text { justify-content: flex-start; gap: .38em; }
+.wrd.probe { position: absolute; visibility: hidden; }
 .mp-line.band-line { justify-content: center; }
 .band-line .surah-band { width: 100%; max-width: none; margin: 0; height: auto; max-height: var(--line); }
 .basmalah-line { justify-content: center; }

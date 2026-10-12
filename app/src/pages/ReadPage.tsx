@@ -3,6 +3,7 @@ import { WORD_SOURCES, loadAlignment, locate, playSpan, type SurahAlign } from '
 import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl } from '../audio/quran';
 import { usePlayer } from '../audio/usePlayer';
 import { PAGE_COUNT, firstVerseOnPage, juzOfPage, pageLines, pageOf, pageSegments } from '../content/pages';
+import { planKashida, withKashida } from '../content/kashida';
 import { Ribbon } from '../ui/Ribbon';
 import { inPortionAhead, markRead, wirdState } from '../content/wird';
 import { Icon } from '../ui/icons';
@@ -133,23 +134,57 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
   const headerSurah = segs[segs.length - 1]?.surah;
   const kufi = (settings.numbering ?? 'kufi') === 'kufi';
   const lines = useMemo(() => pageLines(page, kufi ? 'kufi' : 'basri'), [page, kufi]);
-  // fit: the print stretches letters to fill each of the 15 lines; here the page's font shrinks just enough that no line overflows
+  // fit and kashida: the print fills each of the 15 lines by lengthening letters. Here the page's
+  // font first shrinks just enough that no line overflows; then every line's slack is measured and
+  // turned into kashida strokes inside a few words (content/kashida.ts), so words stay close.
   const body = useRef<HTMLDivElement | null>(null);
+  const [kashida, setKashida] = useState<{ key: string; counts: number[][] }>({ key: '', counts: [] });
+  const layoutKey = `${page}:${kufi}:${settings.quranScale}`;
   useLayoutEffect(() => {
     const el = body.current;
     if (!el) return;
-    const fit = () => {
+    let cancelled = false;
+    const run = () => {
+      if (cancelled) return;
+      // 1. no kashida, measure, shrink until nothing overflows
       el.style.removeProperty('--fit');
+      el.classList.add('measuring');
       let ratio = 1;
-      for (const line of el.querySelectorAll<HTMLElement>('.mp-line.text')) if (line.scrollWidth > line.clientWidth + 1) ratio = Math.min(ratio, line.clientWidth / line.scrollWidth);
+      const textLines = [...el.querySelectorAll<HTMLElement>('.mp-line.text')];
+      for (const line of textLines) if (line.scrollWidth > line.clientWidth + 1) ratio = Math.min(ratio, line.clientWidth / line.scrollWidth);
       if (ratio < 1) el.style.setProperty('--fit', String(Math.max(0.6, ratio * 0.985)));
+      // 2. the slack of every line → strokes per word
+      const probe = document.createElement('span');
+      probe.className = 'wrd probe';
+      probe.textContent = 'ـــــــــــ';
+      const counts: number[][] = [];
+      for (const line of el.querySelectorAll<HTMLElement>('.mp-line')) {
+        if (!line.classList.contains('text') || line.classList.contains('centred')) { counts.push([]); continue; }
+        line.appendChild(probe);
+        const stroke = probe.getBoundingClientRect().width / 11;
+        line.removeChild(probe);
+        const gap = parseFloat(getComputedStyle(line).fontSize) * 0.38;
+        const words = [...line.querySelectorAll<HTMLElement>('.wrd')].map((w) => ({ text: w.dataset.word ?? '', width: w.getBoundingClientRect().width }));
+        counts.push(planKashida(words, line.clientWidth, stroke, gap));
+      }
+      el.classList.remove('measuring');
+      setKashida({ key: layoutKey, counts });
     };
-    fit();
-    const ro = new ResizeObserver(fit);
+    run();
+    const ro = new ResizeObserver(run);
     ro.observe(el);
-    (document as Document & { fonts?: { ready: Promise<unknown> } }).fonts?.ready.then(fit);
-    return () => ro.disconnect();
-  }, [lines, settings.quranScale]);
+    (document as Document & { fonts?: { ready: Promise<unknown> } }).fonts?.ready.then(run);
+    return () => { cancelled = true; ro.disconnect(); };
+  }, [layoutKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 3. if a stroke overshot, let the font give a little more
+  useLayoutEffect(() => {
+    const el = body.current;
+    if (!el || kashida.key !== layoutKey) return;
+    let ratio = 1;
+    for (const line of el.querySelectorAll<HTMLElement>('.mp-line.text')) if (line.scrollWidth > line.clientWidth + 1) ratio = Math.min(ratio, line.clientWidth / line.scrollWidth);
+    if (ratio < 1) { const cur = parseFloat(el.style.getPropertyValue('--fit') || '1'); el.style.setProperty('--fit', String(Math.max(0.6, cur * ratio * 0.99))); }
+  }, [kashida, layoutKey]);
+  const strokes = kashida.key === layoutKey ? kashida.counts : [];
   const bmOnPage = !!bm && pageOf(bm.surah, bm.basri) === page;
   // an unpinned ribbon follows the reader: the page just opened, or the verse where listening stopped
   const remember = useCallback((v: { surah: number; basri: number }) => {
@@ -210,14 +245,14 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
               if (slot.kind === 'empty') return <div key={li} className="mp-line" />;
               return (
                 <div key={li} className={`mp-line text${slot.centred ? ' centred' : ''}`}>
-                  {slot.words.map((w) => {
+                  {slot.words.map((w, wiOnLine) => {
                     const v = w.surah.verses[w.vi];
                     const isCur = current?.surah === w.surah.number && current.basri === v.basri;
                     const canPlay = !!loadAlignment(reciter, w.surah.number)?.verses.find((x) => x.basri === v.basri);
                     const marked = bm?.surah === w.surah.number && bm.basri === v.basri && w.mark !== undefined;
                     return (
-                      <span key={`${w.surah.number}:${w.vi}:${w.wi}`} className={`wrd${isCur ? ' in-aya' : ''}${isCur && wordsTrusted && current!.word === w.wi ? ' on' : ''}`} onClick={() => canPlay && startAt(w.surah.number, v.basri)} role={canPlay ? 'button' : undefined} title={canPlay ? `اسمع من الآية ${arNum(shownNumber(w.surah.number, v.basri, w.wi))}` : undefined}>
-                        {v.words[w.wi]}
+                      <span key={`${w.surah.number}:${w.vi}:${w.wi}`} data-word={v.words[w.wi]} className={`wrd${isCur ? ' in-aya' : ''}${isCur && wordsTrusted && current!.word === w.wi ? ' on' : ''}`} onClick={() => canPlay && startAt(w.surah.number, v.basri)} role={canPlay ? 'button' : undefined} title={canPlay ? `اسمع من الآية ${arNum(shownNumber(w.surah.number, v.basri, w.wi))}` : undefined}>
+                        {withKashida(v.words[w.wi], strokes[li]?.[wiOnLine] ?? 0)}
                         {w.mark !== undefined && <span className={`aya-n${marked ? ' marked' : ''}`} aria-label={`الآية ${arNum(w.mark)}`}>{arNum(w.mark)}</span>}
                       </span>
                     );
