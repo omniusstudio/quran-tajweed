@@ -32,7 +32,7 @@ export default defineConfig({
       workbox: {
         importScripts: ['sw-reload.js'],
         globPatterns: ['**/*.{js,css,html,png,ttf,json,svg}'],
-        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,   // the muṣḥaf text and shipped alignments live in the main chunk (≈6.3 MB)
         // Recordings are deliberately NOT cached by the worker: the player fetches them with byte
         // ranges, and a cache-first copy answered a range with the whole file, which broke playback
         // until the cache was cleared. The server's immutable cache headers let the browser's own
