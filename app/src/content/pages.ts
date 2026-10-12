@@ -113,5 +113,7 @@ export function pageLines(page: number, numbering: 'kufi' | 'basri'): Slot[] {
     }
   }
   for (const slot of slots) if (slot.kind === 'text' && slot.words.some((w) => w.lastOfSurah)) slot.centred = true;
+  // the first two pages are set in a small centred frame in the print: only their used lines
+  if (page <= 2) { let n = slots.length; while (n > 0 && slots[n - 1].kind === 'empty') n--; return slots.slice(0, n); }
   return slots;
 }

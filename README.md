@@ -238,7 +238,12 @@ voice, opens in follow-along, closable for the day.
   the page width: the page's font shrinks just enough that no line overflows, then each line's
   slack becomes kashida strokes inside a few of its words (`content/kashida.ts`, at a join and
   preferably before the last letter, never splitting لا), so the letters stretch as in the print
-  instead of the words drifting apart. A cloth ribbon
+  instead of the words drifting apart. The text is set in the King Fahd Complex's own face for
+  this reading, "KFGQPC Douri Uthmanic Script" version 2.0 (`fonts/UthmanicDouri-v2.ttf`, from Tarteel's QUL, bundled unmodified
+  under the Complex's end-user licence embedded in the font; it covers every character of the
+  Dūrī text, tatweel included), with Scheherazade as the fallback. The per-page QCF fonts the
+  Complex publishes exist only for Ḥafṣ and Warsh, so they are not used: they would show the
+  Ḥafṣ text. The first two pages are set in the print's small centred frame. A cloth ribbon
   (`ui/Ribbon.tsx`) hangs on the page that holds the bookmark: red and unpinned, it follows where
   you read or stopped listening; tap it (or the bookmark button) to pin it green.
   Run `kufi_marks.py`, then `fetch_lines.py`, after `extract_mushaf.py`.

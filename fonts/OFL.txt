@@ -92,3 +92,10 @@ DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 
+
+----------------------------------------------------------------------
+UthmanicDouri-v2.ttf — "KFGQPC Douri Uthmanic Script", version 2.0 (via qul.tarteel.ai)
+Copyright (c) 2010 King Fahd Glorious Quran Printing Complex, Madinah.
+Not under the OFL. Distributed by the Complex (fonts.qurancomplex.gov.sa)
+for use as is; the file is bundled unmodified, under the Complex's
+end-user licence embedded in the font. ISBN 978-603-8010-10-5.

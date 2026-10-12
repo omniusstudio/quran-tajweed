@@ -227,13 +227,13 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
 
       <div className="mushaf-wrap">
         <button className="page-turn prev" onClick={() => turn(-1)} disabled={page <= 1} aria-label="الصفحة السابقة"><Icon name="chevronRight" /></button>
-        <article className={`mushaf-page${player.playing ? ' playing' : ''}`} dir="rtl" onPointerDown={onDown} onPointerUp={onUp} aria-label={`صفحة ${arNum(page)}`}>
+        <article className={`mushaf-page${player.playing ? ' playing' : ''}${page <= 2 ? ' framed' : ''}`} dir="rtl" onPointerDown={onDown} onPointerUp={onUp} aria-label={`صفحة ${arNum(page)}`}>
           {bmOnPage && <Ribbon pinned={!!bm?.pinned} onClick={bookmarkHere} title={bm?.pinned ? 'علامة مثبّتة هنا — اضغط لفكّها' : 'هنا توقفت — اضغط لتثبيت العلامة'} />}
           <header className="mp-head">
             <span>{headerSurah?.name}</span>
             <span>الجزء {JUZ_NAMES[juz]}</span>
           </header>
-          <div className="mp-body" ref={body}>
+          <div className="mp-body" ref={body} style={{ gridTemplateRows: `repeat(${lines.length}, var(--line))` }}>
             {lines.map((slot, li) => {
               if (slot.kind === 'band') return (
                 <div key={li} className={`mp-line band-line${slot.compact ? ' compact' : ''}`}>
