@@ -22,7 +22,7 @@ fi
 
 CHROME="/Applications/Google Chrome.app"
 [ -d "$HOME/Applications/Google Chrome.app" ] && CHROME="$HOME/Applications/Google Chrome.app"
-# An open نُطق window is brought to the front instead of opening a second one.
+# An open نُطق window is brought to the front as it is (never reloaded: a reload would stop the recitation).
 if [ -d "$CHROME" ] && pgrep -xq "Google Chrome"; then
   FOUND=$(osascript <<APPLESCRIPT 2>/dev/null
 tell application "Google Chrome"
@@ -32,7 +32,6 @@ tell application "Google Chrome"
       set i to i + 1
       if URL of t starts with "$URL" then
         set active tab index of w to i
-        reload t
         set minimized of w to false
         set visible of w to true
         set index of w to 1
