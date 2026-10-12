@@ -1144,4 +1144,7 @@ button.word { position: relative; }
 .tj-heavy { color: #1565c0; }
 .tj-legend { list-style: none; margin: 8px 0 0; padding: 6px 8px 0; border-block-start: 1px solid var(--rule-soft); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 3px 14px; font-size: .74rem; color: var(--ink-2); }
 .tj-legend li { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tj-legend a { color: inherit; text-decoration: underline dotted color-mix(in srgb, var(--accent) 60%, transparent); text-underline-offset: 3px; }
+.tj-legend a:hover { color: var(--primary); text-decoration-color: var(--primary); }
+.tj-legend .badge.review { font-size: .62rem; padding: 0 6px; margin-inline-start: 4px; }
 .tj-legend i { width: 10px; height: 10px; border-radius: 50%; flex: none; }

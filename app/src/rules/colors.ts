@@ -7,17 +7,29 @@ import { tagVerse, type RuleId, type Tag } from './tagger';
 
 export type Tone = 'madd6' | 'madd4' | 'madd24' | 'madd1' | 'ghunnah' | 'iqlab' | 'silent' | 'qalqalah' | 'heavy';
 
-export const TONES: { id: Tone; label: string; color: string }[] = [
-  { id: 'madd6', label: 'مدّ لازم (٦ حركات)', color: '#7b1fa2' },
-  { id: 'madd4', label: 'مدّ متصل (٤ حركات)', color: '#d81b60' },
-  { id: 'madd24', label: 'مدّ منفصل أو عارض (٢ أو ٤ أو ٦)', color: '#ef6c00' },
-  { id: 'madd1', label: 'مدّ الصلة (حركتان)', color: '#b8860b' },
-  { id: 'ghunnah', label: 'غنة وإخفاء', color: '#2e7d32' },
-  { id: 'iqlab', label: 'إقلاب', color: '#7cb342' },
-  { id: 'silent', label: 'إدغام وحروف لا تُنطق', color: '#9e9e9e' },
-  { id: 'qalqalah', label: 'قلقلة', color: '#039be5' },
-  { id: 'heavy', label: 'تفخيم (الراء ولام الجلالة) — يُراجع', color: '#1565c0' },
+export interface ToneInfo {
+  id: Tone;
+  label: string;
+  color: string;
+  /** The lessons that teach it, in the order the legend names them. */
+  lessons: { id: string; text: string }[];
+  /** Trailing words with no lesson behind them. */
+  tail?: string;
+  review?: boolean;
+}
+
+export const TONES: ToneInfo[] = [
+  { id: 'madd6', label: 'مدّ لازم (٦ حركات)', color: '#7b1fa2', lessons: [{ id: 's9r4', text: 'مدّ لازم (٦ حركات)' }] },
+  { id: 'madd4', label: 'مدّ متصل (٤ حركات)', color: '#d81b60', lessons: [{ id: 's9r3', text: 'مدّ متصل (٤ حركات)' }] },
+  { id: 'madd24', label: 'مدّ منفصل أو عارض (٢ أو ٤ أو ٦)', color: '#ef6c00', lessons: [{ id: 's9r2', text: 'مدّ منفصل (٢ أو ٤)' }, { id: 's9r5', text: 'عارض (٢ أو ٤ أو ٦)' }] },
+  { id: 'madd1', label: 'مدّ الصلة (حركتان)', color: '#b8860b', lessons: [{ id: 's12r5', text: 'مدّ الصلة (حركتان)' }] },
+  { id: 'ghunnah', label: 'غنة وإخفاء', color: '#2e7d32', lessons: [{ id: 's8r1', text: 'غنة' }, { id: 's6r4', text: 'إخفاء' }] },
+  { id: 'iqlab', label: 'إقلاب', color: '#7cb342', lessons: [{ id: 's6r3', text: 'إقلاب' }] },
+  { id: 'silent', label: 'إدغام وحروف لا تُنطق', color: '#9e9e9e', lessons: [{ id: 's6r2', text: 'إدغام' }], tail: 'وحروف لا تُنطق' },
+  { id: 'qalqalah', label: 'قلقلة', color: '#039be5', lessons: [{ id: 's8r2', text: 'قلقلة' }] },
+  { id: 'heavy', label: 'تفخيم (الراء ولام الجلالة)', color: '#1565c0', lessons: [{ id: 's5r2', text: 'تفخيم الراء' }, { id: 's5r3', text: 'لام الجلالة' }], review: true },
 ];
+export const TONE_LABEL: Record<Tone, string> = Object.fromEntries(TONES.map((t) => [t.id, t.label])) as Record<Tone, string>;
 
 const TONE_OF: Partial<Record<RuleId, Tone>> = {
   madd_lazim: 'madd6',

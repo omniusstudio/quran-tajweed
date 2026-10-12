@@ -4,7 +4,7 @@ import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl } from '..
 import { usePlayer } from '../audio/usePlayer';
 import { PAGE_COUNT, firstVerseOnPage, juzOfPage, pageLines, pageOf, pageSegments } from '../content/pages';
 import { planKashida, withKashida } from '../content/kashida';
-import { TONES, colourVerse, type Piece } from '../rules/colors';
+import { TONES, TONE_LABEL, colourVerse, type Piece } from '../rules/colors';
 import { Ribbon } from '../ui/Ribbon';
 import { inPortionAhead, markRead, wirdState } from '../content/wird';
 import { Icon } from '../ui/icons';
@@ -213,7 +213,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
     const text = shownWords.get(`${sn}:${vi}:${wi}`) ?? SURAH_BY_NUMBER[sn].verses[vi].words[wi];
     const ps = pieces.get(`${sn}:${vi}`)?.[wi];
     if (!ps) return text;
-    return ps.map((p, i) => (p.tone ? <span key={i} className={`tj tj-${p.tone}`}>{p.text}</span> : p.text));
+    return ps.map((p, i) => (p.tone ? <span key={i} className={`tj tj-${p.tone}`} title={TONE_LABEL[p.tone]}>{p.text}</span> : p.text));
   };
   const bmOnPage = !!bm && pageOf(bm.surah, bm.basri) === page;
   // an unpinned ribbon follows the reader: the page just opened, or the verse where listening stopped
@@ -298,8 +298,20 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
             <span>{arNum(page)}</span>
           </footer>
           {colours && (
-            <ul className="tj-legend" aria-label="دليل الألوان">
-              {TONES.map((t) => <li key={t.id}><i style={{ background: t.color }} /> {t.label}</li>)}
+            <ul className="tj-legend" aria-label="دليل الألوان: اضغط اسم الحكم لتفتح درسه">
+              {TONES.map((t) => (
+                <li key={t.id}>
+                  <i style={{ background: t.color }} />
+                  {t.lessons.map((l, i) => (
+                    <span key={l.id}>
+                      {i > 0 && ' · '}
+                      <a href={`#/lessons/${l.id}`} onClick={(e) => { e.preventDefault(); sfx('tap'); go(`#/lessons/${l.id}`); }}>{l.text}</a>
+                    </span>
+                  ))}
+                  {t.tail && <> {t.tail}</>}
+                  {t.review && <span className="badge review">يُراجع</span>}
+                </li>
+              ))}
             </ul>
           )}
         </article>
