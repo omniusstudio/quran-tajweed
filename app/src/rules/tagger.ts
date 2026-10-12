@@ -339,8 +339,10 @@ export function tagVerse(input: TagInput): Tag[] {
 
     // qalqalah when stopping on the verse-final word
     if (isVerseEnd) {
-      const lastConsonant = [...us].reverse().find((u) => !(isAlif(u) && isBare(u)) && !hasAny(u, TANWIN_PLAIN) && !hasAny(u, TANWIN_SEQ)) ?? us[last];
-      if (QALQALAH.has(lastConsonant.ch) && !hasAny(lastConsonant, SUKUN)) push('qalqalah', us.indexOf(lastConsonant), { detail: 'عند الوقف' });
+      // the letter the reader stops on: the last one, its vowel or tanwīn dropped — unless the word ends
+      // in a bare alif (a madd, or fatḥatān turned alif), where the stop is on the alif and nothing bounces
+      const stopUnit = isAlif(us[last]) && isBare(us[last]) ? null : us[last];
+      if (stopUnit && QALQALAH.has(stopUnit.ch) && !hasAny(stopUnit, SUKUN)) push('qalqalah', last, { detail: 'عند الوقف' });
       const u = us[last];
       let detail = 'تسكّن آخر الكلمة';
       if (u.ch === 'ة') detail = 'تقف بالهاء الساكنة';

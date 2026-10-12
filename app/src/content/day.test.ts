@@ -357,3 +357,34 @@ describe('nūn, mīm and ghunnah colours', () => {
     for (const basri of [2, 4, 5, 7]) { const { pieces } = colour(basri); const lastWord = pieces[pieces.length - 1]; const last = lastWord[lastWord.length - 1]; expect(['madd24', 'madd4', 'madd6', 'heavy', 'silent', undefined]).toContain(last.tone); }
   });
 });
+
+describe('madd and qalqalah colours', () => {
+  it('colours the madd letter with what it leans on, and the letter bounced on at a stop', async () => {
+    const { colourVerse } = await import('../rules/colors');
+    const { SURAH_BY_NUMBER } = await import('../audio/quran');
+    const paint = (sn: number, basri: number) => {
+      const s = SURAH_BY_NUMBER[sn]; const i = s.verses.findIndex((v) => v.basri === basri); const v = s.verses[i]; const pv = s.verses[i - 1];
+      return { v, p: colourVerse(v.words, v.hafs, s.verses[i + 1]?.words[0] ?? null, v.words, pv ? { words: pv.words, hafs: pv.hafs } : undefined) };
+    };
+    const letters = (ps: { text: string; tone?: string }[]) => ps.flatMap((p) => [...p.text.replace(/[^ء-غف-يٱ]/g, '')].map((c) => [c, p.tone] as const));
+    // lāzim: الٓمٓ purple on both letters; muttaṣil: ٱلسَّمَآءِ alif and hamzah pink; ʿāriḍ: ٱلۡحَكِيمِ at the verse end, yāʾ and mīm orange
+    const l = paint(31, 1);
+    expect(letters(l.p[0]).map(([, t]) => t)).toEqual([undefined, 'madd6', 'madd6']); // the alif of الٓمٓ is a plain letter name
+    const bare = (w: string) => w.replace(/[^ء-غف-يٱ]/g, '').replace('ٱ', 'ا');
+    const sky = paint(31, 9); const iSky = sky.v.words.findIndex((w) => bare(w) === 'السماء');
+    expect(letters(sky.p[iSky]).filter(([c]) => c === 'ا' || c === 'ء').map(([, t]) => t)).toEqual(['madd4', 'madd4']);
+    const end = letters(l.p[l.p.length - 1]);
+    expect(end.slice(-2).map(([, t]) => t)).toEqual(['madd24', 'madd24']);
+    // munfaṣil reaches the hamzah of the next word: بِمَآ أُنزِلَ
+    const b = paint(2, 3); const iBima = b.v.words.findIndex((w) => bare(w) === 'بما');
+    expect(letters(b.p[iBima]).slice(-1)[0][1]).toBe('madd24');
+    expect(b.p[iBima + 1][0].tone).toBe('madd24');
+    // qalqalah: sākin inside a word (أَبۡصَٰرِهِمۡ) and the letter stopped on at a verse end (أَحَدُۢ, ٱلۡفَلَقِ), not a bare final alif
+    const q = paint(2, 6); const iAb = q.v.words.findIndex((w) => bare(w) === 'أبصرهم');
+    expect(letters(q.p[iAb]).find(([c]) => c === 'ب')?.[1]).toBe('qalqalah');
+    expect(letters(paint(112, 4).p.slice(-1)[0]).slice(-1)[0]).toEqual(['د', 'qalqalah']);
+    expect(letters(paint(113, 1).p.slice(-1)[0]).slice(-1)[0]).toEqual(['ق', 'qalqalah']);
+    const eq = paint(113, 1);
+    expect(eq.p.slice(-1)[0].some((x) => x.tone === 'qalqalah')).toBe(true);
+  });
+});

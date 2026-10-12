@@ -147,11 +147,16 @@ export function isHeavy(word: string, i: number, prev?: string, atStop = false):
 const TANWIN = /[\u064B-\u064D\u0656\u0657\u065E]/;
 const NUN_FAMILY = new Set<RuleId>(['izhar', 'idgham_ghunnah', 'idgham_no_ghunnah', 'iqlab', 'ikhfa', 'mim_ikhfa', 'mim_idgham', 'mim_izhar']);
 
-/** Does the last word of `words` end in a nūn/tanwīn that melts with ghunnah into `nextWord`? (The print colours that next letter.) */
-function meltsWithGhunnah(words: string[], hafs: (string | null)[] | undefined, nextWord: string | null): boolean {
-  if (!nextWord) return false;
+const MADD = new Set<RuleId>(['madd_tabii', 'madd_muttasil', 'madd_munfasil', 'madd_lazim', 'madd_arid', 'madd_silah']);
+
+/** What the last word of `words` hands to the first letter of `nextWord`: the ghunnah of a melting nūn, or the hamzah of a separated madd. */
+function carryFrom(words: string[], hafs: (string | null)[] | undefined, nextWord: string | null): Tone | undefined {
+  if (!nextWord) return undefined;
   const last = words.length - 1;
-  return tagVerse({ words, hafs, nextWord }).some((t) => t.word === last && t.rule === 'idgham_ghunnah');
+  const tags = tagVerse({ words, hafs, nextWord }).filter((t) => t.word === last);
+  if (tags.some((t) => t.rule === 'idgham_ghunnah')) return 'ghunnah';
+  if (tags.some((t) => t.rule === 'madd_munfasil')) return 'madd24';
+  return undefined;
 }
 
 /**
@@ -164,7 +169,7 @@ export function colourVerse(words: string[], hafs: (string | null)[] | undefined
   const tags = tagVerse({ words, hafs, nextWord });
   const byWord: Tag[][] = words.map(() => []);
   for (const t of tags) byWord[t.word]?.push(t);
-  let carry = prev ? meltsWithGhunnah(prev.words, prev.hafs, words[0]) : false;
+  let carry: Tone | undefined = prev ? carryFrom(prev.words, prev.hafs, words[0]) : undefined;
   return words.map((w, wi) => {
     const units = split(shown[wi] ?? w);
     const tone: (Tone | undefined)[] = units.map(() => undefined);
@@ -172,17 +177,27 @@ export function colourVerse(words: string[], hafs: (string | null)[] | undefined
     const isLastWord = wi === words.length - 1;
     for (const i of silentUnits(units)) tone[i] = 'silent';
     for (const i of heavyUnits(units, prevLast, isLastWord)) tone[i] = 'heavy';
-    if (carry && units.length) tone[0] = 'ghunnah';
-    carry = false;
-    for (const t of byWord[wi]) {
+    if (carry && units.length) tone[0] = carry;
+    carry = undefined;
+    // madd first, so a qalqalah or ghunnah on the same letter keeps its own colour
+    const ordered = [...byWord[wi]].sort((a, b) => (MADD.has(a.rule) ? 0 : 1) - (MADD.has(b.rule) ? 0 : 1));
+    for (const t of ordered) {
       const tn = TONE_OF[t.rule];
       if (!tn || t.unit >= units.length) continue;
+      if (MADD.has(t.rule)) {
+        // the print colours the madd letter with what it leans on: the hamzah (muttaṣil), the doubled
+        // or sākin letter (lāzim), the letter stopped on (ʿāriḍ); munfaṣil reaches the next word's hamzah
+        tone[t.unit] = tn;
+        if (t.rule === 'madd_muttasil' || t.rule === 'madd_lazim' || t.rule === 'madd_arid') { if (t.unit + 1 < units.length) tone[t.unit + 1] = tn; }
+        if (t.rule === 'madd_munfasil' && t.unit >= units.length - 2) carry = tn;
+        continue;
+      }
       // a nūn-family rule at the word's end reaches into the next word: the tanwīn may sit on the
       // penultimate unit (هُدٗى), so "the end" is the last unit or a tanwīn just before it
       const atEnd = t.unit === units.length - 1 || (t.unit === units.length - 2 && TANWIN.test(units[t.unit]));
       if (isLastWord && atEnd && NUN_FAMILY.has(t.rule)) continue;
       tone[t.unit] = tn;
-      if (t.rule === 'idgham_ghunnah' && atEnd) carry = true;
+      if (t.rule === 'idgham_ghunnah' && atEnd) carry = 'ghunnah';
     }
     // merge neighbours of one tone into one piece
     const pieces: Piece[] = [];
