@@ -35,6 +35,7 @@
   --info: #1d63b5;
   --info-soft: #e4eefb;
   --hl: #fff1b8; --hl-aya: #fdf4d8; --hl-word: #ffe9a0;
+  --tj-madd6: #7b1fa2; --tj-madd4: #d81b60; --tj-madd24: #ef6c00; --tj-madd1: #b8860b; --tj-ghunnah: #2e7d32; --tj-iqlab: #7cb342; --tj-silent: #9e9e9e; --tj-qalqalah: #039be5; --tj-heavy: #1565c0; --tj-imalah: #00897b; --tj-taqlil: #7bb8a7; --tj-hamza: #8d6e63;
   --hl-ring: #f2d27a;
   --scrim: rgba(31, 38, 34, .45);
   --shadow-1: 0 1px 2px rgba(31, 38, 34, .05), 0 1px 4px rgba(31, 38, 34, .04);
@@ -1102,7 +1103,8 @@ button.word { position: relative; }
 .basmalah.small { font-size: calc(3cqw * var(--quran-scale)); margin-block-start: -1px; }
 .basmalah { font-family: var(--quran); font-size: calc(3.9cqw * var(--quran-scale)); line-height: 1; color: var(--ink-q); white-space: nowrap; }
 .wrd { display: inline-block; border-radius: 3px; padding: .35em .05em; transition: background var(--dur-fast) var(--ease); }   /* inline content, so the browser shapes the coloured pieces as one word */
-.wrd .tj { display: inline; }
+.wt.painted { color: transparent; -webkit-background-clip: text; background-clip: text; background-repeat: no-repeat; }   /* the tones, painted through the glyphs */
+.wrd.on .wt.painted, .wrd.in-aya .wt.painted { background-color: transparent; }
 .wrd[role="button"] { cursor: pointer; }
 /* .wrd.in-aya and .wrd.on carry no paint of their own: the band and the marker are drawn beneath the line */
 .aya-n { display: inline-grid; vertical-align: middle; place-items: center; min-width: 1.55em; height: 1.55em; font-family: var(--display); font-size: .48em; line-height: 1; color: var(--accent-strong); border: 1px solid var(--rule); border-radius: 50%; margin: 0 .25em; position: relative; background: var(--paper); flex: none; }
@@ -1137,18 +1139,18 @@ button.word { position: relative; }
 @media (max-width: 480px) { .read-reciter { display: none; } }
 
 /* tajwīd colours (the colour-coded print's palette) */
-.tj-madd6 { color: #7b1fa2; }
-.tj-madd4 { color: #d81b60; }
-.tj-madd24 { color: #ef6c00; }
-.tj-madd1 { color: #b8860b; }
-.tj-ghunnah { color: #2e7d32; }
-.tj-iqlab { color: #7cb342; }
-.tj-silent { color: #9e9e9e; }
-.tj-qalqalah { color: #039be5; }
-.tj-heavy { color: #1565c0; }
-.tj-imalah { color: #00897b; }
-.tj-taqlil { color: #7bb8a7; }
-.tj-hamza { color: #8d6e63; }
+.tj-madd6 { color: var(--tj-madd6); }
+.tj-madd4 { color: var(--tj-madd4); }
+.tj-madd24 { color: var(--tj-madd24); }
+.tj-madd1 { color: var(--tj-madd1); }
+.tj-ghunnah { color: var(--tj-ghunnah); }
+.tj-iqlab { color: var(--tj-iqlab); }
+.tj-silent { color: var(--tj-silent); }
+.tj-qalqalah { color: var(--tj-qalqalah); }
+.tj-heavy { color: var(--tj-heavy); }
+.tj-imalah { color: var(--tj-imalah); }
+.tj-taqlil { color: var(--tj-taqlil); }
+.tj-hamza { color: var(--tj-hamza); }
 .tj-legend { list-style: none; margin: 8px 0 0; padding: 6px 8px 0; border-block-start: 1px solid var(--rule-soft); display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 3px 14px; font-size: .74rem; color: var(--ink-2); }
 .tj-legend li { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .tj-legend a { color: inherit; text-decoration: underline dotted color-mix(in srgb, var(--accent) 60%, transparent); text-underline-offset: 3px; }

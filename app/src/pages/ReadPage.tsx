@@ -238,9 +238,57 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
   const renderWord = (sn: number, vi: number, wi: number) => {
     const text = shownWords.get(`${sn}:${vi}:${wi}`) ?? SURAH_BY_NUMBER[sn].verses[vi].words[wi];
     const ps = pieces.get(`${sn}:${vi}`)?.[wi];
-    if (!ps) return text;
-    return ps.map((p, i) => (p.tone ? <span key={i} className={`tj tj-${p.tone}`} title={TONE_LABEL[p.tone]}>{p.text}</span> : p.text));
+    if (!ps || !ps.some((p) => p.tone)) return text;
+    // one text node per word: the colours are painted over it (see paintTones), never by splitting the
+    // word into spans, which Safari shapes separately and so disconnects the letters
+    const labels = [...new Set(ps.flatMap((p) => (p.tone ? [TONE_LABEL[p.tone]] : [])))].join(' · ');
+    return <span className="wt" data-k={`${sn}:${vi}:${wi}`} title={labels}>{text}</span>;
   };
+  // paint the tajwīd tones: a horizontal gradient clipped to the word's own glyphs, its stops measured
+  // from the shaped text with Ranges, so every browser shapes the word as one run and colours the same
+  useLayoutEffect(() => {
+    const el = body.current;
+    if (!el) return;
+    const paint = () => {
+      for (const wt of el.querySelectorAll<HTMLElement>('.wt')) {
+        const [sn, vi, wi] = (wt.dataset.k ?? '').split(':').map(Number);
+        const ps = pieces.get(`${sn}:${vi}`)?.[wi];
+        const node = wt.firstChild;
+        if (!ps || !node || node.nodeType !== Node.TEXT_NODE) { wt.classList.remove('painted'); wt.style.removeProperty('background-image'); continue; }
+        const base = wt.getBoundingClientRect();
+        const len = node.textContent?.length ?? 0;
+        const runs: { a: number; b: number; c: string }[] = [];
+        let off = 0;
+        for (const p of ps) {
+          const end = Math.min(off + p.text.length, len);
+          if (p.tone && end > off) {
+            const r = document.createRange();
+            r.setStart(node, off); r.setEnd(node, end);
+            const rects = [...r.getClientRects()].filter((x) => x.width > 0);
+            if (rects.length) runs.push({ a: Math.min(...rects.map((x) => x.left)) - base.left, b: Math.max(...rects.map((x) => x.right)) - base.left, c: `var(--tj-${p.tone})` });
+          }
+          off = end;
+        }
+        if (!runs.length) { wt.classList.remove('painted'); wt.style.removeProperty('background-image'); continue; }
+        runs.sort((x, y) => x.a - y.a);
+        let g = ''; let x = 0;
+        for (const run of runs) {
+          const a = Math.max(x, run.a); const b = Math.max(a, run.b);
+          if (a > x) g += `, var(--ink-q) ${x.toFixed(2)}px ${a.toFixed(2)}px`;
+          g += `, ${run.c} ${a.toFixed(2)}px ${b.toFixed(2)}px`;
+          x = b;
+        }
+        g += `, var(--ink-q) ${x.toFixed(2)}px 100%`;
+        wt.style.backgroundImage = `linear-gradient(to right${g})`;
+        wt.classList.add('painted');
+      }
+    };
+    paint();
+    const ro = new ResizeObserver(paint);
+    ro.observe(el);
+    (document as Document & { fonts?: { ready: Promise<unknown> } }).fonts?.ready.then(paint);
+    return () => ro.disconnect();
+  }, [pieces, shownWords, kashida, page]);
   const bmOnPage = !!bm && pageOf(bm.surah, bm.basri) === page;
   // an unpinned ribbon follows the reader: the page just opened, or the verse where listening stopped
   const remember = useCallback((v: { surah: number; basri: number }) => {
