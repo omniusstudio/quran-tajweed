@@ -43,7 +43,8 @@ export const DEFAULT_RECITER: string = (recitersJson as { default: string }).def
 
 /** Local (build-time cached) audio file for a reciter's sūrah — never hot-linked. */
 export function audioUrl(reciter: string, surah: number): string {
-  return `${import.meta.env.BASE_URL}audio/${reciter}/${String(surah).padStart(3, '0')}.mp3`;
+  // .m4a: an MP4 container seeks exactly; the MP3 these come from lands seconds late deep into a long sūrah
+  return `${import.meta.env.BASE_URL}audio/${reciter}/${String(surah).padStart(3, '0')}.m4a`;
 }
 
 // ---- Dūrī muṣḥaf notation (PROMPT.md §4) ---------------------------------------------------

@@ -8,7 +8,7 @@
 //
 // GET /__lan answers with the addresses to type on the phone and a QR code for the settings page.
 
-import { execFile, execFileSync, spawn } from 'node:child_process';
+import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createReadStream, createWriteStream, existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
@@ -266,9 +266,39 @@ const downloads = new Map();
  * A recording that is not cached yet is fetched once from the reciter's server into public/audio
  * (never hot-linked by the app itself), so any of the 114 sūrahs plays without a full pre-fetch.
  */
+const FFMPEG = ['/usr/local/bin/ffmpeg', '/opt/homebrew/bin/ffmpeg', '/usr/bin/ffmpeg'].find((f) => existsSync(f)) || (spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' }).status === 0 ? 'ffmpeg' : null);
+const conversions = new Map();
+/**
+ * The app plays `.m4a`: browsers seek an MP3 without a seek table by estimating byte positions, which
+ * lands seconds late deep into a long sūrah, while an MP4 container has a sample table and seeks
+ * exactly. The MP3 is fetched (and kept, the alignment scripts read it) and converted with ffmpeg;
+ * without ffmpeg the MP3 itself is served.
+ */
 async function ensureAudio(rel) {
-  const m = /^audio\/([\w-]+)\/(\d{3})\.mp3$/.exec(rel.split(sep).join('/'));
+  const m = /^audio\/([\w-]+)\/(\d{3})\.(mp3|m4a)$/.exec(rel.split(sep).join('/'));
   if (!m) return null;
+  if (m[3] === 'mp3') return ensureMp3(m[1], m[2]);
+  const m4a = join(PUBLIC, 'audio', m[1], `${m[2]}.m4a`);
+  if (existsSync(m4a) && statSync(m4a).size > 10_000) return m4a;
+  const mp3 = await ensureMp3(m[1], m[2]);
+  if (!mp3 || !FFMPEG) return mp3;
+  if (conversions.has(m4a)) return conversions.get(m4a);
+  const job = new Promise((resolveJob, rejectJob) => {
+    const tmp = `${m4a}.part.m4a`;
+    const ff = spawn(FFMPEG, ['-v', 'error', '-y', '-i', mp3, '-map', '0:a', '-c:a', 'aac', '-b:a', '96k', '-movflags', '+faststart', tmp], { stdio: 'ignore' });
+    ff.on('error', rejectJob);
+    ff.on('exit', (code) => {
+      if (code === 0 && existsSync(tmp)) { renameSync(tmp, m4a); console.log(`converted ${rel}`); resolveJob(m4a); }
+      else { try { unlinkSync(tmp); } catch { /* ignore */ } rejectJob(new Error(`ffmpeg exit ${code} for ${rel}`)); }
+    });
+  }).finally(() => conversions.delete(m4a));
+  conversions.set(m4a, job);
+  return job;
+}
+
+async function ensureMp3(reciterId, nnn) {
+  const m = [null, reciterId, nnn];
+  const rel = `audio/${reciterId}/${nnn}.mp3`;
   const reciter = RECITERS.find((r) => r.id === m[1]);
   if (!reciter) return null;
   const dst = join(PUBLIC, 'audio', m[1], `${m[2]}.mp3`);
@@ -306,17 +336,17 @@ function audioStatus(req, res, url) {
   const m = /^\/__audio\/([\w-]+)\/(\d{3})\b/.exec(url);
   if (!m) { res.writeHead(400, json); return res.end('{"error":"bad path"}'); }
   const rel = `audio/${m[1]}/${m[2]}.mp3`;
-  const dst = join(PUBLIC, 'audio', m[1], `${m[2]}.mp3`);
-  const distFile = join(DIST, 'audio', m[1], `${m[2]}.mp3`);
-  if ((existsSync(dst) && statSync(dst).size > 10_000) || (existsSync(distFile) && statSync(distFile).size > 10_000)) {
+  const have = (ext) => [join(PUBLIC, 'audio', m[1], `${m[2]}.${ext}`), join(DIST, 'audio', m[1], `${m[2]}.${ext}`)].some((f) => existsSync(f) && statSync(f).size > 10_000);
+  if (have('m4a') || (!FFMPEG && have('mp3'))) {
     res.writeHead(200, json);
     return res.end(JSON.stringify({ ready: true }));
   }
   if (!RECITERS.some((r) => r.id === m[1])) { res.writeHead(404, json); return res.end('{"error":"unknown reciter"}'); }
-  if (!downloads.has(rel)) ensureAudio(rel).catch((e) => console.warn(String(e)));
+  const m4a = join(PUBLIC, 'audio', m[1], `${m[2]}.m4a`);
+  if (!downloads.has(rel) && !conversions.has(m4a)) ensureAudio(`audio/${m[1]}/${m[2]}.m4a`).catch((e) => console.warn(String(e)));
   const st = downloads.get(rel);
   res.writeHead(200, json);
-  res.end(JSON.stringify({ ready: false, received: st ? st.received : 0, total: st ? st.total : 0 }));
+  res.end(JSON.stringify({ ready: false, received: st ? st.received : 0, total: st ? st.total : 0, converting: !st && conversions.has(m4a) }));
 }
 
 const MIME = {

@@ -60,7 +60,7 @@ export function usePlayer(src: string | null): Player {
     let dead = false;
     // A recording the local server has not cached yet would make the audio element wait on a long
     // download (and proxies give up); ask the server to fetch it first and show the progress.
-    const m = /\/audio\/([\w-]+)\/(\d{3})\.mp3$/.exec(src);
+    const m = /\/audio\/([\w-]+)\/(\d{3})\.(?:mp3|m4a)$/.exec(src);
     const start = () => {
       if (dead) return;
       setLoading(null);
@@ -76,9 +76,9 @@ export function usePlayer(src: string | null): Player {
       try {
         const r = await fetch(statusUrl, { cache: 'no-store' });
         if (!r.ok) return start(); // no such endpoint (dev server): let the audio element try
-        const st = (await r.json()) as { ready: boolean; received?: number; total?: number };
+        const st = (await r.json()) as { ready: boolean; received?: number; total?: number; converting?: boolean };
         if (st.ready) return start();
-        setLoading(st.total ? Math.min(0.99, (st.received ?? 0) / st.total) : 0);
+        setLoading(st.converting ? 0.99 : st.total ? Math.min(0.99, (st.received ?? 0) / st.total) : 0);
         if (!dead) setTimeout(poll, 1000);
       } catch {
         start();
