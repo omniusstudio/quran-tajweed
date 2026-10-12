@@ -203,7 +203,8 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
         if (out.has(key)) continue;
         const v = w.surah.verses[w.vi];
         const shown = v.words.map((t, wi) => shownWords.get(`${w.surah.number}:${w.vi}:${wi}`) ?? t);
-        out.set(key, colourVerse(v.words, v.hafs, w.surah.verses[w.vi + 1]?.words[0] ?? null, shown));
+        const pv = w.surah.verses[w.vi - 1];
+        out.set(key, colourVerse(v.words, v.hafs, w.surah.verses[w.vi + 1]?.words[0] ?? null, shown, pv ? { words: pv.words, hafs: pv.hafs } : undefined));
       }
     }
     return out;

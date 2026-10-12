@@ -28,7 +28,7 @@ const TONE_OF: Partial<Record<RuleId, Tone>> = {
   ikhfa: 'ghunnah',
   ghunnah: 'ghunnah',
   mim_ikhfa: 'ghunnah',
-  idgham_ghunnah: 'ghunnah',
+  idgham_ghunnah: 'silent', // the nūn is not sounded; the ghunnah is on the letter it melts into (coloured on that letter)
   iqlab: 'iqlab',
   idgham_no_ghunnah: 'silent',
   mim_idgham: 'silent',
@@ -144,21 +144,45 @@ export function isHeavy(word: string, i: number, prev?: string, atStop = false):
   return heavyUnits(split(word), prev ? split(prev).slice(-1)[0] : undefined, atStop).has(i);
 }
 
-/** The pieces of every word of a verse, coloured; `shown` are the words as displayed (kashida included). */
-export function colourVerse(words: string[], hafs: (string | null)[] | undefined, nextWord: string | null, shown: string[]): Piece[][] {
+const TANWIN = /[\u064B-\u064D\u0656\u0657\u065E]/;
+const NUN_FAMILY = new Set<RuleId>(['izhar', 'idgham_ghunnah', 'idgham_no_ghunnah', 'iqlab', 'ikhfa', 'mim_ikhfa', 'mim_idgham', 'mim_izhar']);
+
+/** Does the last word of `words` end in a nūn/tanwīn that melts with ghunnah into `nextWord`? (The print colours that next letter.) */
+function meltsWithGhunnah(words: string[], hafs: (string | null)[] | undefined, nextWord: string | null): boolean {
+  if (!nextWord) return false;
+  const last = words.length - 1;
+  return tagVerse({ words, hafs, nextWord }).some((t) => t.word === last && t.rule === 'idgham_ghunnah');
+}
+
+/**
+ * The pieces of every word of a verse, coloured; `shown` are the words as displayed (kashida
+ * included). `prev` is the previous verse (its last word may melt into this verse's first letter).
+ * Rules on the verse's last letter are not coloured: the print judges the stop, where tanwīn and
+ * the sākin nūn's rule fall away.
+ */
+export function colourVerse(words: string[], hafs: (string | null)[] | undefined, nextWord: string | null, shown: string[], prev?: { words: string[]; hafs?: (string | null)[] }): Piece[][] {
   const tags = tagVerse({ words, hafs, nextWord });
   const byWord: Tag[][] = words.map(() => []);
   for (const t of tags) byWord[t.word]?.push(t);
+  let carry = prev ? meltsWithGhunnah(prev.words, prev.hafs, words[0]) : false;
   return words.map((w, wi) => {
     const units = split(shown[wi] ?? w);
     const tone: (Tone | undefined)[] = units.map(() => undefined);
     const prevLast = wi > 0 ? split(words[wi - 1]).slice(-1)[0] : undefined;
+    const isLastWord = wi === words.length - 1;
     for (const i of silentUnits(units)) tone[i] = 'silent';
-    for (const i of heavyUnits(units, prevLast, wi === words.length - 1)) tone[i] = 'heavy';
+    for (const i of heavyUnits(units, prevLast, isLastWord)) tone[i] = 'heavy';
+    if (carry && units.length) tone[0] = 'ghunnah';
+    carry = false;
     for (const t of byWord[wi]) {
       const tn = TONE_OF[t.rule];
       if (!tn || t.unit >= units.length) continue;
+      // a nūn-family rule at the word's end reaches into the next word: the tanwīn may sit on the
+      // penultimate unit (هُدٗى), so "the end" is the last unit or a tanwīn just before it
+      const atEnd = t.unit === units.length - 1 || (t.unit === units.length - 2 && TANWIN.test(units[t.unit]));
+      if (isLastWord && atEnd && NUN_FAMILY.has(t.rule)) continue;
       tone[t.unit] = tn;
+      if (t.rule === 'idgham_ghunnah' && atEnd) carry = true;
     }
     // merge neighbours of one tone into one piece
     const pieces: Piece[] = [];

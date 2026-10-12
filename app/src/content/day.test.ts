@@ -319,3 +319,41 @@ describe('heavy rāʾ and the lām of الله', () => {
     expect(isHeavy('لِلَّهِ', lam('لِلَّهِ'), 'اِ۬لۡحَمۡدُ')).toBe(false);
   });
 });
+
+describe('nūn, mīm and ghunnah colours', () => {
+  it('colours as the print does: ikhfāʾ green on the nūn, idghām grey with the ghunnah on the next letter, nothing on the stop', async () => {
+    const { colourVerse } = await import('../rules/colors');
+    const { SURAH_BY_NUMBER } = await import('../audio/quran');
+    const s = SURAH_BY_NUMBER[31];
+    const colour = (basri: number) => {
+      const i = s.verses.findIndex((v) => v.basri === basri);
+      const v = s.verses[i];
+      const pv = s.verses[i - 1];
+      return { v, pieces: colourVerse(v.words, v.hafs, s.verses[i + 1]?.words[0] ?? null, v.words, pv ? { words: pv.words, hafs: pv.hafs } : undefined) };
+    };
+    const toneOf = (pieces: { text: string; tone?: string }[], letter: string) => pieces.find((p) => p.text.replace(/[^ء-غف-يٱ]/g, '').startsWith(letter))?.tone;
+    // 31:2 (Baṣrī) هُدٗى وَرَحۡمَةٗ لِّلۡمُحۡسِنِينَ — tanwīn + و melts with ghunnah: د grey, و green; tanwīn + ل melts without: ة grey
+    const a = colour(2);
+    const iHuda = a.v.words.findIndex((w) => w.startsWith('هُد'));
+    expect(toneOf(a.pieces[iHuda], 'د')).toBe('silent');
+    expect(a.pieces[iHuda + 1][0].tone).toBe('ghunnah');
+    expect(toneOf(a.pieces[iHuda + 1], 'ة')).toBe('silent');
+    // 31:5 مَن يَشۡتَرِي: ن grey, ي green; مِّن رَّبِّهِمۡ in 31:4: ن grey (no ghunnah), ر heavy
+    const b = colour(5);
+    const iMan = b.v.words.findIndex((w) => w === 'مَن');
+    expect(toneOf(b.pieces[iMan], 'ن')).toBe('silent');
+    expect(b.pieces[iMan + 1][0].tone).toBe('ghunnah');
+    const c = colour(4);
+    const iMin = c.v.words.findIndex((w) => w.replace(/[^ء-غف-يٱ]/g, '') === 'من' && w.includes('ّ'));
+    expect(toneOf(c.pieces[iMin], 'ن')).toBe('silent');
+    expect(c.pieces[iMin + 1][0].tone).toBe('heavy');
+    // ikhfāʾ inside a word: أَنزَلۡنَا — the nūn green; a doubled nūn: إِنَّ green
+    const d = colour(9);
+    const iAnz = d.v.words.findIndex((w) => w.includes('أَنزَلۡنَا'));
+    expect(toneOf(d.pieces[iAnz], 'ن')).toBe('ghunnah');
+    const e = colour(7);
+    expect(toneOf(e.pieces[0], 'ن')).toBe('ghunnah'); // إِنَّ
+    // the verse's last letter carries no nūn-rule colour (the stop)
+    for (const basri of [2, 4, 5, 7]) { const { pieces } = colour(basri); const lastWord = pieces[pieces.length - 1]; const last = lastWord[lastWord.length - 1]; expect(['madd24', 'madd4', 'madd6', 'heavy', 'silent', undefined]).toContain(last.tone); }
+  });
+});
