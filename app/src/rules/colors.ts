@@ -41,6 +41,8 @@ const KASRA = 'ِ';
 const SHADDA = 'ّ';
 const SILENT_ALIF = '۟';
 const SUN = new Set('تثدذرزسشصضطظلن');
+const NON_JOINING = new Set('اأإآٱدذرزوؤةىءٲٳ');
+export const ZWJ = '\u200d';
 
 export interface Piece {
   text: string;
@@ -119,6 +121,12 @@ export function colourVerse(words: string[], hafs: (string | null)[] | undefined
       if (last && last.tone === tone[i]) last.text += u;
       else pieces.push({ text: u, tone: tone[i] });
     });
+    // each piece is shaped on its own by the browser, which would break the cursive joins at a colour
+    // boundary: a zero-width joiner on both sides of every join keeps the letters connected
+    for (let i = 0; i + 1 < pieces.length; i++) {
+      const lastLetter = pieces[i].text.replace(/[^ء-غف-يٱ]/g, '').slice(-1);
+      if (lastLetter && !NON_JOINING.has(lastLetter)) { pieces[i].text += ZWJ; pieces[i + 1].text = ZWJ + pieces[i + 1].text; }
+    }
     return pieces;
   });
 }
