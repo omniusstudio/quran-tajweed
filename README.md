@@ -229,8 +229,16 @@ voice, opens in follow-along, closable for the day.
   ḥizb quarter from the Kūfī ayah holding its last word, so pages begin and end where the printed
   muṣḥaf's do (page 2 is al-Baqarah 1–5, page 50 opens Āl ʿImrān), and each sūrah's Kūfī verse
   count for the heading. The heading is the printed one redrawn in SVG (`ui/SurahBand.tsx`): a
-  green ornamental band, the name in a cartouche, medallions with آياتها and ترتيبها. Run
-  `kufi_marks.py` after `extract_mushaf.py`.
+  green ornamental band, the name in a cartouche, medallions with آياتها and ترتيبها.
+  Each page is laid out on the print's fifteen lines: `scripts/fetch_lines.py` takes, from
+  Quran.com's API for the Madani 15-line muṣḥaf (cached in `data/mushaf_lines/`, git-ignored), the
+  line of every word and stores `lines` per verse; `pageLines()` in `content/pages.ts` builds the
+  fifteen slots (heading and basmalah take the lines above a sūrah's first text line; a verse that
+  runs over a page break is split between the two pages), and the view justifies every line to
+  the page width, shrinking the page's font just enough that no line overflows. A cloth ribbon
+  (`ui/Ribbon.tsx`) hangs on the page that holds the bookmark: red and unpinned, it follows where
+  you read or stopped listening; tap it (or the bookmark button) to pin it green.
+  Run `kufi_marks.py`, then `fetch_lines.py`, after `extract_mushaf.py`.
 - **تحصين البيت** (`#/tahsin`, `content/tahsin.ts`, `pages/TahsinPage.tsx`): the sūrahs and āyāt
   the Sunnah ties to a protected home, read aloud in sequence in the reciter's voice. Two programs:
   the daily one (Āyat al-Kursī, the last two verses of al-Baqarah, al-Ikhlāṣ and the two

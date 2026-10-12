@@ -6,6 +6,8 @@ export interface Verse {
   kufi: number | null;
   /** Where Kūfī (Ḥafṣ-muṣḥaf) verse ends fall: [[words before the marker, Kūfī number], …] (scripts/kufi_marks.py). */
   kufiEnds?: [number, number][];
+  /** The Madani 15-line page: [[line, number of words], …] in reading order (scripts/fetch_lines.py). */
+  lines?: [number, number][];
   /** Juzʾ (1–30), ḥizb quarter (1–240) and muṣḥaf page (1–604) of the Ḥafṣ ayah this verse maps to. */
   juz: number | null;
   q: number | null;

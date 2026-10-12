@@ -224,3 +224,31 @@ describe('Kūfī numbering marks', () => {
     for (const s of SURAHS) for (const v of s.verses) for (const [after] of v.kufiEnds ?? []) expect(after >= 1 && after <= v.words.length).toBe(true);
   });
 });
+
+describe('the 15-line page', () => {
+  it('places every word on a line of its page, in order, with headings above a sūrah\'s first line', async () => {
+    const { PAGE_COUNT, pageLines, pageSegments } = await import('./pages');
+    let placed = 0;
+    for (let p = 1; p <= PAGE_COUNT; p++) {
+      const slots = pageLines(p, 'kufi');
+      expect(slots).toHaveLength(15);
+      const words = slots.flatMap((s) => (s.kind === 'text' ? s.words : []));
+      expect(words.length, `page ${p}`).toBeGreaterThan(0);
+      placed += words.length;
+      for (let i = 1; i < words.length; i++) {
+        const a = words[i - 1], b = words[i];
+        expect(a.surah.number < b.surah.number || (a.surah.number === b.surah.number && (a.vi < b.vi || (a.vi === b.vi && a.wi < b.wi)))).toBe(true);
+      }
+      for (const g of pageSegments(p)) if (g.starts) expect(slots.some((s) => s.kind === 'band' && s.surah === g.surah), `band on page ${p}`).toBe(true);
+    }
+    expect(placed).toBe(77426); // every word of the muṣḥaf, once
+    // a verse running over a page break is split: its first words close one page, the rest open the next
+    const p34 = pageLines(34, 'kufi').flatMap((s) => (s.kind === 'text' ? s.words : []));
+    const p35 = pageLines(35, 'kufi').flatMap((s) => (s.kind === 'text' ? s.words : []));
+    expect(p34[p34.length - 1].surah.number).toBe(2);
+    expect(p35[0].vi).toBe(p34[p34.length - 1].vi);
+    expect(p35[0].wi).toBe(p34[p34.length - 1].wi + 1);
+    const p604 = pageLines(604, 'kufi').map((s) => s.kind);
+    expect(p604).toEqual(['band', 'basmalah', 'text', 'text', 'band', 'basmalah', 'text', 'text', 'text', 'band', 'basmalah', 'text', 'text', 'text', 'text']);
+  });
+});

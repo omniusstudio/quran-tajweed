@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { WORD_SOURCES, loadAlignment, locate, playSpan, type SurahAlign } from '../audio/alignment';
 import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl } from '../audio/quran';
 import { usePlayer } from '../audio/usePlayer';
-import { PAGE_COUNT, firstVerseOnPage, juzOfPage, pageOf, pageSegments } from '../content/pages';
+import { PAGE_COUNT, firstVerseOnPage, juzOfPage, pageLines, pageOf, pageSegments } from '../content/pages';
+import { Ribbon } from '../ui/Ribbon';
 import { inPortionAhead, markRead, wirdState } from '../content/wird';
 import { Icon } from '../ui/icons';
 import { SurahBand } from '../ui/SurahBand';
 import { rewardWird } from '../ui/rewards';
-import { useSettings } from '../ui/settings';
+import { getSettings, useSettings } from '../ui/settings';
 import { sfx } from '../ui/sound';
 import { arNum } from './shared';
 
@@ -18,6 +19,8 @@ const JUZ_NAMES = ['', 'الأول', 'الثاني', 'الثالث', 'الراب
  * headers and the basmalah where a sūrah begins, and an optional recitation that lights the words
  * as it goes and turns the page by itself. `#/read/<sūrah>/<verse>` opens the page holding that verse.
  */
+const getSettingsBookmark = () => getSettings().bookmark;
+
 export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number; go: (hash: string) => void }) {
   const [settings, updateSettings] = useSettings();
   const reciter = RECITERS.some((r) => r.id === settings.reciter) ? settings.reciter : DEFAULT_RECITER;
@@ -121,14 +124,45 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
 
   const bm = settings.bookmark;
   const bookmarkHere = () => {
-    const v = pos && align ? { surah: playSurah, basri: align.verses[pos.verse].basri } : firstVerseOnPage(page);
     sfx('toggle');
-    if (bm && bm.pinned && bm.surah === v.surah && bm.basri === v.basri) return updateSettings({ bookmark: { ...bm, pinned: false } });
+    if (bm?.pinned && pageOf(bm.surah, bm.basri) === page) return updateSettings({ bookmark: { ...bm, pinned: false } });
+    const v = pos && align && player.playing ? { surah: playSurah, basri: align.verses[pos.verse].basri } : bm && pageOf(bm.surah, bm.basri) === page ? { surah: bm.surah, basri: bm.basri } : firstVerseOnPage(page);
     updateSettings({ bookmark: { ...v, pinned: true, at: Date.now() } });
   };
   const current = pos && align ? { surah: playSurah, basri: align.verses[pos.verse].basri, word: pos.word } : null;
   const headerSurah = segs[segs.length - 1]?.surah;
   const kufi = (settings.numbering ?? 'kufi') === 'kufi';
+  const lines = useMemo(() => pageLines(page, kufi ? 'kufi' : 'basri'), [page, kufi]);
+  // fit: the print stretches letters to fill each of the 15 lines; here the page's font shrinks just enough that no line overflows
+  const body = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const el = body.current;
+    if (!el) return;
+    const fit = () => {
+      el.style.removeProperty('--fit');
+      let ratio = 1;
+      for (const line of el.querySelectorAll<HTMLElement>('.mp-line.text')) if (line.scrollWidth > line.clientWidth + 1) ratio = Math.min(ratio, line.clientWidth / line.scrollWidth);
+      if (ratio < 1) el.style.setProperty('--fit', String(Math.max(0.6, ratio * 0.985)));
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    (document as Document & { fonts?: { ready: Promise<unknown> } }).fonts?.ready.then(fit);
+    return () => ro.disconnect();
+  }, [lines, settings.quranScale]);
+  const bmOnPage = !!bm && pageOf(bm.surah, bm.basri) === page;
+  // an unpinned ribbon follows the reader: the page just opened, or the verse where listening stopped
+  const remember = useCallback((v: { surah: number; basri: number }) => {
+    const cur = getSettingsBookmark();
+    if (cur?.pinned) return;
+    if (cur && cur.surah === v.surah && cur.basri === v.basri) return;
+    updateSettings({ bookmark: { ...v, pinned: false, at: Date.now() } });
+  }, [updateSettings]);
+  useEffect(() => { remember(firstVerseOnPage(page)); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (player.playing || !align || !pos) return;
+    remember({ surah: playSurah, basri: align.verses[pos.verse].basri });
+  }, [player.playing]); // eslint-disable-line react-hooks/exhaustive-deps
   /** The verse number to announce for a position, in the chosen count. */
   const shownNumber = (sn: number, basri: number, word: number) => {
     const v = SURAH_BY_NUMBER[sn].verses.find((x) => x.basri === basri)!;
@@ -150,7 +184,8 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
           </label>
         </div>
         <span className="row">
-          <button className={`icon-btn${bm?.pinned && pageOf(bm.surah, bm.basri) === page ? ' on' : ''}`} onClick={bookmarkHere} aria-label="علامة هنا" title="ثبّت العلامة هنا"><Icon name="bookmark" /></button>
+          <button className={`icon-btn${bm?.pinned && bmOnPage ? ' on' : ''}`} onClick={bookmarkHere} aria-label="علامة هنا" title={bm?.pinned && bmOnPage ? 'فكّ العلامة' : 'ثبّت العلامة هنا'}><Icon name="bookmark" /></button>
+          {bm && !bmOnPage && <button className="icon-btn" onClick={() => { sfx('tap'); setPage(pageOf(bm.surah, bm.basri)); }} aria-label="اذهب إلى العلامة" title={`العلامة: صفحة ${arNum(pageOf(bm.surah, bm.basri))}`}><Icon name="arrowLeft" /></button>}
           <button className="icon-btn" onClick={() => go(`#/follow/${current?.surah ?? firstVerseOnPage(page).surah}/${current?.basri ?? firstVerseOnPage(page).basri}`)} aria-label="افتح في المتابعة" title="المتابعة آيةً آية"><Icon name="headphones" /></button>
         </span>
       </div>
@@ -158,43 +193,36 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
       <div className="mushaf-wrap">
         <button className="page-turn prev" onClick={() => turn(-1)} disabled={page <= 1} aria-label="الصفحة السابقة"><Icon name="chevronRight" /></button>
         <article className={`mushaf-page${player.playing ? ' playing' : ''}`} dir="rtl" onPointerDown={onDown} onPointerUp={onUp} aria-label={`صفحة ${arNum(page)}`}>
+          {bmOnPage && <Ribbon pinned={!!bm?.pinned} onClick={bookmarkHere} title={bm?.pinned ? 'علامة مثبّتة هنا — اضغط لفكّها' : 'هنا توقفت — اضغط لتثبيت العلامة'} />}
           <header className="mp-head">
             <span>{headerSurah?.name}</span>
             <span>الجزء {JUZ_NAMES[juz]}</span>
           </header>
-          <div className="mp-body">
-            {segs.map((g) => {
-              const s = g.surah;
-              const a = loadAlignment(reciter, s.number);
+          <div className="mp-body" ref={body}>
+            {lines.map((slot, li) => {
+              if (slot.kind === 'band') return (
+                <div key={li} className={`mp-line band-line${slot.compact ? ' compact' : ''}`}>
+                  <SurahBand name={slot.surah.name} order={slot.surah.number} count={slot.surah.kufiCount ?? slot.surah.verses.length} />
+                  {slot.compact && <span className="basmalah small">{slot.surah.header}</span>}
+                </div>
+              );
+              if (slot.kind === 'basmalah') return <div key={li} className="mp-line basmalah-line"><span className="basmalah">{slot.surah.header}{kufi && slot.surah.headerKufi ? <> <span className="aya-n">{arNum(slot.surah.headerKufi)}</span></> : null}</span></div>;
+              if (slot.kind === 'empty') return <div key={li} className="mp-line" />;
               return (
-                <section key={s.number} className="mp-surah">
-                  {g.starts && (
-                    <>
-                      <SurahBand name={s.name} order={s.number} count={s.kufiCount ?? s.verses.length} />
-                      {s.header && <p className="basmalah">{s.header}{kufi && s.headerKufi ? <> <span className="aya-n">{arNum(s.headerKufi)}</span></> : null}</p>}
-                    </>
-                  )}
-                  <p className="mp-text">
-                    {Array.from({ length: g.to - g.from + 1 }, (_, k) => s.verses[g.from + k]).map((v) => {
-                      const isCur = current?.surah === s.number && current.basri === v.basri;
-                      const marked = bm?.pinned && bm.surah === s.number && bm.basri === v.basri;
-                      const canPlay = !!a?.verses.find((x) => x.basri === v.basri);
-                      return (
-                        <span key={v.basri} className={`aya${isCur ? ' on' : ''}${marked ? ' marked' : ''}`} onClick={() => canPlay && startAt(s.number, v.basri)} role={canPlay ? 'button' : undefined} title={canPlay ? `اسمع من الآية ${arNum(v.basri)}` : undefined}>
-                          {v.words.map((w, wi) => {
-                            const mark = kufi ? v.kufiEnds?.find((e) => e[0] === wi + 1)?.[1] : wi === v.words.length - 1 ? v.basri : undefined;
-                            return (
-                              <span key={wi}>
-                                <span className={`w${isCur && wordsTrusted && current!.word === wi ? ' on' : ''}`}>{w}</span>
-                                {mark !== undefined && <> <span className="aya-n" aria-label={`الآية ${arNum(mark)}`}>{arNum(mark)}</span></>}{' '}
-                              </span>
-                            );
-                          })}
-                        </span>
-                      );
-                    })}
-                  </p>
-                </section>
+                <div key={li} className={`mp-line text${slot.centred ? ' centred' : ''}`}>
+                  {slot.words.map((w) => {
+                    const v = w.surah.verses[w.vi];
+                    const isCur = current?.surah === w.surah.number && current.basri === v.basri;
+                    const canPlay = !!loadAlignment(reciter, w.surah.number)?.verses.find((x) => x.basri === v.basri);
+                    const marked = bm?.surah === w.surah.number && bm.basri === v.basri && w.mark !== undefined;
+                    return (
+                      <span key={`${w.surah.number}:${w.vi}:${w.wi}`} className={`wrd${isCur ? ' in-aya' : ''}${isCur && wordsTrusted && current!.word === w.wi ? ' on' : ''}`} onClick={() => canPlay && startAt(w.surah.number, v.basri)} role={canPlay ? 'button' : undefined} title={canPlay ? `اسمع من الآية ${arNum(shownNumber(w.surah.number, v.basri, w.wi))}` : undefined}>
+                        {v.words[w.wi]}
+                        {w.mark !== undefined && <span className={`aya-n${marked ? ' marked' : ''}`} aria-label={`الآية ${arNum(w.mark)}`}>{arNum(w.mark)}</span>}
+                      </span>
+                    );
+                  })}
+                </div>
               );
             })}
           </div>
