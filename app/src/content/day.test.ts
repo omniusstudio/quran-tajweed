@@ -372,7 +372,7 @@ describe('madd and qalqalah colours', () => {
     expect(letters(l.p[0]).map(([, t]) => t)).toEqual([undefined, 'madd6', 'madd6']); // the alif of الٓمٓ is a plain letter name
     const bare = (w: string) => w.replace(/[^ء-غف-يٱ]/g, '').replace('ٱ', 'ا');
     const sky = paint(31, 9); const iSky = sky.v.words.findIndex((w) => bare(w) === 'السماء');
-    expect(letters(sky.p[iSky]).filter(([c]) => c === 'ا' || c === 'ء').map(([, t]) => t)).toEqual(['madd4', 'madd4']);
+    expect(letters(sky.p[iSky]).slice(-2).map(([, t]) => t)).toEqual(['madd4', 'madd4']); // the alif of the madd and the hamzah it meets
     const end = letters(l.p[l.p.length - 1]);
     expect(end.slice(-2).map(([, t]) => t)).toEqual(['madd24', 'madd24']);
     // munfaṣil reaches the hamzah of the next word: بِمَآ أُنزِلَ
