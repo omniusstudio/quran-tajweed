@@ -429,3 +429,16 @@ describe('kashida never breaks a letter form', () => {
     expect(withKashida(w, 2).replace(/[^ء-يٱـ]/g, '')).toBe('شــيء');   // the stroke sits between shīn and yāʾ
   });
 });
+
+describe('colour pieces never force a join onto a hamzah', () => {
+  it('شَيۡءٖ keeps its final yāʾ: no joiner around the hamzah', async () => {
+    const { colourVerse, ZWJ } = await import('../rules/colors');
+    const { SURAH_BY_NUMBER } = await import('../audio/quran');
+    const s = SURAH_BY_NUMBER[11];
+    const i = s.verses.findIndex((v) => v.words.some((w) => w.replace(/[^ء-يٱ]/g, '') === 'شيء'));
+    const v = s.verses[i]; const k = v.words.findIndex((w) => w.replace(/[^ء-يٱ]/g, '') === 'شيء');
+    const pieces = colourVerse(v.words, v.hafs, s.verses[i + 1]?.words[0] ?? null, v.words)[k];
+    expect(pieces.length).toBeGreaterThan(1);   // the tanwīn on the hamzah is coloured
+    expect(pieces.map((p) => p.text).join('')).not.toContain(ZWJ);
+  });
+});
