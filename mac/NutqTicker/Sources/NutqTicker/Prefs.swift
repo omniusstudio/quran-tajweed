@@ -37,6 +37,7 @@ final class Prefs: ObservableObject {
     @Published var autoContinue: Bool { didSet { d.set(autoContinue, forKey: "autoContinue") } }
     @Published var kufi: Bool { didSet { d.set(kufi, forKey: "kufi") } }
     @Published var colours: Bool { didSet { d.set(colours, forKey: "colours") } }
+    @Published var showNext: Bool { didSet { d.set(showNext, forKey: "showNext") } }
     @Published var clickThrough: Bool { didSet { d.set(clickThrough, forKey: "clickThrough") } }
     @Published var hidden: Bool { didSet { d.set(hidden, forKey: "hidden") } }
     @Published var belowMenuBar: Bool { didSet { d.set(belowMenuBar, forKey: "belowMenuBar") } }
@@ -61,6 +62,7 @@ final class Prefs: ObservableObject {
         autoContinue = flag("autoContinue", true)
         kufi = flag("kufi", true)
         colours = flag("colours", true)
+        showNext = flag("showNext", true)
         clickThrough = flag("clickThrough", false)
         hidden = flag("hidden", false)
         belowMenuBar = flag("belowMenuBar", true)

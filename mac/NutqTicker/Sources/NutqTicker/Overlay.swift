@@ -9,6 +9,8 @@ final class TickerUI: ObservableObject {
 enum TickerLayout {
     static let rightInset: CGFloat = 176
     static let leftInset: CGFloat = 152
+    /// The second line, where the next verse waits faded.
+    static func previewHeight(_ h: Double) -> CGFloat { CGFloat((h * 0.46).rounded()) }
 }
 
 /// Buttons that look the same whether or not the panel is active (a strip that never takes focus is always "inactive").
@@ -102,6 +104,7 @@ struct OverlayView: View {
             }
             if rec.phase == .complete, let r = rec.run, r.completed { prompt(r) }
         }
+        .padding(.bottom, prefs.showNext ? TickerLayout.previewHeight(prefs.height) : 0)
         .environment(\.layoutDirection, .rightToLeft)
         .animation(.easeOut(duration: 0.15), value: ui.hover)
     }

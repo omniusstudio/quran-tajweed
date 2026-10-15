@@ -232,6 +232,7 @@ struct ControlPanel: View {
                 Text("٠٫٧٥×").tag(0.75); Text("١×").tag(1.0); Text("١٫٢٥×").tag(1.25)
             }.pickerStyle(.segmented)
             Toggle("ألوان التجويد", isOn: $prefs.colours)
+            Toggle("الآية التالية باهتة تحت الحالية", isOn: $prefs.showNext)
             Toggle("ترقيم الآيات الكوفي (وإلا البصري)", isOn: $prefs.kufi)
             Toggle("تحت شريط القوائم", isOn: $prefs.belowMenuBar)
             Toggle("مرّر النقرات عبر الشريط", isOn: $prefs.clickThrough)

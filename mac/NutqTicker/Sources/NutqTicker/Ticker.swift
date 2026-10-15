@@ -36,6 +36,7 @@ final class TickerController: NSObject {
 
     private(set) var panel: TickerPanel!
     private let line = TickerLineView(frame: .zero)
+    private let preview = TickerLineView(frame: .zero)
     private let backdrop = NSView()
     private var host: FirstMouseHost<OverlayView>!
     private var bag = Set<AnyCancellable>()
@@ -66,6 +67,9 @@ final class TickerController: NSObject {
         backdrop.layer?.borderWidth = 1
         root.addSubview(backdrop)
         root.addSubview(line)
+        preview.isPreview = true
+        preview.baseAlpha = 0.5
+        root.addSubview(preview)
         host = FirstMouseHost(rootView: OverlayView(rec: rec, ui: ui, prefs: prefs, ledger: ledger, onMenu: { [weak self] in self?.onMenu() }, onHide: { [weak self] in self?.prefs.hidden = true }))
         host.sizingOptions = []
         host.layer?.backgroundColor = .clear
@@ -117,7 +121,7 @@ final class TickerController: NSObject {
 
     func reposition() {
         guard let screen = NSScreen.screens.first else { return }
-        let h = CGFloat(prefs.height)
+        let h = totalHeight
         let w = width(for: screen)
         let top = prefs.belowMenuBar ? screen.visibleFrame.maxY : screen.frame.maxY
         let y = prefs.dock == .top ? top - h : screen.visibleFrame.minY
@@ -134,7 +138,11 @@ final class TickerController: NSObject {
         panel.contentView?.frame = bounds
         backdrop.frame = bounds
         host.frame = bounds
-        line.frame = NSRect(x: TickerLayout.leftInset + 10, y: 0, width: max(80, size.width - TickerLayout.leftInset - TickerLayout.rightInset - 20), height: size.height)
+        let pv = prefs.showNext ? TickerLayout.previewHeight(prefs.height) : 0
+        let lw = max(80, size.width - TickerLayout.leftInset - TickerLayout.rightInset - 20)
+        line.frame = NSRect(x: TickerLayout.leftInset + 10, y: pv, width: lw, height: size.height - pv)
+        preview.frame = NSRect(x: TickerLayout.leftInset + 10, y: 0, width: lw, height: pv)
+        preview.isHidden = pv == 0
         backdrop.layer?.maskedCorners = prefs.dock == .top ? [.layerMinXMinYCorner, .layerMaxXMinYCorner] : [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
     }
 
@@ -149,11 +157,12 @@ final class TickerController: NSObject {
     func refresh() {
         if prefs.hidden { panel.orderOut(nil) } else if !panel.isVisible { reposition(); panel.orderFrontRegardless() }
         panel.ignoresMouseEvents = prefs.clickThrough
-        if lastFrame.height != CGFloat(prefs.height) || abs(lastFrame.width - width(for: NSScreen.screens.first ?? NSScreen.main!)) > 1 { lastFrame = .zero; reposition() }
+        if lastFrame.height != totalHeight || abs(lastFrame.width - width(for: NSScreen.screens.first ?? NSScreen.main!)) > 1 { lastFrame = .zero; reposition() }
         let theme = TickerTheme.current(prefs.theme)
         backdrop.layer?.backgroundColor = theme.background.cgColor
         backdrop.layer?.borderColor = theme.rule.withAlphaComponent(0.55).cgColor
         line.theme = theme
+        preview.theme = theme
         let showMessage: Bool = { if case .playing = rec.state { return false }; if case .paused = rec.state { return false }; if case .idle = rec.state { return false }; return true }()
         let prompting = rec.phase == .complete && rec.run?.completed == true
         line.isHidden = showMessage || prompting
@@ -165,5 +174,15 @@ final class TickerController: NSObject {
         if ProcessInfo.processInfo.environment["NUTQ_DEBUG"] != nil { print("refresh veil=\(veil) peek=\(ui.peek) run=\(String(describing: rec.run?.done)) verse=\(cv.surah.n):\(cv.verse.b)") }
         line.show(verse: cv.verse, content: TickerLineView.Content(surah: cv.surah.n, basri: cv.verse.b, veil: veil, peek: ui.peek, colours: prefs.colours, kufi: prefs.kufi, dark: theme.dark, fontSize: CGFloat(prefs.height) * 0.5 * CGFloat(prefs.fontScale)))
         line.wake()
+        // the next verse, faded under this one
+        if prefs.showNext, let next = cv.surah.verses.first(where: { $0.b > cv.verse.b }) {
+            let pf = CGFloat(prefs.height) * 0.5 * CGFloat(prefs.fontScale) * 0.56
+            preview.show(verse: next, content: TickerLineView.Content(surah: cv.surah.n, basri: next.b, veil: 0, peek: true, colours: prefs.colours, kufi: prefs.kufi, dark: theme.dark, fontSize: pf))
+            preview.isHidden = false
+        } else {
+            preview.isHidden = true
+        }
     }
+
+    private var totalHeight: CGFloat { CGFloat(prefs.height) + (prefs.showNext ? TickerLayout.previewHeight(prefs.height) : 0) }
 }

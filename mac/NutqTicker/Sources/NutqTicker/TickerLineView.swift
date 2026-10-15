@@ -18,6 +18,9 @@ final class TickerLineView: NSView {
     }
 
     var theme: TickerTheme = .paper { didSet { needsDisplay = true } }
+    /// The preview line of the next verse: faded, no marker on a word, no veil lines.
+    var isPreview = false
+    var baseAlpha: CGFloat = 1
     /// The word sounding now in the verse shown, or nil.
     var activeProvider: (() -> Int?)?
     var isPlaying: () -> Bool = { false }
@@ -180,10 +183,10 @@ final class TickerLineView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext, let line else { return }
         ctx.saveGState()
-        ctx.setAlpha(alpha)
+        ctx.setAlpha(alpha * baseAlpha)
         let h = ascent + descent
         let base = (bounds.height - h) / 2 + descent
-        if hasHighlight {
+        if hasHighlight, !isPreview {
             let r = CGRect(x: offsetX + hlX - 5, y: base - descent - 1, width: hlW + 10, height: h + 2)
             ctx.setFillColor(theme.highlight.cgColor)
             ctx.addPath(CGPath(roundedRect: r, cornerWidth: 5, cornerHeight: 5, transform: nil))

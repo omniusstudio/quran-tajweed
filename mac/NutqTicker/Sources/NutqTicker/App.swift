@@ -18,6 +18,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupHotKeys()
         Task { await Ledger.shared.sync() }
         if let spec = ProcessInfo.processInfo.environment["NUTQ_DEMO"] { Snapshot.demo(spec, ticker: ticker) }
+        if ProcessInfo.processInfo.environment["NUTQ_POPOVER"] != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                self.togglePopover()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    let f = self.popover.contentViewController?.view.window?.frame ?? .zero
+                    print("button window:", self.statusItem.button?.window?.frame ?? .zero, "popover frame:", f, "screen:", NSScreen.screens.first?.frame ?? .zero, "visible:", NSScreen.screens.first?.visibleFrame ?? .zero, "content:", self.popover.contentSize)
+                    NSApp.terminate(nil)
+                }
+            }
+        }
     }
 
     private func setupStatusItem() {
@@ -29,7 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             b.action = #selector(togglePopoverAction)
         }
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: ControlPanel(rec: .shared, prefs: .shared, ledger: .shared, onClose: { [weak self] in self?.popover.performClose(nil) }, onQuit: { NSApp.terminate(nil) }))
+        // the size is fixed up front: a popover that grows after it is shown grows upward off the top of the screen
+        popover.contentSize = NSSize(width: 392, height: 580)
+        let controller = NSHostingController(rootView: ControlPanel(rec: .shared, prefs: .shared, ledger: .shared, onClose: { [weak self] in self?.popover.performClose(nil) }, onQuit: { NSApp.terminate(nil) }))
+        controller.sizingOptions = []
+        controller.preferredContentSize = NSSize(width: 392, height: 580)
+        popover.contentViewController = controller
         // the count rides in the menu bar during a session, visible even when the strip is hidden
         Recitation.shared.objectWillChange.receive(on: DispatchQueue.main).sink { [weak self] _ in
             guard let self, let b = self.statusItem.button else { return }
