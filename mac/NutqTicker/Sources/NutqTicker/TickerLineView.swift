@@ -27,8 +27,8 @@ final class TickerLineView: NSView {
     /// The preview line of the next verse: faded, no marker on a word, no veil lines.
     var isPreview = false
     var baseAlpha: CGFloat = 1
-    /// The word sounding now in the verse being read, or nil.
-    var activeProvider: (() -> Int?)?
+    /// Where the recitation is: the verse, the word, and how far through that word (0…1). The tape follows it continuously.
+    var positionProvider: (() -> (basri: Int, word: Int, frac: CGFloat)?)?
     var isPlaying: () -> Bool = { false }
     /// How strongly the verses around the one being read are drawn.
     var neighbourAlpha: CGFloat = 0.72
@@ -46,8 +46,6 @@ final class TickerLineView: NSView {
 
     /// Where the line sits inside this view (the whole strip is the view's height so a line can rise into place).
     var rowFrame: CGRect? { didSet { needsDisplay = true } }
-    /// Progress along the verse (0…1) and whether it is a countdown for the silent gap; drawn as a hairline.
-    var progressProvider: (() -> (CGFloat, Bool)?)?
     private var row: CGRect { rowFrame ?? bounds }
     private var ySh: CGFloat = 0
     private var sc: CGFloat = 1
@@ -55,9 +53,6 @@ final class TickerLineView: NSView {
     private var groupTarget: CGFloat = 1
     private var dimTarget: CGFloat = 1
     private var dim: CGFloat = 1
-    private var prog: CGFloat = 0
-    private var progIsGap = false
-    private var hasProgress = false
     private(set) var verseKey: String?
     private var offsetX: CGFloat = 0
     private var targetX: CGFloat = 0
@@ -119,9 +114,11 @@ final class TickerLineView: NSView {
         let changedVerse = key != verseKey
         // where, on screen, the verse about to become current stands now: the tape is re-aligned to it afterwards
         var anchor: CGFloat?
+        var anchorLine: CGFloat?
         if changedVerse, !sameTape, let old = self.content, let b = content.basris.indices.contains(content.current) ? content.basris[content.current] : nil,
            old.surah == content.surah, let oi = old.basris.firstIndex(of: b), wordX.indices.contains(oi), let w = wordX[oi].first {
             anchor = offsetX + (w.0 + w.1) / 2
+            anchorLine = (w.0 + w.1) / 2
         }
         verses = new
         self.content = content
@@ -129,16 +126,18 @@ final class TickerLineView: NSView {
         rebuild()
         if changedVerse {
             if let a = anchor, wordX.indices.contains(content.current), let w = wordX[content.current].first {
-                // seamless: the same word stays where it was
-                offsetX = a - (w.0 + w.1) / 2
+                // seamless: the same word stays where it was, and the line's coordinates moved by `shift`
+                let newC = (w.0 + w.1) / 2
+                let shift = newC - (anchorLine ?? newC)
+                focusSm = focusSm.map { $0 + shift }
+                lastFocus = lastFocus.map { $0 + shift }
+                        offsetX = a - newC
                 if rise == nil { alpha = 1 }
                 ySh = 0; sc = 1
-                prog = 0
                 retarget(jump: false)
                 hlX = hlTargetX; hlW = hlTargetW
             } else {
                 if let r = rise { ySh = r.dy; sc = r.scale; alpha = r.alpha } else { ySh = 0; sc = 1; alpha = 0 }
-                prog = 0
                 retarget(jump: true)
             }
         } else {
@@ -210,24 +209,44 @@ final class TickerLineView: NSView {
 
     // MARK: motion
 
-    private func retarget(jump: Bool) {
+    private var lastFocus: CGFloat?
+    /// The focus point, smoothed in time: whatever the target does (a verse starting after the basmalah, a seek), it moves continuously.
+    private var focusSm: CGFloat?
+    var debugOffset: CGFloat { offsetX }
+    /// Where the word in focus appears in the view: what the eye follows.
+    var debugFocusScreenX: CGFloat { offsetX + (wordX.first?.first.map { ($0.0 + $0.1) / 2 } ?? 0) }
+
+    private func retarget(jump: Bool, dt: CGFloat = 0) {
         let V = row.width
         guard line != nil, V > 0, let c = content else { return }
         let pad: CGFloat = 14
-        let words = wordX.indices.contains(c.current) ? wordX[c.current] : []
-        let active = activeProvider?().flatMap { words.indices.contains($0) ? $0 : nil }
-        if lineWidth <= V - 2 * pad {
-            targetX = (V - lineWidth) / 2
-        } else if let focus = words[safe: active ?? 0] ?? words.first {
-            // upcoming words are to the left, so the word in focus sits a little right of centre
-            let want = V * 0.6 - (focus.0 + focus.1) / 2
-            targetX = min(pad, max(V - pad - lineWidth, want))
-            // a tape of several verses never runs out of text, so it may run past the edges
-            if verses.count > 1 { targetX = want }
+        // where the recitation is on the tape: found by verse, so it keeps going into the next verse before the tape is rebuilt
+        var focusX: CGFloat?
+        var hlWord: (Int, Int)?
+        if let p = positionProvider?(), let vi = c.basris.firstIndex(of: p.basri), wordX.indices.contains(vi), wordX[vi].indices.contains(p.word) {
+            let w = wordX[vi][p.word]
+            // the word is read from its right edge to its left, so the focus moves through it smoothly with the sound
+            focusX = w.1 - min(1, max(0, p.frac)) * (w.1 - w.0)
+            hlWord = (vi, p.word)
+        } else if let first = wordX[safe: c.current]?.first {
+            focusX = lastFocus ?? (first.0 + first.1) / 2
         }
-        if let i = active, words.indices.contains(i) {
-            hlTargetX = words[i].0
-            hlTargetW = words[i].1 - words[i].0
+        if let f = focusX {
+            lastFocus = f
+            if focusSm == nil || jump { focusSm = f } else if dt > 0 { focusSm! += (f - focusSm!) * (1 - exp(-dt * 4.5)) }
+        }
+        // a tape of several verses always follows the sound; centring is only for a single short verse
+        // (switching between the two as verses were added made the tape lurch)
+        if verses.count == 1, lineWidth <= V - 2 * pad {
+            targetX = (V - lineWidth) / 2
+        } else if let f = focusSm ?? focusX {
+            // upcoming words are to the left, so the word in focus sits a little right of centre
+            let want = V * 0.6 - f
+            targetX = verses.count > 1 ? want : min(pad, max(V - pad - lineWidth, want))
+        }
+        if let (vi, wi) = hlWord {
+            hlTargetX = wordX[vi][wi].0
+            hlTargetW = wordX[vi][wi].1 - wordX[vi][wi].0
             if !hasHighlight { hlX = hlTargetX; hlW = hlTargetW; hasHighlight = true }
         } else {
             hasHighlight = false
@@ -235,10 +254,21 @@ final class TickerLineView: NSView {
         if jump { offsetX = targetX; hlX = hlTargetX; hlW = hlTargetW }
     }
 
+    /// Test hook: drive the motion by hand instead of the display link.
+    var manualClock = false
+
     @objc private func step(_ l: CADisplayLink) {
-        let dt = CGFloat(max(0.001, l.targetTimestamp - l.timestamp))
-        retarget(jump: false)
-        let k = 1 - exp(-dt * 9)
+        if manualClock { return }
+        let settled = advance(dt: CGFloat(max(0.001, l.targetTimestamp - l.timestamp)))
+        if settled && !isPlaying() { l.isPaused = true }
+    }
+
+    /// One frame of motion. Returns true when everything has come to rest.
+    @discardableResult
+    func advance(dt: CGFloat) -> Bool {
+        retarget(jump: false, dt: dt)
+        // the focus is already smoothed in time, so the tape follows it almost directly
+        let k = 1 - exp(-dt * 40)
         offsetX += (targetX - offsetX) * k
         hlX += (hlTargetX - hlX) * (1 - exp(-dt * 16))
         hlW += (hlTargetW - hlW) * (1 - exp(-dt * 16))
@@ -249,11 +279,9 @@ final class TickerLineView: NSView {
         if alpha < 1 { alpha = min(1, alpha + dt * (ySh != 0 ? 7 : 5)) }
         groupAlpha += (groupTarget - groupAlpha) * (1 - exp(-dt * 14))
         dim += (dimTarget - dim) * (1 - exp(-dt * 8))
-        if let p = progressProvider?() { prog += (p.0 - prog) * (1 - exp(-dt * 10)); progIsGap = p.1; hasProgress = true } else { hasProgress = false }
         needsDisplay = true
-        let settled = abs(targetX - offsetX) < 0.2 && abs(hlTargetX - hlX) < 0.2 && abs(hlTargetW - hlW) < 0.2 && alpha >= 1
+        return abs(targetX - offsetX) < 0.2 && abs(hlTargetX - hlX) < 0.2 && abs(hlTargetW - hlW) < 0.2 && alpha >= 1
             && abs(ySh) < 0.2 && abs(1 - sc) < 0.003 && abs(groupTarget - groupAlpha) < 0.01 && abs(dimTarget - dim) < 0.01
-        if settled && !isPlaying() { l.isPaused = true }
     }
 
     // MARK: drawing
@@ -309,19 +337,6 @@ final class TickerLineView: NSView {
             CTLineDraw(ln, ctx)
         }
         ctx.restoreGState()
-        // progress hairline: along the verse, or the silent gap running out; it grows from the right, the way the text is read
-        if hasProgress, !isPreview {
-            let inset: CGFloat = 14
-            let w = (row.width - 2 * inset) * min(1, max(0, prog))
-            let y = row.minY + 2
-            ctx.setAlpha(groupAlpha)
-            ctx.setStrokeColor((progIsGap ? NSColor(srgbRed: 0.85, green: 0.62, blue: 0.16, alpha: 1) : theme.rule).withAlphaComponent(progIsGap ? 0.95 : 0.55).cgColor)
-            ctx.setLineWidth(2)
-            ctx.setLineCap(.round)
-            ctx.move(to: CGPoint(x: row.maxX - inset, y: y))
-            ctx.addLine(to: CGPoint(x: row.maxX - inset - w, y: y))
-            ctx.strokePath()
-        }
     }
 }
 

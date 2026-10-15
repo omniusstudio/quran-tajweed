@@ -80,6 +80,16 @@ final class Recitation: ObservableObject {
         return p
     }
 
+    /// The verse, word and how far through the word the sound is: the tape follows this continuously.
+    func fractionalPosition() -> (basri: Int, word: Int, frac: CGFloat)? {
+        guard let a = align, let p = position, a.verses.indices.contains(p.verse) else { return nil }
+        let v = a.verses[p.verse]
+        guard v.words.indices.contains(p.word) else { return (v.basri, p.word, 0) }
+        let w = v.words[p.word]
+        let f = (now() - w.0) / max(0.05, w.1 - w.0)
+        return (v.basri, p.word, CGFloat(min(1, max(0, f))))
+    }
+
     var currentVerse: (surah: SurahData, verse: VerseData)? {
         guard let a = align, let s = Quran.shared.surah(a.surah), a.verses.indices.contains(verseIndex) else { return nil }
         guard let v = s.verse(a.verses[verseIndex].basri) else { return nil }

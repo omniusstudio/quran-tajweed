@@ -33,10 +33,7 @@ final class MenuBarTicker: NSObject {
         container.onEnter = { [weak self] in self?.onHover(true) }
         container.onExit = { [weak self] in self?.onHover(false) }
         line.isPlaying = { rec.isPlaying }
-        line.activeProvider = {
-            guard let p = rec.position, p.verse == rec.verseIndex else { return nil }
-            return p.word
-        }
+        line.positionProvider = { rec.fractionalPosition() }
     }
 
     /// Whether the menu bar itself is dark right now (it follows the wallpaper), for the colour of the text.

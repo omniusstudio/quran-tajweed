@@ -64,6 +64,36 @@ enum Snapshot {
                 }
             }
             return
+        case "smooth":
+            // how far the menu-bar tape moves each frame while reading across verses: no frame should jump
+            Prefs.shared.lastSurah = 78; Prefs.shared.lastVerse = 1
+            ticker.refresh()
+            rec.read(surah: 78, from: 1)
+            var last: CGFloat?
+            var deltas: [CGFloat] = []
+            var verses = Set<Int>()
+            Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { t in
+                MainActor.assumeIsolated {
+                    guard let line = ticker.menuBar?.line else { return }
+                    line.manualClock = true
+                    ticker.refresh()
+                    line.advance(dt: 1.0 / 60)
+                    verses.insert(rec.verseIndex)
+                    if rec.isPlaying, let l = last {
+                        deltas.append(line.debugFocusScreenX - l)
+                        if Swift.abs(line.debugFocusScreenX - l) > 6 { print(String(format: "jump %.1f at t=%.2f verse=%d", line.debugFocusScreenX - l, rec.now(), rec.verseIndex)) }
+                    }
+                    last = line.debugFocusScreenX
+                    if rec.now() > 17 || deltas.count > 1100 {
+                        t.invalidate()
+                        let abs = deltas.map { Swift.abs($0) }
+                        let sorted = abs.sorted()
+                        print(String(format: "frames=%d verses=%d median=%.2f p95=%.2f max=%.2f over6=%d", abs.count, verses.count, sorted[sorted.count / 2], sorted[Int(Double(sorted.count) * 0.95)], sorted.last ?? 0, abs.filter { $0 > 6 }.count))
+                        NSApp.terminate(nil)
+                    }
+                }
+            }
+            return
         case "rise":
             // frames of the next verse rising into the main row, as the recitation crosses from one verse to the next
             Prefs.shared.lastSurah = 112; Prefs.shared.lastVerse = 1

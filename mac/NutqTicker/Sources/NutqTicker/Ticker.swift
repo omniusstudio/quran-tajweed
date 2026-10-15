@@ -66,8 +66,6 @@ final class TickerController: NSObject {
 
         let root = HoverRoot()
         root.wantsLayer = true
-        root.onEnter = { [weak self] in self?.panelHover = true; self?.pointerEntered(); self?.evaluateDropdown() }
-        root.onExit = { [weak self] in self?.panelHover = false; self?.pointerExited(); self?.evaluateDropdown() }
         backdrop.wantsLayer = true
         backdrop.layer?.cornerRadius = 8
         backdrop.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
@@ -90,10 +88,7 @@ final class TickerController: NSObject {
         p.contentView = root
 
         line.isPlaying = { [weak self] in self?.rec.isPlaying ?? false }
-        line.activeProvider = { [weak self] in
-            guard let self, let p = self.rec.position, p.verse == self.rec.verseIndex else { return nil }
-            return p.word
-        }
+        line.positionProvider = { [weak self] in self?.rec.fractionalPosition() }
 
         rec.objectWillChange.merge(with: prefs.objectWillChange, ui.objectWillChange, ledger.objectWillChange)
             .receive(on: DispatchQueue.main)
@@ -102,6 +97,9 @@ final class TickerController: NSObject {
         NotificationCenter.default.addObserver(self, selector: #selector(screensChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(screensChanged), name: NSWorkspace.activeSpaceDidChangeNotification, object: nil)
         Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.reposition() } }
+        // the pointer is polled rather than tracked: tracking areas fire exits when it moves between the strip's
+        // buttons, and the controls vanished; this also works while clicks pass through the strip
+        Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in MainActor.assumeIsolated { self?.pollPointer() } }
         refresh()
     }
 
@@ -112,12 +110,6 @@ final class TickerController: NSObject {
         let m = MenuBarTicker(item: item, rec: rec, prefs: prefs)
         m.restoreIcon = restoreIcon
         m.onMenu = { [weak self] in self?.onMenu() }
-        m.onHover = { [weak self] h in
-            guard let self else { return }
-            self.barHover = h
-            if h { self.pointerEntered() } else { self.pointerExited() }
-            self.evaluateDropdown()
-        }
         menuBar = m
         refresh()
     }
@@ -147,7 +139,19 @@ final class TickerController: NSObject {
         }
     }
 
+    private func pollPointer() {
+        let m = NSEvent.mouseLocation
+        let nb = menuBar?.installed == true && (menuBar?.screenFrame?.insetBy(dx: -1, dy: -1).contains(m) ?? false)
+        let np = panel.isVisible && panel.frame.insetBy(dx: -1, dy: -1).contains(m)
+        if nb != barHover || np != panelHover {
+            barHover = nb; panelHover = np
+            if nb || np { pointerEntered() } else { pointerExited() }
+            evaluateDropdown()
+        }
+    }
+
     private func pointerEntered() {
+        if ui.hover { return }
         ui.hover = true
         peekTimer?.invalidate()
         // resting on the strip for a moment shows the veiled words
@@ -255,7 +259,6 @@ final class TickerController: NSObject {
             let pv = TickerLayout.previewHeight(prefs.height)
             rise = (dy: pv / 2 - (pv + (lastFrame.height - pv) / 2), scale: TickerLayout.previewScale, alpha: 0.55)
         }
-        line.progressProvider = { [weak self] in self?.progress() }
         let range = sessionRange(cv.surah.n)
         line.show(verse: cv.verse, content: TickerLineView.Content(surah: cv.surah.n, basris: [cv.verse.b], current: 0, veil: veil, veilFrom: range.0, veilTo: range.1, peek: ui.peek, colours: prefs.colours, kufi: prefs.kufi, dark: theme.dark, fontSize: CGFloat(prefs.height) * 0.5 * CGFloat(prefs.fontScale)), rise: rise)
         line.wake()
@@ -272,15 +275,6 @@ final class TickerController: NSObject {
         }
     }
 
-    /// 0…1 along the verse being heard, or the silent gap running out.
-    private func progress() -> (CGFloat, Bool)? {
-        if case .gap(let until) = rec.phase, rec.gapSpan > 0 { return (CGFloat(max(0, until.timeIntervalSinceNow) / rec.gapSpan), true) }
-        guard rec.isPlaying, let a = rec.align, a.verses.indices.contains(rec.verseIndex) else { return nil }
-        let v = a.verses[rec.verseIndex]
-        let t = rec.now()
-        return (CGFloat(min(1, max(0, (t - v.start) / max(0.1, v.end - v.start)))), false)
-    }
-
     /// The verses a running session veils.
     private func sessionRange(_ surah: Int) -> (Int, Int) {
         if let r = rec.run, !r.completed, r.plan.veil, r.plan.surah == surah { return (r.plan.from, r.plan.to) }
@@ -293,7 +287,6 @@ final class TickerController: NSObject {
         m.applyTheme()
         m.line.setVisible(!hidden)
         if case .gap = rec.phase { m.line.setDim(true) } else { m.line.setDim(false) }
-        m.line.progressProvider = { [weak self] in self?.progress() }
         // the verse being read with the ones around it, so the ayat keep scrolling in
         let all = cv.surah.verses
         let i = all.firstIndex(where: { $0.b == cv.verse.b }) ?? 0
