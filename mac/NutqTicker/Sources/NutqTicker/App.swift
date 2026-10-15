@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ticker.onMenu = { [weak self] in self?.togglePopover() }
         ticker.start()
         setupStatusItem()
+        ticker.attach(item: statusItem, restoreIcon: { [weak self] in self?.restoreStatusIcon() })
         setupHotKeys()
         Task { await Ledger.shared.sync() }
         if let spec = ProcessInfo.processInfo.environment["NUTQ_DEMO"] { Snapshot.demo(spec, ticker: ticker) }
@@ -47,9 +48,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentViewController = controller
         // the count rides in the menu bar during a session, visible even when the strip is hidden
         Recitation.shared.objectWillChange.receive(on: DispatchQueue.main).sink { [weak self] _ in
-            guard let self, let b = self.statusItem.button else { return }
+            guard let self, let b = self.statusItem.button, self.ticker.menuBar?.installed != true else { return }
             if let r = Recitation.shared.run, !r.completed { b.title = " \(arNum(r.done))/\(arNum(r.plan.target))" } else { b.title = "" }
         }.store(in: &bag)
+    }
+
+    private func restoreStatusIcon() {
+        guard let b = statusItem.button else { return }
+        b.image = NSImage(systemSymbolName: "text.book.closed", accessibilityDescription: "نُطق")
+        b.imagePosition = .imageLeading
     }
 
     @objc private func togglePopoverAction() { togglePopover() }

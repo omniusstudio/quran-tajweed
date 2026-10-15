@@ -35,6 +35,21 @@ final class TickerLineView: NSView {
     private var veiled: Set<Int> = []
     private var markers: [(x0: CGFloat, x1: CGFloat, label: String)] = []
 
+    /// Where the line sits inside this view (the whole strip is the view's height so a line can rise into place).
+    var rowFrame: CGRect? { didSet { needsDisplay = true } }
+    /// Progress along the verse (0…1) and whether it is a countdown for the silent gap; drawn as a hairline.
+    var progressProvider: (() -> (CGFloat, Bool)?)?
+    private var row: CGRect { rowFrame ?? bounds }
+    private var ySh: CGFloat = 0
+    private var sc: CGFloat = 1
+    private var groupAlpha: CGFloat = 1
+    private var groupTarget: CGFloat = 1
+    private var dimTarget: CGFloat = 1
+    private var dim: CGFloat = 1
+    private var prog: CGFloat = 0
+    private var progIsGap = false
+    private var hasProgress = false
+    private(set) var verseKey: String?
     private var offsetX: CGFloat = 0
     private var targetX: CGFloat = 0
     private var hlX: CGFloat = 0
@@ -81,15 +96,28 @@ final class TickerLineView: NSView {
 
     // MARK: content
 
-    func show(verse: VerseData?, content: Content) {
+    /// Show a verse. `rise` brings it in from where the faded preview of the same verse stood: below, smaller, fainter.
+    func show(verse: VerseData?, content: Content, rise: (dy: CGFloat, scale: CGFloat, alpha: CGFloat)? = nil) {
         let changed = verse?.b != self.verse?.b || content.surah != self.content?.surah
         if self.content == content, !changed { return }
         self.verse = verse
         self.content = content
+        verseKey = verse.map { "\(content.surah):\($0.b)" }
         rebuild()
-        if changed { alpha = 0; retarget(jump: true) } else { retarget(jump: false) }
+        if changed {
+            if let r = rise { ySh = r.dy; sc = r.scale; alpha = r.alpha } else { ySh = 0; sc = 1; alpha = 0 }
+            prog = 0
+            retarget(jump: true)
+        } else {
+            retarget(jump: false)
+        }
         wake()
     }
+
+    /// Fade the whole line in or out (a message or a prompt takes its place).
+    func setVisible(_ on: Bool) { groupTarget = on ? 1 : 0; wake() }
+    /// Dim the line while the reader says the verse back.
+    func setDim(_ on: Bool) { dimTarget = on ? 0.5 : 1; wake() }
 
     func wake() { link?.isPaused = false }
 
@@ -143,7 +171,7 @@ final class TickerLineView: NSView {
     // MARK: motion
 
     private func retarget(jump: Bool) {
-        let V = bounds.width
+        let V = row.width
         guard line != nil, V > 0 else { return }
         let pad: CGFloat = 14
         let active = activeProvider?().flatMap { wordX.indices.contains($0) ? $0 : nil }
@@ -172,9 +200,17 @@ final class TickerLineView: NSView {
         offsetX += (targetX - offsetX) * k
         hlX += (hlTargetX - hlX) * (1 - exp(-dt * 16))
         hlW += (hlTargetW - hlW) * (1 - exp(-dt * 16))
-        if alpha < 1 { alpha = min(1, alpha + dt * 5) }
+        // a line rising from the preview: a quick, critically damped glide
+        let kr = 1 - exp(-dt * 11)
+        ySh += (0 - ySh) * kr
+        sc += (1 - sc) * kr
+        if alpha < 1 { alpha = min(1, alpha + dt * (ySh != 0 ? 7 : 5)) }
+        groupAlpha += (groupTarget - groupAlpha) * (1 - exp(-dt * 14))
+        dim += (dimTarget - dim) * (1 - exp(-dt * 8))
+        if let p = progressProvider?() { prog += (p.0 - prog) * (1 - exp(-dt * 10)); progIsGap = p.1; hasProgress = true } else { hasProgress = false }
         needsDisplay = true
         let settled = abs(targetX - offsetX) < 0.2 && abs(hlTargetX - hlX) < 0.2 && abs(hlTargetW - hlW) < 0.2 && alpha >= 1
+            && abs(ySh) < 0.2 && abs(1 - sc) < 0.003 && abs(groupTarget - groupAlpha) < 0.01 && abs(dimTarget - dim) < 0.01
         if settled && !isPlaying() { l.isPaused = true }
     }
 
@@ -183,9 +219,13 @@ final class TickerLineView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext, let line else { return }
         ctx.saveGState()
-        ctx.setAlpha(alpha * baseAlpha)
+        ctx.setAlpha(alpha * baseAlpha * groupAlpha * dim)
+        // the line may be rising from below and growing: scale about the middle of its row
+        ctx.translateBy(x: row.midX, y: row.midY + ySh)
+        ctx.scaleBy(x: sc, y: sc)
+        ctx.translateBy(x: -row.midX, y: -row.midY)
         let h = ascent + descent
-        let base = (bounds.height - h) / 2 + descent
+        let base = row.minY + (row.height - h) / 2 + descent
         if hasHighlight, !isPreview {
             let r = CGRect(x: offsetX + hlX - 5, y: base - descent - 1, width: hlW + 10, height: h + 2)
             ctx.setFillColor(theme.highlight.cgColor)
@@ -208,8 +248,8 @@ final class TickerLineView: NSView {
         // verse-end medallions
         for mk in markers {
             let cx = offsetX + (mk.x0 + mk.x1) / 2
-            let r = min(bounds.height * 0.3, (content?.fontSize ?? 24) * 0.42)
-            let circle = CGRect(x: cx - r, y: bounds.midY - r, width: 2 * r, height: 2 * r)
+            let r = min(row.height * 0.3, (content?.fontSize ?? 24) * 0.42)
+            let circle = CGRect(x: cx - r, y: row.midY - r, width: 2 * r, height: 2 * r)
             ctx.setFillColor(theme.background.cgColor)
             ctx.fillEllipse(in: circle)
             ctx.setStrokeColor(theme.rule.cgColor)
@@ -221,9 +261,22 @@ final class TickerLineView: NSView {
             let s = NSAttributedString(string: mk.label, attributes: attrs)
             let ln = CTLineCreateWithAttributedString(s)
             let w = CGFloat(CTLineGetTypographicBounds(ln, nil, nil, nil))
-            ctx.textPosition = CGPoint(x: cx - w / 2, y: bounds.midY - r * 0.33)
+            ctx.textPosition = CGPoint(x: cx - w / 2, y: row.midY - r * 0.33)
             CTLineDraw(ln, ctx)
         }
         ctx.restoreGState()
+        // progress hairline: along the verse, or the silent gap running out; it grows from the right, the way the text is read
+        if hasProgress, !isPreview {
+            let inset: CGFloat = 14
+            let w = (row.width - 2 * inset) * min(1, max(0, prog))
+            let y = row.minY + 2
+            ctx.setAlpha(groupAlpha)
+            ctx.setStrokeColor((progIsGap ? NSColor(srgbRed: 0.85, green: 0.62, blue: 0.16, alpha: 1) : theme.rule).withAlphaComponent(progIsGap ? 0.95 : 0.55).cgColor)
+            ctx.setLineWidth(2)
+            ctx.setLineCap(.round)
+            ctx.move(to: CGPoint(x: row.maxX - inset, y: y))
+            ctx.addLine(to: CGPoint(x: row.maxX - inset - w, y: y))
+            ctx.strokePath()
+        }
     }
 }

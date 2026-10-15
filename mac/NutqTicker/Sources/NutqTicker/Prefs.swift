@@ -6,6 +6,11 @@ enum WidthMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String { self == .compact ? "متوسط" : self == .wide ? "عريض" : "كامل العرض" }
 }
+enum DisplayMode: String, CaseIterable, Identifiable {
+    case menuBar, floating
+    var id: String { rawValue }
+    var label: String { self == .menuBar ? "في شريط القوائم" : "شريط عائم" }
+}
 enum Dock: String, CaseIterable, Identifiable {
     case top, bottom
     var id: String { rawValue }
@@ -23,6 +28,8 @@ final class Prefs: ObservableObject {
     static let shared = Prefs()
     private let d = UserDefaults.standard
 
+    @Published var mode: DisplayMode { didSet { d.set(mode.rawValue, forKey: "mode") } }
+    @Published var barWidth: Double { didSet { d.set(barWidth, forKey: "barWidth") } }
     @Published var width: WidthMode { didSet { d.set(width.rawValue, forKey: "width") } }
     @Published var dock: Dock { didSet { d.set(dock.rawValue, forKey: "dock") } }
     @Published var theme: ThemeMode { didSet { d.set(theme.rawValue, forKey: "theme") } }
@@ -48,6 +55,8 @@ final class Prefs: ObservableObject {
         let d = UserDefaults.standard
         func flag(_ k: String, _ def: Bool) -> Bool { d.object(forKey: k) == nil ? def : d.bool(forKey: k) }
         func num(_ k: String, _ def: Double) -> Double { d.object(forKey: k) == nil ? def : d.double(forKey: k) }
+        mode = DisplayMode(rawValue: d.string(forKey: "mode") ?? "") ?? .menuBar
+        barWidth = num("barWidth", 560)
         width = WidthMode(rawValue: d.string(forKey: "width") ?? "") ?? .compact
         dock = Dock(rawValue: d.string(forKey: "dock") ?? "") ?? .top
         theme = ThemeMode(rawValue: d.string(forKey: "theme") ?? "") ?? .paper

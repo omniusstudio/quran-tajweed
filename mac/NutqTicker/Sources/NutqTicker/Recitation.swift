@@ -38,6 +38,8 @@ final class Recitation: ObservableObject {
     @Published private(set) var phase: Phase = .paused
     /// What starts next when this session is answered (the link pass, the next verse).
     @Published private(set) var queued: [Plan] = []
+    /// How long the current silent gap is, for its countdown.
+    private(set) var gapSpan: TimeInterval = 0
 
     private var item: AVPlayerItem?
     private var timeObserver: Any?
@@ -288,6 +290,7 @@ final class Recitation: ObservableObject {
         let pass = (range?.1 ?? 0) - (range?.0 ?? 0)
         let gap = Memo.gapSeconds(r.plan.gap, pass: pass / max(0.5, prefs.speed))
         if gap > 0 {
+            gapSpan = gap
             phase = .gap(Date().addingTimeInterval(gap))
             state = .paused
             gapTask = Task { [weak self] in

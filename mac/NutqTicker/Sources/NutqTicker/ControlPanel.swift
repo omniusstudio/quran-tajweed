@@ -222,6 +222,11 @@ struct ControlPanel: View {
 
     private var look: some View {
         VStack(alignment: .leading, spacing: 10) {
+            Picker("مكان الشريط", selection: $prefs.mode) { ForEach(DisplayMode.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
+            if prefs.mode == .menuBar {
+                HStack { Text("عرض الشريط في القائمة").font(.system(size: 12)); Slider(value: $prefs.barWidth, in: 320...1000, step: 20) }
+                Text("أبقِ المؤشر عليه لحظة فيفتح الشريط الكبير تحته، ويُغلق حين تبتعد.").font(.system(size: 10.5)).foregroundStyle(.secondary)
+            }
             Picker("العرض", selection: $prefs.width) { ForEach(WidthMode.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
             Picker("الموضع", selection: $prefs.dock) { ForEach(Dock.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
             Picker("السمة", selection: $prefs.theme) { ForEach(ThemeMode.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)

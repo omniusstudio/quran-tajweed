@@ -10,7 +10,9 @@ enum TickerLayout {
     static let rightInset: CGFloat = 176
     static let leftInset: CGFloat = 152
     /// The second line, where the next verse waits faded.
-    static func previewHeight(_ h: Double) -> CGFloat { CGFloat((h * 0.46).rounded()) }
+    static func previewHeight(_ h: Double) -> CGFloat { CGFloat((h * 0.62).rounded()) }
+    /// The next verse is set a little smaller than the one being read.
+    static let previewScale: CGFloat = 0.8
 }
 
 /// Buttons that look the same whether or not the panel is active (a strip that never takes focus is always "inactive").
@@ -58,6 +60,7 @@ struct OverlayView: View {
     @ObservedObject var ledger: Ledger
     let onMenu: () -> Void
     let onHide: () -> Void
+    @State private var pulse = false
 
     private var theme: TickerTheme { TickerTheme.current(prefs.theme) }
     private var ink: Color { Color(nsColor: theme.ink) }
@@ -93,6 +96,8 @@ struct OverlayView: View {
 
     var body: some View {
         ZStack {
+            // a click anywhere on the strip plays or pauses
+            Color.clear.contentShape(Rectangle()).onTapGesture { rec.toggle() }
             HStack(spacing: 0) {
                 chip.frame(width: TickerLayout.rightInset, alignment: .trailing)
                 Spacer(minLength: 0)
@@ -102,8 +107,11 @@ struct OverlayView: View {
             if let m = message {
                 Text(m).font(.system(size: 13, weight: .medium)).foregroundStyle(dim)
             }
-            if rec.phase == .complete, let r = rec.run, r.completed { prompt(r) }
+            if rec.phase == .complete, let r = rec.run, r.completed {
+                prompt(r).transition(.opacity.combined(with: .scale(scale: 0.96)))
+            }
         }
+        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: rec.phase == .complete)
         .padding(.bottom, prefs.showNext ? TickerLayout.previewHeight(prefs.height) : 0)
         .environment(\.layoutDirection, .rightToLeft)
         .animation(.easeOut(duration: 0.15), value: ui.hover)
@@ -130,7 +138,7 @@ struct OverlayView: View {
         let frac = r.map { min(1, Double($0.done) / Double(max(1, $0.plan.target))) } ?? 0
         return ZStack {
             Circle().stroke(dim.opacity(0.25), lineWidth: 3)
-            if r != nil { Circle().trim(from: 0, to: frac).stroke(accent, style: StrokeStyle(lineWidth: 3, lineCap: .round)).rotationEffect(.degrees(-90)) }
+            if r != nil { Circle().trim(from: 0, to: frac).stroke(accent, style: StrokeStyle(lineWidth: 3, lineCap: .round)).rotationEffect(.degrees(-90)).animation(.easeOut(duration: 0.45), value: frac) }
             if let r {
                 if rec.isPlaying || rec.phase == .listening && rec.state == .playing {
                     Text(arNum(r.done)).font(.system(size: r.done > 99 ? 9.5 : 11.5, weight: .bold).monospacedDigit()).foregroundStyle(ink)
@@ -142,6 +150,11 @@ struct OverlayView: View {
             }
         }
         .frame(width: 32, height: 32)
+        .scaleEffect(pulse ? 1.14 : 1)
+        .onChange(of: rec.run?.done) { _, _ in
+            pulse = true
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.45)) { pulse = false }
+        }
         .contentShape(Circle())
         .onTapGesture { rec.toggle() }
         .help(rec.isPlaying ? "إيقاف مؤقت" : "تشغيل")

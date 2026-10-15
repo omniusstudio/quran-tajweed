@@ -29,6 +29,39 @@ enum Snapshot {
                 NSApp.terminate(nil)
             }
             return
+        case "bar", "bar-run", "bar-prompt":
+            // the menu-bar strip, and the strip that drops open under it
+            Prefs.shared.lastSurah = 2; Prefs.shared.lastVerse = 255
+            if scenario == "bar-run" { rec.debugApply(run: Run(plan: base, done: 52), phase: .listening, state: .paused, surah: 2, verse: 255) }
+            if scenario == "bar-prompt" { rec.debugApply(run: Run(plan: Plan(surah: 112, from: 1, to: 1, target: 100, gap: .none, veil: true), done: 100, completed: true), phase: .complete, state: .paused, surah: 112, verse: 1) }
+            ticker.refresh()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                if let v = ticker.menuBar?.view { write(v, to: out) }
+                ticker.debugDropdown()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                    if let v = ticker.panel.contentView { write(v, to: out.replacingOccurrences(of: ".png", with: "-drop.png")) }
+                    print("bar window:", ticker.menuBar?.screenFrame ?? .zero, "panel:", ticker.panel.frame)
+                    NSApp.terminate(nil)
+                }
+            }
+            return
+        case "rise":
+            // frames of the next verse rising into the main row, as the recitation crosses from one verse to the next
+            Prefs.shared.lastSurah = 112; Prefs.shared.lastVerse = 1
+            rec.read(surah: 112, from: 1)
+            var frame = 0
+            var started = false
+            Timer.scheduledTimer(withTimeInterval: 0.06, repeats: true) { t in
+                MainActor.assumeIsolated {
+                    if !started, rec.verseIndex == 1 { started = true }
+                    if started, frame < 8 {
+                        if let v = ticker.panel.contentView { write(v, to: out.replacingOccurrences(of: ".png", with: "\(frame).png")) }
+                        frame += 1
+                    }
+                    if frame >= 8 || (!started && rec.now() > 12) { t.invalidate(); NSApp.terminate(nil) }
+                }
+            }
+            return
         case "click":
             // a real mouse click on the play ring, delivered to the panel the way the system would
             Prefs.shared.lastSurah = 112; Prefs.shared.lastVerse = 1
