@@ -37,6 +37,7 @@ enum Snapshot {
             ticker.refresh()
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                 if let v = ticker.menuBar?.view { write(v, to: out) }
+                ticker.ui.hover = true
                 ticker.debugDropdown()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                     if let v = ticker.panel.contentView { write(v, to: out.replacingOccurrences(of: ".png", with: "-drop.png")) }

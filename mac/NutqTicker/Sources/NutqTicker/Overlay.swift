@@ -8,7 +8,8 @@ final class TickerUI: ObservableObject {
 
 enum TickerLayout {
     static let rightInset: CGFloat = 176
-    static let leftInset: CGFloat = 152
+    /// Wide enough for the ring and all five hover buttons while a session runs (they were clipped at 152).
+    static let leftInset: CGFloat = 212
     /// The second line, where the next verse waits faded.
     static func previewHeight(_ h: Double) -> CGFloat { CGFloat((h * 0.72).rounded()) }
     /// The next verse is set a little smaller than the one being read.
