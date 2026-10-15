@@ -10,7 +10,7 @@ enum TickerLayout {
     static let rightInset: CGFloat = 176
     static let leftInset: CGFloat = 152
     /// The second line, where the next verse waits faded.
-    static func previewHeight(_ h: Double) -> CGFloat { CGFloat((h * 0.62).rounded()) }
+    static func previewHeight(_ h: Double) -> CGFloat { CGFloat((h * 0.72).rounded()) }
     /// The next verse is set a little smaller than the one being read.
     static let previewScale: CGFloat = 0.8
 }

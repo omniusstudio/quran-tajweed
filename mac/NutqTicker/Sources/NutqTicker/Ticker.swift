@@ -300,7 +300,7 @@ final class TickerController: NSObject {
         let lo = max(0, i - 1), hi = min(all.count - 1, i + 3)
         let seq = Array(all[lo...hi])
         let range = sessionRange(cv.surah.n)
-        m.line.show(verses: seq, content: TickerLineView.Content(surah: cv.surah.n, basris: seq.map(\.b), current: i - lo, veil: veil, veilFrom: range.0, veilTo: range.1, peek: ui.peek, colours: prefs.colours, kufi: prefs.kufi, dark: m.theme.dark, fontSize: m.height * 0.74 * CGFloat(prefs.fontScale)))
+        m.line.show(verses: seq, content: TickerLineView.Content(surah: cv.surah.n, basris: seq.map(\.b), current: i - lo, veil: veil, veilFrom: range.0, veilTo: range.1, peek: ui.peek, colours: prefs.colours, kufi: prefs.kufi, dark: m.theme.dark, fontSize: min(m.height * 0.72, (m.height - 2) / QuranFont.inkHeight) * CGFloat(prefs.fontScale)))
         m.line.wake()
     }
 

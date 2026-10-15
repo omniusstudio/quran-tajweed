@@ -266,10 +266,12 @@ final class TickerLineView: NSView {
         ctx.translateBy(x: row.midX, y: row.midY + ySh)
         ctx.scaleBy(x: sc, y: sc)
         ctx.translateBy(x: -row.midX, y: -row.midY)
-        let h = ascent + descent
-        let base = row.minY + (row.height - h) / 2 + descent
+        let fs = content?.fontSize ?? 24
+        // centred on the ink of the verse, not on the font's tall typographic box
+        let base = row.midY - QuranFont.inkCentre * fs
         if hasHighlight, !isPreview {
-            let r = CGRect(x: offsetX + hlX - 4, y: base - descent - 1, width: hlW + 8, height: h + 2)
+            let hh = min(QuranFont.inkHeight * fs + 4, row.height - 2)
+            let r = CGRect(x: offsetX + hlX - 4, y: row.midY - hh / 2, width: hlW + 8, height: hh)
             ctx.setFillColor(theme.highlight.cgColor)
             ctx.addPath(CGPath(roundedRect: r, cornerWidth: 5, cornerHeight: 5, transform: nil))
             ctx.fillPath()
@@ -279,7 +281,7 @@ final class TickerLineView: NSView {
         ctx.setLineWidth(1.8)
         ctx.setLineCap(.round)
         for (k, i) in veiled where wordX.indices.contains(k) && wordX[k].indices.contains(i) {
-            let y = base - descent * 0.2
+            let y = base - 0.18 * fs
             ctx.move(to: CGPoint(x: offsetX + wordX[k][i].0 + 1, y: y))
             ctx.addLine(to: CGPoint(x: offsetX + wordX[k][i].1 - 1, y: y))
         }

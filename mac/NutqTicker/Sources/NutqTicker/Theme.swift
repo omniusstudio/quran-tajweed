@@ -59,6 +59,11 @@ extension NSColor {
 }
 
 enum QuranFont {
+    /// The font's real ink, as a share of its size: it runs from 0.30 below the baseline to 1.10 above it (the
+    /// typographic box, 1.76, is far taller than any verse), so rows are sized and centred on the ink.
+    static let inkHeight: CGFloat = 1.40
+    static let inkCentre: CGFloat = 0.404
+
     /// The Dūrī muṣḥaf font, registered for this process from the app's resources.
     static let name: String? = {
         guard let url = Resources.url("fonts/UthmanicDouri-v2.ttf") else { return nil }
