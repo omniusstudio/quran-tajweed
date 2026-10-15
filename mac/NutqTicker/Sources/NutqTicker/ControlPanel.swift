@@ -230,6 +230,9 @@ struct ControlPanel: View {
         VStack(alignment: .leading, spacing: 10) {
             Picker("مكان الشريط", selection: $prefs.mode) { ForEach(DisplayMode.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented)
             if prefs.mode == .menuBar {
+                Picker("لون نص القائمة", selection: $prefs.barText) {
+                    Text("تلقائي").tag("auto"); Text("فاتح").tag("light"); Text("داكن").tag("dark")
+                }.pickerStyle(.segmented)
                 HStack { Text("عرض الشريط في القائمة").font(.system(size: 12)); Slider(value: $prefs.barWidth, in: 320...1000, step: 20) }
                 Text("أبقِ المؤشر عليه لحظة فيفتح الشريط الكبير تحته، ويُغلق حين تبتعد.").font(.system(size: 10.5)).foregroundStyle(.secondary)
             }

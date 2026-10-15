@@ -31,7 +31,7 @@ final class TickerLineView: NSView {
     var activeProvider: (() -> Int?)?
     var isPlaying: () -> Bool = { false }
     /// How strongly the verses around the one being read are drawn.
-    var neighbourAlpha: CGFloat = 0.55
+    var neighbourAlpha: CGFloat = 0.72
 
     private var verses: [VerseData] = []
     private var content: Content?
@@ -171,7 +171,7 @@ final class TickerLineView: NSView {
                 if hidden { veiled.append((k, i)) }
                 let start = m.length
                 for p in word {
-                    var color: NSColor = hidden ? .clear : (c.colours ? (p.tone.flatMap { Quran.shared.tones[$0] }.map { theme.tone($0) } ?? theme.ink) : theme.ink)
+                    var color: NSColor = hidden ? .clear : (c.colours ? (p.tone.map { theme.tone(id: $0) } ?? theme.ink) : theme.ink)
                     if !isCurrent, !hidden { color = color.withAlphaComponent(neighbourAlpha) }
                     // CoreText's own colour key keeps a fully transparent colour transparent (a veiled word)
                     m.append(NSAttributedString(string: p.text, attributes: [.font: font, NSAttributedString.Key(kCTForegroundColorAttributeName as String): color.cgColor]))

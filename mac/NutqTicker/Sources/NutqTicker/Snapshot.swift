@@ -40,7 +40,7 @@ enum Snapshot {
                 ticker.debugDropdown()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                     if let v = ticker.panel.contentView { write(v, to: out.replacingOccurrences(of: ".png", with: "-drop.png")) }
-                    print("bar window:", ticker.menuBar?.screenFrame ?? .zero, "panel:", ticker.panel.frame)
+                    print("bar window:", ticker.menuBar?.screenFrame ?? .zero, "panel:", ticker.panel.frame, "barDark:", MenuBarTicker.barDark)
                     NSApp.terminate(nil)
                 }
             }

@@ -29,6 +29,8 @@ final class Prefs: ObservableObject {
     private let d = UserDefaults.standard
 
     @Published var mode: DisplayMode { didSet { d.set(mode.rawValue, forKey: "mode") } }
+    /// The menu bar's text colour: follow the menu bar, or force light or dark when the wallpaper fools the detection.
+    @Published var barText: String { didSet { d.set(barText, forKey: "barText") } }
     @Published var barWidth: Double { didSet { d.set(barWidth, forKey: "barWidth") } }
     @Published var width: WidthMode { didSet { d.set(width.rawValue, forKey: "width") } }
     @Published var dock: Dock { didSet { d.set(dock.rawValue, forKey: "dock") } }
@@ -56,6 +58,7 @@ final class Prefs: ObservableObject {
         func flag(_ k: String, _ def: Bool) -> Bool { d.object(forKey: k) == nil ? def : d.bool(forKey: k) }
         func num(_ k: String, _ def: Double) -> Double { d.object(forKey: k) == nil ? def : d.double(forKey: k) }
         mode = DisplayMode(rawValue: d.string(forKey: "mode") ?? "") ?? .menuBar
+        barText = d.string(forKey: "barText") ?? "auto"
         barWidth = num("barWidth", 560)
         width = WidthMode(rawValue: d.string(forKey: "width") ?? "") ?? .compact
         dock = Dock(rawValue: d.string(forKey: "dock") ?? "") ?? .top

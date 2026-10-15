@@ -46,7 +46,10 @@ final class MenuBarTicker: NSObject {
     var theme: TickerTheme { .system(dark: Self.barDark) }
 
     func refreshAppearance() {
-        let dark = item.button?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        // the wallpaper under the strip decides the menu bar's text colour; the appearance is the fallback
+        var auto = item.button?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        if let f = screenFrame, let screen = item.button?.window?.screen ?? NSScreen.screens.first, let dark = WallpaperProbe.isDarkUnder(f, on: screen) { auto = dark }
+        let dark = Prefs.shared.barText == "light" ? true : Prefs.shared.barText == "dark" ? false : auto
         if dark != Self.barDark { Self.barDark = dark }
     }
 

@@ -42,10 +42,16 @@ struct TickerTheme {
         }
     }
 
-    /// The tajwīd palette is made for paper; on a dark strip the colours are lifted toward white.
-    func tone(_ hex: String) -> NSColor {
-        let c = NSColor(hex: hex)
-        return dark ? c.blended(withFraction: 0.42, of: .white) ?? c : c
+    /// Tajwīd colours made for paper, and brighter ones for a dark strip, where the dark purples and blues would
+    /// all but vanish (lifting them toward white was not enough).
+    private static let darkTones: [String: String] = [
+        "madd6": "#dc9cf0", "madd4": "#ff8fb4", "madd24": "#ffb25e", "madd1": "#efca62", "ghunnah": "#7fdc86",
+        "iqlab": "#bfe87a", "silent": "#bdbdbd", "qalqalah": "#66c8ff", "heavy": "#8dbaff", "imalah": "#5fdccb",
+        "taqlil": "#b5e8d8", "hamza": "#e0b79c",
+    ]
+    func tone(id: String) -> NSColor {
+        if dark, let h = Self.darkTones[id] { return NSColor(hex: h) }
+        return NSColor(hex: Quran.shared.tones[id] ?? "#1b2a22")
     }
 }
 
