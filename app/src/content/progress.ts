@@ -25,6 +25,8 @@ export interface Progress {
   updatedAt?: number;
   /** Memorization challenges (see content/hifz.ts). */
   hifz?: { done: Record<string, { at: number; reviews: number; due: number }>; updatedAt?: number };
+  /** The repeat-to-memorize ledger (see content/memo.ts). */
+  memo?: { verses: Record<string, { reps: number; last: number; done?: boolean; mAt?: number; reviews?: number; due?: number }>; days: Record<string, number>; updatedAt?: number };
   /** The daily wird (see content/wird.ts). */
   wird?: unknown;
   /** The daily checklist: what was ticked, per day (see content/daily.ts). */

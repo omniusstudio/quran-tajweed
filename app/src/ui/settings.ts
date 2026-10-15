@@ -40,6 +40,8 @@ export interface Settings {
   numbering?: 'kufi' | 'basri';
   /** Colour the letters by their tajwīd rule in the muṣḥaf, like the colour-coded prints. */
   tajweedColors?: boolean;
+  /** The repeat-to-memorize defaults (see content/memoRun.ts). */
+  memo?: { count: number; scope: 'verse' | 'page' | 'surah'; gap: 'none' | 'short' | 'recite'; veil: boolean };
   /** The muṣḥaf page last open in the reading view. */
   lastPage?: number;
   /** Minutes without interaction before the ambient screen takes over (0 = never). */

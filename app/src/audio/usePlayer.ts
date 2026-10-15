@@ -20,6 +20,8 @@ export interface Player {
   seek: (t: number) => void;
   setSpeed: (s: PlaySpeed) => void;
   setLoop: (l: [number, number] | null) => void;
+  /** Called each time the loop's end is reached: return true to wrap to the start, false to pause there (the caller resumes). */
+  setPassHandler: (fn: (() => boolean) | null) => void;
   /** Play [from, to) once; resolves when `to` is reached or playback is interrupted. */
   playRange: (from: number, to: number) => Promise<boolean>;
 }
@@ -46,6 +48,7 @@ export function usePlayer(src: string | null): Player {
   const [loading, setLoading] = useState<number | null>(null);
   const [speed, setSpeedState] = useState<PlaySpeed>(1);
   const loopRef = useRef<[number, number] | null>(null);
+  const passRef = useRef<(() => boolean) | null>(null);
   const [loop, setLoopState] = useState<[number, number] | null>(null);
   const rangeRef = useRef<{ to: number; resolve: (ok: boolean) => void } | null>(null);
 
@@ -121,7 +124,11 @@ export function usePlayer(src: string | null): Player {
         audio.pause();
         r.resolve(true);
         rangeRef.current = null;
-      } else if (loopRef.current && !audio.paused && (t >= loopRef.current[1] || t < loopRef.current[0] - 0.5)) {
+      } else if (loopRef.current && !audio.paused && t >= loopRef.current[1]) {
+        const wrap = passRef.current ? passRef.current() : true;
+        if (wrap) audio.currentTime = loopRef.current[0];
+        else audio.pause();
+      } else if (loopRef.current && !audio.paused && t < loopRef.current[0] - 0.5) {
         audio.currentTime = loopRef.current[0];
       }
     };
@@ -176,6 +183,9 @@ export function usePlayer(src: string | null): Player {
     loopRef.current = l;
     setLoopState(l);
   }, []);
+  const setPassHandler = useCallback((fn: (() => boolean) | null) => {
+    passRef.current = fn;
+  }, []);
   const playRange = useCallback(
     (from: number, to: number) =>
       new Promise<boolean>((resolve) => {
@@ -189,7 +199,7 @@ export function usePlayer(src: string | null): Player {
     [audio],
   );
 
-  return { audio, time, duration, playing, ready, error, loading, speed, loop, play, pause, toggle, seek, setSpeed, setLoop, playRange };
+  return { audio, time, duration, playing, ready, error, loading, speed, loop, play, pause, toggle, seek, setSpeed, setLoop, setPassHandler, playRange };
 }
 
 /** A short beep for echo mode (no TTS, just a tone). */

@@ -16,6 +16,7 @@ import { arNum } from './pages/shared';
 import { PracticePage } from './pages/PracticePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { HifzPage } from './pages/HifzPage';
+import { MemoPage } from './pages/MemoPage';
 import { WirdPage } from './pages/WirdPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { AdhkarPage } from './pages/AdhkarPage';
@@ -38,6 +39,7 @@ type Route =
   | { tab: 'practice' }
   | { tab: 'settings' }
   | { tab: 'hifz' }
+  | { tab: 'memo' }
   | { tab: 'wird' }
   | { tab: 'calendar' }
   | { tab: 'ambient' }
@@ -63,6 +65,7 @@ function parseHash(): Route {
   if (tab === 'practice') return { tab: 'practice' };
   if (tab === 'settings') return { tab: 'settings' };
   if (tab === 'hifz') return { tab: 'hifz' };
+  if (tab === 'memo') return { tab: 'memo' };
   if (tab === 'wird') return { tab: 'wird' };
   if (tab === 'calendar') return { tab: 'calendar' };
   if (tab === 'ambient') return { tab: 'ambient' };
@@ -120,6 +123,7 @@ const MORE: NavItem[] = [
   { tab: 'adhkar', label: 'الأذكار', hash: '#/adhkar', icon: 'sunrise', hint: 'الصباح والمساء والنوم والاستيقاظ، بعدّاد' },
   { tab: 'wird', label: 'الورد اليومي', hash: '#/wird', icon: 'calendar', hint: 'ربع أو حزب أو جزء كل يوم، حتى الختمة' },
   { tab: 'hifz', label: 'تحدي الحفظ', hash: '#/hifz', icon: 'star', hint: 'خمس آيات كل يوم، والمراجعة في وقتها' },
+  { tab: 'memo', label: 'حفظي', hash: '#/memo', icon: 'repeat', hint: 'التكرار حتى يثبت، وما حفظته وما ينتظر المراجعة' },
   { tab: 'reference', label: 'المرجع', hash: '#/reference', icon: 'library', hint: 'الدوري وحفص، الأصول والفرش' },
   { tab: 'dictionary', label: 'القاموس', hash: '#/dictionary', icon: 'dictionary', hint: 'كل مصطلح بتعريف بسيط' },
   { tab: 'contrast', label: 'هذا، لا ذاك', hash: '#/contrast', icon: 'split', hint: 'الأزواج المتشابهة جنباً إلى جنب' },
@@ -128,7 +132,7 @@ const MORE: NavItem[] = [
   { tab: 'recorder', label: 'تسجيل المعلم', hash: '#/recorder', icon: 'mic', hint: 'أداة المطوّر: مقاطع الحروف' },
   { tab: 'checklist', label: 'الجاهزية', hash: '#/checklist', icon: 'clipboard', hint: 'أداة المطوّر: ما اكتمل وما لم يكتمل' },
 ];
-const MORE_TABS = new Set<Route['tab']>(['read', 'calendar', 'adhkar', 'tahsin', 'reference', 'dictionary', 'settings', 'align', 'recorder', 'checklist']);
+const MORE_TABS = new Set<Route['tab']>(['read', 'memo', 'calendar', 'adhkar', 'tahsin', 'reference', 'dictionary', 'settings', 'align', 'recorder', 'checklist']);
 
 export default function App() {
   const [route, go] = useRoute();
@@ -284,6 +288,7 @@ export default function App() {
         {route.tab === 'practice' && <PracticePage go={go} />}
         {route.tab === 'settings' && <SettingsPage go={go} />}
         {route.tab === 'hifz' && <HifzPage go={go} />}
+        {route.tab === 'memo' && <MemoPage go={go} />}
         {route.tab === 'wird' && <WirdPage go={go} />}
         {route.tab === 'calendar' && <CalendarPage go={go} />}
         {route.tab === 'adhkar' && <AdhkarPage set={route.set} go={go} />}

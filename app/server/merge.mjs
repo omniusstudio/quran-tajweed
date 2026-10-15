@@ -25,6 +25,17 @@ export function mergeProgress(a, b) {
     if (!cur || num(card.reviews) > num(cur.reviews) || (num(card.reviews) === num(cur.reviews) && num(card.due) > num(cur.due))) hifzDone[id] = card;
   }
   const hifz = { done: hifzDone, updatedAt: Math.max(num(a.hifz && a.hifz.updatedAt), num(b.hifz && b.hifz.updatedAt)) };
+  // the repeat-to-memorize ledger: repetitions only ever grow (max); the memorized flag follows its latest change
+  const memoVerses = { ...((a.memo && a.memo.verses) || {}) };
+  for (const [k, v] of Object.entries((b.memo && b.memo.verses) || {})) {
+    const cur = memoVerses[k];
+    if (!cur) { memoVerses[k] = v; continue; }
+    const flag = num(v.mAt) > num(cur.mAt) || (num(v.mAt) === num(cur.mAt) && num(v.reviews) > num(cur.reviews)) ? v : cur;
+    memoVerses[k] = { reps: Math.max(num(cur.reps), num(v.reps)), last: Math.max(num(cur.last), num(v.last)), done: flag.done, mAt: flag.mAt, reviews: flag.reviews, due: flag.due };
+  }
+  const memoDays = {};
+  for (const src of [(a.memo && a.memo.days) || {}, (b.memo && b.memo.days) || {}]) for (const [k, n] of Object.entries(src)) memoDays[k] = Math.max(num(memoDays[k]), num(n));
+  const memo = a.memo || b.memo ? { verses: memoVerses, days: memoDays, updatedAt: Math.max(num(a.memo && a.memo.updatedAt), num(b.memo && b.memo.updatedAt)) } : undefined;
   // the wird: the reader who is further ahead (more khatms, then more quarters) sets the position;
   // each day keeps its best log; pace / Ramadan / reminder follow the latest change
   let wird = a.wird || b.wird || null;
@@ -48,7 +59,7 @@ export function mergeProgress(a, b) {
       for (const [id, tick] of Object.entries(d)) if (!day[id] || num(tick.at) > num(day[id].at)) day[id] = tick;
     }
   }
-  return { done, days, last: newer.last ?? a.last ?? b.last, hifz, wird, todos, updatedAt: Math.max(num(a.updatedAt), num(b.updatedAt)) };
+  return { done, days, last: newer.last ?? a.last ?? b.last, hifz, ...(memo ? { memo } : {}), wird, todos, updatedAt: Math.max(num(a.updatedAt), num(b.updatedAt)) };
 }
 
 export function mergeDeck(a, b) {

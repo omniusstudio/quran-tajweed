@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { WORD_SOURCES, loadAlignment, locate, playSpan, type SurahAlign, startTime } from '../audio/alignment';
 import { DEFAULT_RECITER, RECITERS, SURAHS, SURAH_BY_NUMBER, audioUrl } from '../audio/quran';
 import { usePlayer } from '../audio/usePlayer';
@@ -13,6 +13,13 @@ import { rewardWird } from '../ui/rewards';
 import { getSettings, useSettings } from '../ui/settings';
 import { sfx } from '../ui/sound';
 import { arNum } from './shared';
+import { RING, memoState, memorizedSet, vkey } from '../content/memo';
+import { inPlan, isVeiled, takeIntent, veilFraction } from '../content/memoRun';
+import { useProgress } from '../content/progress';
+import { NEXT_TEXT, TEXT_LABEL, useReadView } from '../ui/readView';
+import { reducedMotion } from '../ui/settings';
+import { MemoDone, MemoHud, MemoSheet } from './MemoUi';
+import { useMemoRun } from './useMemoRun';
 
 const JUZ_NAMES = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس', 'السابع', 'الثامن', 'التاسع', 'العاشر', 'الحادي عشر', 'الثاني عشر', 'الثالث عشر', 'الرابع عشر', 'الخامس عشر', 'السادس عشر', 'السابع عشر', 'الثامن عشر', 'التاسع عشر', 'العشرون', 'الحادي والعشرون', 'الثاني والعشرون', 'الثالث والعشرون', 'الرابع والعشرون', 'الخامس والعشرون', 'السادس والعشرون', 'السابع والعشرون', 'الثامن والعشرون', 'التاسع والعشرون', 'الثلاثون'];
 
@@ -28,6 +35,9 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
   const reciter = RECITERS.some((r) => r.id === settings.reciter) ? settings.reciter : DEFAULT_RECITER;
   const initial = surah ? pageOf(surah, verse ?? SURAH_BY_NUMBER[surah].verses[0].basri) : settings.lastPage ?? 1;
   const [page, setPage] = useState(initial);
+  const [view, setView] = useReadView();
+  const focus = view.focus;
+  const flow = view.text !== 'page';
   const segs = useMemo(() => pageSegments(page), [page]);
   const juz = juzOfPage(page);
 
@@ -38,6 +48,8 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
   const pos = align && player.playing ? locate(align, player.time) : align ? locate(align, player.time) : null;
   const wordsTrusted = !!align && (!align.source || WORD_SOURCES.has(align.source));
   const pendingStart = useRef<number | null>(null);
+  const memo = useMemoRun({ player, align, playSurah, setPlaySurah, pendingStart, reciter });
+  const memoLive = !!memo.run && !memo.run.completed;
 
   useEffect(() => { updateSettings({ lastPage: page }); }, [page]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { scrollTo({ top: 0 }); }, [page]);
@@ -58,7 +70,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
     }
   }, [pos?.verse, player.playing]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!align || !player.playing) return;
+    if (!align || !player.playing || memoLive) return;
     const last = align.verses[align.verses.length - 1];
     if (player.time < playSpan(last)[1]) return;
     const next = playSurah + 1;
@@ -85,7 +97,10 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
     player.seek(at);
     void player.play();
   };
+  const memoActive = memo.phase === 'gap' || (memo.phase === 'listening' && player.playing);
+  const memoToggle = () => (memoActive ? memo.pause() : memo.resume());
   const mainToggle = () => {
+    if (memoLive) return memoToggle();
     if (player.playing) return player.pause();
     if (!align || segs.every((g) => g.surah.number !== playSurah)) {
       const first = firstVerseOnPage(page);
@@ -140,7 +155,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
   // turned into kashida strokes inside a few words (content/kashida.ts), so words stay close.
   const body = useRef<HTMLDivElement | null>(null);
   const [kashida, setKashida] = useState<{ key: string; counts: number[][] }>({ key: '', counts: [] });
-  const layoutKey = `${page}:${kufi}:${settings.quranScale}`;
+  const layoutKey = `${page}:${kufi}:${settings.quranScale}:${flow}`;
   useLayoutEffect(() => {
     const el = body.current;
     if (!el) return;
@@ -199,11 +214,19 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
       const b = el.getBoundingClientRect();
       const box = (r: { left: number; top: number; right: number; bottom: number }): Box => ({ left: r.left - b.left, top: r.top - b.top, width: r.right - r.left, height: r.bottom - r.top });
       const bands: Box[] = [];
-      for (const line of el.querySelectorAll<HTMLElement>('.mp-line.text')) {
-        const rs = [...line.querySelectorAll<HTMLElement>('.wrd.in-aya')].map((w) => w.getBoundingClientRect());
-        if (!rs.length) continue;
-        bands.push(box({ left: Math.min(...rs.map((r) => r.left)), right: Math.max(...rs.map((r) => r.right)), top: Math.min(...rs.map((r) => r.top)), bottom: Math.max(...rs.map((r) => r.bottom)) }));
+      const rects = [...el.querySelectorAll<HTMLElement>('.wrd.in-aya')].map((w) => w.getBoundingClientRect()).sort((x, y) => x.top - y.top);
+      let group: DOMRect[] = [];
+      const flush = () => {
+        if (!group.length) return;
+        bands.push(box({ left: Math.min(...group.map((r) => r.left)), right: Math.max(...group.map((r) => r.right)), top: Math.min(...group.map((r) => r.top)), bottom: Math.max(...group.map((r) => r.bottom)) }));
+        group = [];
+      };
+      for (const r of rects) {
+        const ref = group[0];
+        if (ref && r.top > ref.top + ref.height * 0.5) flush();
+        group.push(r);
       }
+      flush();
       const on = el.querySelector<HTMLElement>('.wrd.on');
       setHl({ bands, word: on ? box(on.getBoundingClientRect()) : null });
     };
@@ -211,14 +234,14 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [curKey, kashida, page]);
+  }, [curKey, kashida, page, flow, focus]);
   const colours = settings.tajweedColors !== false;
   // the shown text of every word on the page (with its kashida), then the coloured pieces per verse
   const shownWords = useMemo(() => {
     const m = new Map<string, string>();
-    lines.forEach((slot, li) => { if (slot.kind === 'text') slot.words.forEach((w, i) => m.set(`${w.surah.number}:${w.vi}:${w.wi}`, withKashida(w.surah.verses[w.vi].words[w.wi], strokes[li]?.[i] ?? 0))); });
+    lines.forEach((slot, li) => { if (slot.kind === 'text') slot.words.forEach((w, i) => m.set(`${w.surah.number}:${w.vi}:${w.wi}`, withKashida(w.surah.verses[w.vi].words[w.wi], flow ? 0 : strokes[li]?.[i] ?? 0))); });
     return m;
-  }, [lines, strokes]);
+  }, [lines, strokes, flow]);
   const pieces = useMemo(() => {
     const out = new Map<string, Piece[][]>();
     if (!colours) return out;
@@ -290,6 +313,95 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
     return () => ro.disconnect();
   }, [pieces, shownWords, kashida, page]);
   const bmOnPage = !!bm && pageOf(bm.surah, bm.basri) === page;
+
+  // ---- repeat to memorize: what is memorized, the veil, the sheet, long-press to start
+  const [progress] = useProgress();
+  const memorized = useMemo(() => memorizedSet(progress), [progress]);
+  const ledger = useMemo(() => memoState(progress).verses, [progress]);
+  const veilFrac = memo.run && memo.run.plan.veil && !memo.run.completed ? veilFraction(memo.run.done, memo.run.plan.target) : 0;
+  const [peek, setPeek] = useState<Set<string>>(() => new Set());
+  const peekWord = (k: string) => {
+    setPeek((p) => new Set(p).add(k));
+    setTimeout(() => setPeek((p) => { const n = new Set(p); n.delete(k); return n; }), 2500);
+  };
+  const [sheet, setSheet] = useState<{ anchor: { surah: number; basri: number }; preset?: NonNullable<ReturnType<typeof takeIntent>> } | null>(null);
+  useEffect(() => {
+    const i = takeIntent();
+    if (i) setSheet({ anchor: { surah: i.surah, basri: i.from }, preset: i });
+  }, []);
+  const openMemo = (at?: { surah: number; basri: number }) => {
+    sfx('tap');
+    const anchor = at ?? (current && player.playing ? { surah: current.surah, basri: current.basri } : bm && bmOnPage ? { surah: bm.surah, basri: bm.basri } : firstVerseOnPage(page));
+    setSheet({ anchor });
+  };
+  const press = useRef<{ timer: ReturnType<typeof setTimeout> | null; fired: boolean; x: number; y: number }>({ timer: null, fired: false, x: 0, y: 0 });
+  const stopPress = () => { const pr = press.current; if (pr.timer) { clearTimeout(pr.timer); pr.timer = null; } };
+  type Slot = (typeof lines)[number];
+  type SlotWord = Extract<Slot, { kind: 'text' }>['words'][number];
+  const wordSpan = (w: SlotWord) => {
+    const v = w.surah.verses[w.vi];
+    const isCur = current?.surah === w.surah.number && current.basri === v.basri;
+    const canPlay = !!loadAlignment(reciter, w.surah.number)?.verses.find((x) => x.basri === v.basri);
+    const marked = bm?.surah === w.surah.number && bm.basri === v.basri && w.mark !== undefined;
+    const k = `${w.surah.number}:${v.basri}:${w.wi}`;
+    const veiled = memoLive && !!memo.run && veilFrac > 0 && inPlan(memo.run.plan, w.surah.number, v.basri) && !peek.has(k) && isVeiled(w.surah.number, v.basri, w.wi, veilFrac);
+    const mk = vkey(w.surah.number, v.basri);
+    const reps = ledger[mk]?.reps ?? 0;
+    const st = memorized.has(mk) ? ' m-done' : reps > 0 ? ' m-doing' : '';
+    return (
+      <span key={k} data-word={v.words[w.wi]} className={`wrd${isCur ? ' in-aya' : ''}${isCur && wordsTrusted && current!.word === w.wi ? ' on' : ''}${veiled ? ' veil' : ''}`}
+        onClick={() => {
+          if (press.current.fired) { press.current.fired = false; return; }
+          if (memoLive) { if (veiled) peekWord(k); return; }
+          if (canPlay) startAt(w.surah.number, v.basri);
+        }}
+        onPointerDown={(e) => {
+          const pr = press.current;
+          pr.fired = false; pr.x = e.clientX; pr.y = e.clientY;
+          stopPress();
+          pr.timer = setTimeout(() => { pr.timer = null; pr.fired = true; openMemo({ surah: w.surah.number, basri: v.basri }); }, 550);
+        }}
+        onPointerMove={(e) => { if (press.current.timer && Math.hypot(e.clientX - press.current.x, e.clientY - press.current.y) > 10) stopPress(); }}
+        onPointerUp={stopPress} onPointerCancel={stopPress}
+        onContextMenu={(e) => { e.preventDefault(); openMemo({ surah: w.surah.number, basri: v.basri }); }}
+        role={canPlay || memoLive ? 'button' : undefined}
+        title={memoLive ? (veiled ? 'اضغط لتنظر إلى الكلمة' : undefined) : canPlay ? `اسمع من الآية ${arNum(shownNumber(w.surah.number, v.basri, w.wi))} · اضغط مطوّلًا لتحفظها` : undefined}>
+        {renderWord(w.surah.number, w.vi, w.wi)}
+        {w.mark !== undefined && <span className={`aya-n${marked ? ' marked' : ''}${st}`} style={st === ' m-doing' ? ({ '--p': Math.min(1, reps / RING) } as React.CSSProperties) : undefined} aria-label={`الآية ${arNum(w.mark)}${st === ' m-done' ? '، محفوظة' : ''}`}>{arNum(w.mark)}</span>}
+      </span>
+    );
+  };
+  const flowBlocks = useMemo(() => {
+    const out: { li: number; slot?: Slot; words?: SlotWord[] }[] = [];
+    lines.forEach((slot, li) => {
+      if (slot.kind === 'text') {
+        const last = out[out.length - 1];
+        if (last?.words) last.words.push(...slot.words);
+        else out.push({ li, words: [...slot.words] });
+      } else if (slot.kind !== 'empty') out.push({ li, slot });
+    });
+    return out;
+  }, [lines]);
+
+  // the focus view hides the app's chrome (see .read-focus in styles.css); Escape leaves it
+  useEffect(() => {
+    document.documentElement.classList.toggle('read-focus', focus);
+    return () => document.documentElement.classList.remove('read-focus');
+  }, [focus]);
+  useEffect(() => {
+    if (!focus) return;
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setView({ focus: false }); };
+    addEventListener('keydown', key);
+    return () => removeEventListener('keydown', key);
+  }, [focus, setView]);
+  // reflowed text is taller than the screen: keep the word being recited in view
+  useEffect(() => {
+    if (!flow || !player.playing || !curKey) return;
+    const el = body.current?.querySelector<HTMLElement>('.wrd.on') ?? body.current?.querySelector<HTMLElement>('.wrd.in-aya');
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    if (r.top < 90 || r.bottom > innerHeight - 160) scrollBy({ top: r.top - innerHeight * 0.33, behavior: reducedMotion() ? 'auto' : 'smooth' });
+  }, [curKey, flow]); // eslint-disable-line react-hooks/exhaustive-deps
   // an unpinned ribbon follows the reader: the page just opened, or the verse where listening stopped
   const remember = useCallback((v: { surah: number; basri: number }) => {
     const cur = getSettingsBookmark();
@@ -311,8 +423,12 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
 
   return (
     <div className="page read">
-      <div className="read-bar">
-        <a href="#/" onClick={(e) => { e.preventDefault(); go('#/'); }} className="crumb"><Icon name="chevronRight" size={18} /> الرئيسية</a>
+      <div className={`read-bar${focus ? ' focus' : ''}`}>
+        {focus ? (
+          <button className="icon-btn" onClick={() => { setView({ focus: false }); sfx('tap'); }} aria-label="اخرج من وضع التركيز" title="خروج (Esc)"><Icon name="x" /></button>
+        ) : (
+          <a href="#/" onClick={(e) => { e.preventDefault(); go('#/'); }} className="crumb"><Icon name="chevronRight" size={18} /> <span className="crumb-label">الرئيسية</span></a>
+        )}
         <div className="read-goto">
           <select value={headerSurah?.number ?? 1} onChange={(e) => { const s = SURAH_BY_NUMBER[Number(e.target.value)]; setPage(pageOf(s.number, s.verses[0].basri)); sfx('tap'); }} aria-label="السورة">
             {SURAHS.map((s) => <option key={s.number} value={s.number}>{arNum(s.number)} · {s.name.replace(/^سُورَةُ\s*/, '')}</option>)}
@@ -323,25 +439,34 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
           </label>
         </div>
         <span className="row">
-          <button className={`icon-btn${bm?.pinned && bmOnPage ? ' on' : ''}`} onClick={bookmarkHere} aria-label="علامة هنا" title={bm?.pinned && bmOnPage ? 'فكّ العلامة' : 'ثبّت العلامة هنا'}><Icon name="bookmark" /></button>
-          {bm && !bmOnPage && <button className="icon-btn" onClick={() => { sfx('tap'); setPage(pageOf(bm.surah, bm.basri)); }} aria-label="اذهب إلى العلامة" title={`العلامة: صفحة ${arNum(pageOf(bm.surah, bm.basri))}`}><Icon name="arrowLeft" /></button>}
-          <button className={`icon-btn${colours ? ' on' : ''}`} onClick={() => { updateSettings({ tajweedColors: !colours }); sfx('toggle'); }} aria-pressed={colours} aria-label="ألوان التجويد" title={colours ? 'أطفئ ألوان التجويد' : 'لوّن الحروف بأحكام التجويد'}><Icon name="sparkles" /></button>
-          <button className="icon-btn" onClick={() => go(`#/follow/${current?.surah ?? firstVerseOnPage(page).surah}/${current?.basri ?? firstVerseOnPage(page).basri}`)} aria-label="افتح في المتابعة" title="المتابعة آيةً آية"><Icon name="headphones" /></button>
+          {!focus && <button className={`icon-btn${bm?.pinned && bmOnPage ? ' on' : ''}`} onClick={bookmarkHere} aria-label="علامة هنا" title={bm?.pinned && bmOnPage ? 'فكّ العلامة' : 'ثبّت العلامة هنا'}><Icon name="bookmark" /></button>}
+          {!focus && bm && !bmOnPage && <button className="icon-btn" onClick={() => { sfx('tap'); setPage(pageOf(bm.surah, bm.basri)); }} aria-label="اذهب إلى العلامة" title={`العلامة: صفحة ${arNum(pageOf(bm.surah, bm.basri))}`}><Icon name="arrowLeft" /></button>}
+          {!focus && <button className={`icon-btn${colours ? ' on' : ''}`} onClick={() => { updateSettings({ tajweedColors: !colours }); sfx('toggle'); }} aria-pressed={colours} aria-label="ألوان التجويد" title={colours ? 'أطفئ ألوان التجويد' : 'لوّن الحروف بأحكام التجويد'}><Icon name="sparkles" /></button>}
+          <button className={`icon-btn text-size${flow ? ' on' : ''}`} onClick={() => { setView({ text: NEXT_TEXT[view.text] }); sfx('tap'); }} aria-label={`حجم النص: ${TEXT_LABEL[view.text]}`} title={`حجم النص: ${TEXT_LABEL[view.text]}. اضغط للتبديل`}><Icon name="textSize" />{flow && <small>{TEXT_LABEL[view.text]}</small>}</button>
+          <button className={`icon-btn${memo.run ? ' on' : ''}`} onClick={() => openMemo()} aria-label="احفظ بالتكرار" title="احفظ بالتكرار"><Icon name="repeat" /></button>
+          {!focus && <button className="icon-btn only-wide" onClick={() => go(`#/follow/${current?.surah ?? firstVerseOnPage(page).surah}/${current?.basri ?? firstVerseOnPage(page).basri}`)} aria-label="افتح في المتابعة" title="المتابعة آيةً آية"><Icon name="headphones" /></button>}
+          {!focus && <button className="icon-btn" onClick={() => { setView({ focus: true }); sfx('tap'); }} aria-label="وضع التركيز" title="وضع التركيز: النص فقط"><Icon name="expand" /></button>}
         </span>
       </div>
 
       <div className="mushaf-wrap">
         <button className="page-turn prev" onClick={() => turn(-1)} disabled={page <= 1} aria-label="الصفحة السابقة"><Icon name="chevronRight" /></button>
-        <article className={`mushaf-page${player.playing ? ' playing' : ''}${page <= 2 ? ' framed' : ''}`} dir="rtl" onPointerDown={onDown} onPointerUp={onUp} aria-label={`صفحة ${arNum(page)}`}>
+        <article className={`mushaf-page${player.playing ? ' playing' : ''}${page <= 2 && !flow ? ' framed' : ''}${flow ? ' flowing' : ''}`} dir="rtl" onPointerDown={onDown} onPointerUp={onUp} aria-label={`صفحة ${arNum(page)}`}>
           {bmOnPage && <Ribbon pinned={!!bm?.pinned} onClick={bookmarkHere} title={bm?.pinned ? 'علامة مثبّتة هنا — اضغط لفكّها' : 'هنا توقفت — اضغط لتثبيت العلامة'} />}
           <header className="mp-head">
             <span>{headerSurah?.name}</span>
             <span>الجزء {JUZ_NAMES[juz]}</span>
           </header>
-          <div className="mp-body" ref={body} style={{ gridTemplateRows: `repeat(${lines.length}, var(--line))` }}>
+          <div className={`mp-body${flow ? ' flow' : ''}`} data-text={view.text} ref={body} style={flow ? undefined : { gridTemplateRows: `repeat(${lines.length}, var(--line))` }}>
             {hl.bands.map((b, i) => <div key={i} className="aya-band" style={b} aria-hidden />)}
             {hl.word && <div className="word-marker" style={hl.word} aria-hidden />}
-            {lines.map((slot, li) => {
+            {(flow ? flowBlocks : lines.map((slot, li) => (slot.kind === 'text' ? { li, words: slot.words, centred: slot.centred } : { li, slot }))).map((b) => {
+              const li = b.li;
+              if ('words' in b && b.words) {
+                if (flow) return <p key={li} className="mp-flow-text" dir="rtl">{b.words.map((w) => <Fragment key={`${w.surah.number}:${w.vi}:${w.wi}`}>{wordSpan(w)}{' '}</Fragment>)}</p>;
+                return <div key={li} className={`mp-line text${'centred' in b && b.centred ? ' centred' : ''}`}>{b.words.map((w) => wordSpan(w))}</div>;
+              }
+              const slot = b.slot!;
               if (slot.kind === 'band') return (
                 <div key={li} className={`mp-line band-line${slot.compact ? ' compact' : ''}`}>
                   <SurahBand name={slot.surah.name} order={slot.surah.number} count={slot.surah.kufiCount ?? slot.surah.verses.length} revelation={slot.surah.revelation} />
@@ -351,25 +476,9 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
               if (slot.kind === 'basmalah') {
                 const playable = !!loadAlignment(reciter, slot.surah.number);
                 const first = slot.surah.verses[0];
-                return <div key={li} className="mp-line basmalah-line"><span className={`basmalah${playable ? ' wrd' : ''}`} onClick={() => playable && startAt(slot.surah.number, first.basri)} role={playable ? 'button' : undefined} title={playable ? 'اسمع من البسملة' : undefined}>{slot.surah.header}{kufi && slot.surah.headerKufi ? <> <span className="aya-n">{arNum(slot.surah.headerKufi)}</span></> : null}</span></div>;
+                return <div key={li} className="mp-line basmalah-line"><span className={`basmalah${playable ? ' wrd' : ''}`} onClick={() => playable && !memoLive && startAt(slot.surah.number, first.basri)} role={playable ? 'button' : undefined} title={playable ? 'اسمع من البسملة' : undefined}>{slot.surah.header}{kufi && slot.surah.headerKufi ? <> <span className="aya-n">{arNum(slot.surah.headerKufi)}</span></> : null}</span></div>;
               }
-              if (slot.kind === 'empty') return <div key={li} className="mp-line" />;
-              return (
-                <div key={li} className={`mp-line text${slot.centred ? ' centred' : ''}`}>
-                  {slot.words.map((w) => {
-                    const v = w.surah.verses[w.vi];
-                    const isCur = current?.surah === w.surah.number && current.basri === v.basri;
-                    const canPlay = !!loadAlignment(reciter, w.surah.number)?.verses.find((x) => x.basri === v.basri);
-                    const marked = bm?.surah === w.surah.number && bm.basri === v.basri && w.mark !== undefined;
-                    return (
-                      <span key={`${w.surah.number}:${w.vi}:${w.wi}`} data-word={v.words[w.wi]} className={`wrd${isCur ? ' in-aya' : ''}${isCur && wordsTrusted && current!.word === w.wi ? ' on' : ''}`} onClick={() => canPlay && startAt(w.surah.number, v.basri)} role={canPlay ? 'button' : undefined} title={canPlay ? `اسمع من الآية ${arNum(shownNumber(w.surah.number, v.basri, w.wi))}` : undefined}>
-                        {renderWord(w.surah.number, w.vi, w.wi)}
-                        {w.mark !== undefined && <span className={`aya-n${marked ? ' marked' : ''}`} aria-label={`الآية ${arNum(w.mark)}`}>{arNum(w.mark)}</span>}
-                      </span>
-                    );
-                  })}
-                </div>
-              );
+              return <div key={li} className="mp-line" />;
             })}
           </div>
           <footer className="mp-foot">
@@ -398,6 +507,17 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
         <button className="page-turn next" onClick={() => turn(1)} disabled={page >= PAGE_COUNT} aria-label="الصفحة التالية"><Icon name="chevronLeft" /></button>
       </div>
 
+      {flow && (
+        <div className="flow-turn">
+          <button className="toggle" onClick={() => turn(1)} disabled={page >= PAGE_COUNT}><Icon name="chevronRight" size={18} /> الصفحة التالية</button>
+          <span>{arNum(page)}</span>
+          <button className="toggle" onClick={() => turn(-1)} disabled={page <= 1}>الصفحة السابقة <Icon name="chevronLeft" size={18} /></button>
+        </div>
+      )}
+
+      {memo.run && !memo.run.completed ? (
+        <MemoHud run={memo.run} phase={memo.phase} playing={player.playing} gapEnds={memo.gapEnds} kufi={kufi} onToggle={memoToggle} onEnd={memo.clear} />
+      ) : (
       <div className="read-player">
         <button className="play" onClick={mainToggle} aria-label={player.playing ? 'إيقاف مؤقت' : 'استمع'} disabled={!align && !loadAlignment(reciter, firstVerseOnPage(page).surah)}>
           <Icon name={player.playing ? 'pause' : 'play'} size={22} />
@@ -410,13 +530,29 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
           ) : !align && !loadAlignment(reciter, firstVerseOnPage(page).surah) ? (
             <><strong>اقرأ من المصحف</strong><small>لا تلاوة متزامنة لهذه السورة بعد</small></>
           ) : (
-            <><strong>استمع وتابع</strong><small>اضغط آيةً لتبدأ منها · ← → لتقليب الصفحات</small></>
+            <><strong>استمع وتابع</strong><small>اضغط آيةً لتبدأ منها · اضغطها مطوّلًا لتحفظها بالتكرار</small></>
           )}
         </div>
         <select className="read-reciter" value={reciter} onChange={(e) => updateSettings({ reciter: e.target.value })} aria-label="القارئ">
           {RECITERS.map((r) => <option key={r.id} value={r.id}>{r.nameAr}</option>)}
         </select>
       </div>
+      )}
+
+      {sheet && (
+        <MemoSheet anchor={sheet.anchor} preset={sheet.preset} reciter={reciter} kufi={kufi} run={memo.run} defaults={settings.memo} go={go}
+          onClose={() => setSheet(null)}
+          onResume={() => { setSheet(null); if (memo.run) setPage(pageOf(memo.run.plan.surah, memo.run.plan.from)); memo.resume(); }}
+          onDiscard={() => memo.clear()}
+          onStart={(plan) => {
+            if (!plan.review) updateSettings({ memo: { count: plan.target, scope: plan.scope === 'range' ? 'verse' : plan.scope, gap: plan.gap, veil: plan.veil } });
+            setSheet(null);
+            if (memo.start(plan)) setPage(pageOf(plan.surah, plan.from));
+          }} />
+      )}
+      {memo.phase === 'complete' && memo.run?.completed && (
+        <MemoDone run={memo.run} kufi={kufi} onYes={() => memo.finish(true)} onNo={() => memo.finish(false)} onMore={(n) => memo.extend(n)} onLater={memo.clear} />
+      )}
     </div>
   );
 }
