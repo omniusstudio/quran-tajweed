@@ -94,7 +94,7 @@ enum Snapshot {
         ticker.refresh()
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
             if let v = ticker.panel.contentView { write(v, to: out) }
-            if scenario == "idle" { writePanel(to: out.replacingOccurrences(of: ".png", with: "-menu.png")) }
+            if scenario == "idle" || scenario == "menu" { writePanel(to: out.replacingOccurrences(of: ".png", with: "-menu.png")) }
             NSApp.terminate(nil)
         }
     }
@@ -102,6 +102,7 @@ enum Snapshot {
     static func writePanel(to path: String) {
         let host = NSHostingView(rootView: ControlPanel(rec: .shared, prefs: .shared, ledger: .shared, onClose: {}, onQuit: {}))
         host.frame = NSRect(x: 0, y: 0, width: 392, height: 580)
+        host.appearance = NSAppearance(named: .aqua)
         let win = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         win.contentView = host
         write(host, to: path)

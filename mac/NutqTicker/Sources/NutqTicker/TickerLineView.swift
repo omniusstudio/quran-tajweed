@@ -70,7 +70,7 @@ final class TickerLineView: NSView {
         wantsLayer = true
         layer?.masksToBounds = true
         fade.colors = [NSColor.clear.cgColor, NSColor.black.cgColor, NSColor.black.cgColor, NSColor.clear.cgColor]
-        fade.locations = [0, 0.05, 0.95, 1]
+        fade.locations = [0, 0.07, 0.93, 1]
         fade.startPoint = CGPoint(x: 0, y: 0.5)
         fade.endPoint = CGPoint(x: 1, y: 0.5)
         layer?.mask = fade

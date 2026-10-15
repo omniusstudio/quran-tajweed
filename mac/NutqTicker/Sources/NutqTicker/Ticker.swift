@@ -192,11 +192,11 @@ final class TickerController: NSObject {
         backdrop.frame = bounds
         host.frame = bounds
         let pv = prefs.showNext ? TickerLayout.previewHeight(prefs.height) : 0
-        let lw = max(80, size.width - TickerLayout.leftInset - TickerLayout.rightInset - 20)
+        let lw = max(80, size.width - TickerLayout.leftInset - TickerLayout.rightInset - 34)
         // the tape's view spans both rows so the next verse can rise into the main row
-        line.frame = NSRect(x: TickerLayout.leftInset + 10, y: 0, width: lw, height: size.height)
+        line.frame = NSRect(x: TickerLayout.leftInset + 24, y: 0, width: lw, height: size.height)
         line.rowFrame = NSRect(x: 0, y: pv, width: lw, height: size.height - pv)
-        preview.frame = NSRect(x: TickerLayout.leftInset + 10, y: 0, width: lw, height: pv)
+        preview.frame = NSRect(x: TickerLayout.leftInset + 24, y: 0, width: lw, height: pv)
         preview.isHidden = pv == 0
         backdrop.layer?.maskedCorners = prefs.dock == .top ? [.layerMinXMinYCorner, .layerMaxXMinYCorner] : [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
     }

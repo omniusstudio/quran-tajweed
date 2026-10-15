@@ -51,13 +51,23 @@ struct ControlPanel: View {
     }
 
     var body: some View {
-        ScrollView {
+        VStack(spacing: 0) {
+            ScrollView { content }
+            // the start button never scrolls out of reach
+            Divider()
+            startButton.padding(.horizontal, 16).padding(.vertical, 12)
+        }
+        .frame(width: 392, height: 580)
+        .environment(\.layoutDirection, .rightToLeft)
+        .onChange(of: surah) { _, _ in from = min(from, data.verses.count); to = max(from, min(to, data.verses.count)) }
+    }
+
+    private var content: some View {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 if let r = rec.run { runCard(r) }
                 chooser
                 modeSection
-                startButton
                 Divider()
                 progressSection
                 dueSection
@@ -70,10 +80,6 @@ struct ControlPanel: View {
                 }
             }
             .padding(16)
-        }
-        .frame(width: 392, height: 580)
-        .environment(\.layoutDirection, .rightToLeft)
-        .onChange(of: surah) { _, _ in from = min(from, data.verses.count); to = max(from, min(to, data.verses.count)) }
     }
 
     // MARK: sections
