@@ -78,6 +78,8 @@ struct ControlPanel: View {
                     Spacer()
                     Button("خروج", action: onQuit).buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(.secondary)
                 }
+                Text("الصوت: الشيخ نورين محمد صديق، رواية الدوري عن أبي عمرو، عبر mp3quran.net · الإصدار \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev")")
+                    .font(.system(size: 10)).foregroundStyle(.tertiary)
             }
             .padding(16)
     }

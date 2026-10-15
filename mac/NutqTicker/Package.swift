@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "NutqTicker",
-    platforms: [.macOS(.v15)],
+    platforms: [.macOS(.v14)],
     products: [.executable(name: "NutqTicker", targets: ["NutqTicker"])],
     targets: [
         .executableTarget(name: "NutqTicker", path: "Sources/NutqTicker"),

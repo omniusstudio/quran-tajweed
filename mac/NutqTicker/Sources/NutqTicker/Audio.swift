@@ -73,7 +73,14 @@ final class AudioStore {
         let part = dir.appendingPathComponent("\(nnn).part.m4a")
         try? fm.removeItem(at: part)
         do {
-            try await session.export(to: part, as: .m4a)
+            if #available(macOS 15, *) {
+                try await session.export(to: part, as: .m4a)
+            } else {
+                session.outputURL = part
+                session.outputFileType = .m4a
+                await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in session.exportAsynchronously { c.resume() } }
+                if session.status != .completed { throw session.error ?? NSError(domain: "Nutq", code: 3) }
+            }
             try? fm.removeItem(at: m4a)
             try fm.moveItem(at: part, to: m4a)
             return m4a

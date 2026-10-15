@@ -18,6 +18,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ticker.attach(item: statusItem, restoreIcon: { [weak self] in self?.restoreStatusIcon() })
         setupHotKeys()
         Task { await Ledger.shared.sync() }
+        // first launch: open the menu once so a new reader sees where everything is
+        if !UserDefaults.standard.bool(forKey: "welcomed"), ProcessInfo.processInfo.environment["NUTQ_DEMO"] == nil {
+            UserDefaults.standard.set(true, forKey: "welcomed")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in self?.togglePopover() }
+        }
         if let spec = ProcessInfo.processInfo.environment["NUTQ_DEMO"] { Snapshot.demo(spec, ticker: ticker) }
         if ProcessInfo.processInfo.environment["NUTQ_POPOVER"] != nil {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {

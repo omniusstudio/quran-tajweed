@@ -15,3 +15,10 @@ app, follows the recitation word by word, and runs the repeat-to-memorize sessio
 - Development: `NUTQ_RES=mac/build/Resources NUTQ_SUPPORT=/tmp/x NUTQ_NOSYNC=1 NUTQ_MUTE=1 swift run`;
   `--selftest` plays a short muted session; `NUTQ_DEMO=<scenario>:<out.png>` renders the strip to a PNG
   (idle, hover, veil, veil3, gap, prompt, loading, long, dark, play, click).
+
+## Packaging for other people
+
+`bash scripts/package_mac_ticker.sh 1.0.0` builds a universal (Apple silicon + Intel, macOS 14+) app, signs it with the
+Omnius Studio Developer ID with the hardened runtime, notarizes it with the `soli-notary` keychain profile, staples it and
+puts it in a signed, notarized disk image at `mac/dist/NutqTicker-<version>.dmg` (about 3 MB; recordings are fetched on first
+use). Set `NUTQ_SKIP_NOTARIZE=1` for a signed-only local build.
