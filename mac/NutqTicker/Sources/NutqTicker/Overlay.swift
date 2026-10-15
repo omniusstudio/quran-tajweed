@@ -7,7 +7,7 @@ final class TickerUI: ObservableObject {
 }
 
 enum TickerLayout {
-    static let rightInset: CGFloat = 176
+    static let rightInset: CGFloat = 128
     /// Wide enough for the ring and all five hover buttons while a session runs (they were clipped at 152).
     static let leftInset: CGFloat = 212
     /// The second line, where the next verse waits faded.
@@ -100,9 +100,10 @@ struct OverlayView: View {
             // a click anywhere on the strip plays or pauses
             Color.clear.contentShape(Rectangle()).onTapGesture { rec.toggle() }
             HStack(spacing: 0) {
-                chip.frame(width: TickerLayout.rightInset, alignment: .trailing)
+                // the layout is right-to-left, so .leading is the right edge and .trailing the left edge
+                chip.frame(width: TickerLayout.rightInset, alignment: .leading)
                 Spacer(minLength: 0)
-                controls.frame(width: TickerLayout.leftInset, alignment: .leading)
+                controls.frame(width: TickerLayout.leftInset, alignment: .trailing)
             }
             .padding(.horizontal, 10)
             if let m = message {
@@ -119,7 +120,7 @@ struct OverlayView: View {
     }
 
     private var chip: some View {
-        VStack(alignment: .trailing, spacing: 1) {
+        VStack(alignment: .leading, spacing: 1) {
             if let l = label {
                 Text(l.title).font(.system(size: 14, weight: .semibold)).foregroundStyle(ink).lineLimit(1)
                 if case .gap(let until) = rec.phase {
@@ -131,7 +132,7 @@ struct OverlayView: View {
                 }
             }
         }
-        .padding(.trailing, 4)
+        .padding(.leading, 4)
     }
 
     private var ring: some View {
@@ -175,7 +176,7 @@ struct OverlayView: View {
                 IconButton(system: "xmark", label: "إخفاء الشريط (⌃⌥H)", size: 11, color: ink) { onHide() }
             }
         }
-        .padding(.leading, 4)
+        .padding(.trailing, 4)
     }
 
     private func prompt(_ r: Run) -> some View {

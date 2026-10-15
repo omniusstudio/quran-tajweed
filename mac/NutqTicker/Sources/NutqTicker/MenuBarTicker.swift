@@ -126,7 +126,7 @@ struct CompactOverlay: View {
             Color.clear.contentShape(Rectangle()).onTapGesture { onMenu() }
             HStack(spacing: 0) {
                 Text(title).font(.system(size: 11.5, weight: .semibold)).foregroundStyle(ink).lineLimit(1)
-                    .frame(width: MenuBarTicker.insetRight - 12, alignment: .trailing).padding(.trailing, 8)
+                    .frame(width: MenuBarTicker.insetRight - 12, alignment: .leading).padding(.leading, 6)
                 Spacer(minLength: 0)
                 ring.frame(width: MenuBarTicker.insetLeft, alignment: .center)
             }
