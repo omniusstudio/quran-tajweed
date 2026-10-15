@@ -72,6 +72,11 @@ export const STAGE_LABEL = (fraction: number) => (fraction === 0 ? 'النص ك�
 function hash(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  // FNV-1a alone moves only the low bits when the last character changes, so neighbouring words
+  // would hash alike; a final avalanche spreads them (murmur3's finalizer)
+  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
   return (h >>> 0) / 4294967296;
 }
 /** Whether a word is hidden at a given veil fraction. The set only grows as the fraction does. */

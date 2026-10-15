@@ -10,3 +10,5 @@ app/.local/
 data/hafs_audio/
 data/hadith_cache/
 data/mushaf_lines/
+mac/build/
+mac/NutqTicker/.build/

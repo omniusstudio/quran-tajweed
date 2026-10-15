@@ -104,3 +104,14 @@ describe('repeat session plan', () => {
     expect(b.size).toBeGreaterThan(100);
   });
 });
+
+describe('the veil on a short verse', () => {
+  it('hides some words first, not all at once', () => {
+    const n = 9;
+    const hidden = (f: number) => Array.from({ length: n }, (_, i) => i).filter((w) => isVeiled(2, 255, w, f)).length;
+    expect(hidden(1 / 3)).toBeGreaterThan(0);
+    expect(hidden(1 / 3)).toBeLessThan(n);
+    expect(hidden(2 / 3)).toBeGreaterThanOrEqual(hidden(1 / 3));
+    expect(hidden(2 / 3)).toBeLessThan(n);
+  });
+});
