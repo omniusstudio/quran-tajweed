@@ -90,6 +90,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
     const a = loadAlignment(reciter, s);
     const v = a?.verses.find((x) => x.basri === basri);
     if (!a || !v) return;
+    player.unlock();
     sfx('tap');
     const at = startTime(a, v);   // a sūrah starts with its basmalah when the reciter reads one
     if (s !== playSurah) { pendingStart.current = at; setPlaySurah(s); return; }
@@ -100,6 +101,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
   const memoActive = memo.phase === 'gap' || (memo.phase === 'listening' && player.playing);
   const memoToggle = () => (memoActive ? memo.pause() : memo.resume());
   const mainToggle = () => {
+    player.unlock();
     if (memoLive) return memoToggle();
     if (player.playing) return player.pause();
     if (!align || segs.every((g) => g.surah.number !== playSurah)) {
@@ -527,6 +529,8 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
             <><strong>{SURAH_BY_NUMBER[current.surah].name.replace(/^سُورَةُ\s*/, '')} · الآية {arNum(shownNumber(current.surah, current.basri, current.word))}</strong><small>{RECITERS.find((r) => r.id === reciter)?.nameAr}</small></>
           ) : player.loading !== null ? (
             <><strong>جارٍ جلب التلاوة…</strong><small>{arNum(Math.round(player.loading * 100))}٪</small></>
+          ) : player.error ? (
+            <><strong>تعذّر تشغيل التلاوة</strong><small>اضغط زر التشغيل لتعيد المحاولة</small></>
           ) : !align && !loadAlignment(reciter, firstVerseOnPage(page).surah) ? (
             <><strong>اقرأ من المصحف</strong><small>لا تلاوة متزامنة لهذه السورة بعد</small></>
           ) : (

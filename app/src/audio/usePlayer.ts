@@ -1,6 +1,9 @@
 import { setBusy } from '../ui/activity';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+/** 0.1 s of silence, played on the first tap so the element counts as started by the user. */
+const SILENCE = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+
 export type PlaySpeed = 0.5 | 0.75 | 1;
 
 export interface Player {
@@ -15,6 +18,8 @@ export interface Player {
   speed: PlaySpeed;
   loop: [number, number] | null;
   play: () => Promise<void>;
+  /** Call inside a tap: lets a recording that loads afterwards start by itself (iOS only allows play() on an element a tap has already played). */
+  unlock: () => void;
   pause: () => void;
   toggle: () => void;
   seek: (t: number) => void;
@@ -156,9 +161,15 @@ export function usePlayer(src: string | null): Player {
   const play = useCallback(async () => {
     try {
       await audio.play();
+      setError(null);
     } catch (e) {
       setError(String(e));
     }
+  }, [audio]);
+  const unlock = useCallback(() => {
+    if (audio.src) return;
+    audio.src = SILENCE;
+    void audio.play().catch(() => undefined);
   }, [audio]);
   const pause = useCallback(() => audio.pause(), [audio]);
   const toggle = useCallback(() => {
@@ -199,7 +210,7 @@ export function usePlayer(src: string | null): Player {
     [audio],
   );
 
-  return { audio, time, duration, playing, ready, error, loading, speed, loop, play, pause, toggle, seek, setSpeed, setLoop, setPassHandler, playRange };
+  return { audio, time, duration, playing, ready, error, loading, speed, loop, play, unlock, pause, toggle, seek, setSpeed, setLoop, setPassHandler, playRange };
 }
 
 /** A short beep for echo mode (no TTS, just a tone). */

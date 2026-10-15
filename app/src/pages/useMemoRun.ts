@@ -130,12 +130,14 @@ export function useMemoRun(opts: { player: Player; align: SurahAlign | undefined
   };
 
   const start = (plan: MemoPlan) => {
+    player.unlock();
     if (!loadAlignment(reciter, plan.surah)) return false;
     const r: MemoRun = { plan, done: 0, at: Date.now() };
     commit(r);
     return launch(r);
   };
   const resume = () => {
+    player.unlock();
     const r = runRef.current;
     if (!r || r.completed) return;
     const range = rangeOf(r);
