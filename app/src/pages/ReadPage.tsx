@@ -445,7 +445,7 @@ export function ReadPage({ surah, verse, go }: { surah?: number; verse?: number;
           <button className={`icon-btn text-size${flow ? ' on' : ''}`} onClick={() => { setView({ text: NEXT_TEXT[view.text] }); sfx('tap'); }} aria-label={`حجم النص: ${TEXT_LABEL[view.text]}`} title={`حجم النص: ${TEXT_LABEL[view.text]}. اضغط للتبديل`}><Icon name="textSize" />{flow && <small>{TEXT_LABEL[view.text]}</small>}</button>
           <button className={`icon-btn${memo.run ? ' on' : ''}`} onClick={() => openMemo()} aria-label="احفظ بالتكرار" title="احفظ بالتكرار"><Icon name="repeat" /></button>
           {!focus && <button className="icon-btn only-wide" onClick={() => go(`#/follow/${current?.surah ?? firstVerseOnPage(page).surah}/${current?.basri ?? firstVerseOnPage(page).basri}`)} aria-label="افتح في المتابعة" title="المتابعة آيةً آية"><Icon name="headphones" /></button>}
-          {!focus && <button className="icon-btn" onClick={() => { setView({ focus: true }); sfx('tap'); }} aria-label="وضع التركيز" title="وضع التركيز: النص فقط"><Icon name="expand" /></button>}
+          {!focus && <button className="icon-btn" onClick={() => { setView({ focus: true, ...(!view.chosen && innerWidth < 600 ? { text: 'large', chosen: false } : {}) }); sfx('tap'); }} aria-label="وضع التركيز" title="وضع التركيز: النص فقط"><Icon name="expand" /></button>}
         </span>
       </div>
 

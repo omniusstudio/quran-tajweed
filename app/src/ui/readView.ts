@@ -5,18 +5,18 @@
 import { useSyncExternalStore } from 'react';
 
 export type ReadText = 'page' | 'large' | 'xlarge';
-export interface ReadView { focus: boolean; text: ReadText }
+export interface ReadView { focus: boolean; text: ReadText; /** The reader picked a size themselves, so it is never chosen for them. */ chosen?: boolean }
 
 const KEY = 'nutq.read.view';
 let state: ReadView = { focus: false, text: 'page' };
 try {
   const raw = JSON.parse(localStorage.getItem(KEY) || 'null') as Partial<ReadView> | null;
-  if (raw) state = { focus: !!raw.focus, text: raw.text === 'large' || raw.text === 'xlarge' ? raw.text : 'page' };
+  if (raw) state = { focus: !!raw.focus, text: raw.text === 'large' || raw.text === 'xlarge' ? raw.text : 'page', chosen: !!raw.chosen };
 } catch { /* ignore */ }
 
 const listeners = new Set<() => void>();
 export function setReadView(patch: Partial<ReadView>) {
-  state = { ...state, ...patch };
+  state = { ...state, ...patch, ...(patch.text && !('chosen' in patch) ? { chosen: true } : {}) };
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch { /* ignore */ }
   listeners.forEach((l) => l());
 }
