@@ -210,10 +210,36 @@ final class Recitation: ObservableObject {
     func next() { step(+1) }
     func previous() { step(-1) }
 
+    /// Move to the next or previous verse. With a session running it moves the session along (same count, gap and
+    /// veil, counted afresh); otherwise it moves the reading, loading the recording first if nothing is loaded yet.
     private func step(_ by: Int) {
-        guard let a = align, item != nil else { return }
-        let i = min(max(0, verseIndex + by), a.verses.count - 1)
-        Task { await seek(a.startTime(i)); verseIndex = i }
+        if let r = run, !r.completed {
+            let n = Quran.shared.surah(r.plan.surah)?.verses.count ?? 0
+            let a = r.plan.from + by, b = r.plan.to + by
+            guard a >= 1, b <= n else { return }
+            var plan = r.plan
+            plan.from = a; plan.to = b; plan.wholeSurah = false
+            startRun(plan)
+            return
+        }
+        Task {
+            let n = align?.surah ?? prefs.lastSurah
+            guard await load(n), let a = align else { return }
+            let from = item != nil && state != .idle ? verseIndex : (a.index(of: prefs.lastVerse) ?? 0)
+            let i = from + by
+            if i < 0 || i >= a.verses.count {
+                // across a sūrah boundary: read on from the neighbour
+                let m = n + (i < 0 ? -1 : 1)
+                guard m >= 1, m <= 114, SurahAlign.exists(surah: m, reciter: reciter) else { return }
+                if let b = SurahAlign(surah: m, reciter: reciter) { read(surah: m, from: i < 0 ? b.verses[b.verses.count - 1].basri : 1) }
+                return
+            }
+            await seek(a.startTime(i))
+            verseIndex = i
+            prefs.lastSurah = n
+            prefs.lastVerse = a.verses[i].basri
+            if state == .idle { state = .paused }
+        }
     }
 
     func setVolume(_ v: Double) { prefs.volume = v; player.volume = Float(v) }

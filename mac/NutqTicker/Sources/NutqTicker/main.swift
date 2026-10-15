@@ -19,6 +19,21 @@ if CommandLine.arguments.contains("--selftest") {
         print("completed; ledger reps 112:1 =", r.ledger.reps("112:1"), "days:", r.ledger.days)
         r.finish(true)
         print("memorized:", r.ledger.isDone("112:1"), "queued:", r.queued.count)
+        // navigation from a cold start: next / previous must move the verse even with nothing loaded
+        r.endRun()
+        UserDefaults.standard.set(112, forKey: "lastSurah"); Prefs.shared.lastSurah = 112; Prefs.shared.lastVerse = 1
+        r.next()
+        try? await Task.sleep(nanoseconds: 2_000_000_000)
+        print("after next: verse index", r.verseIndex, "lastVerse", Prefs.shared.lastVerse)
+        r.previous()
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        print("after previous: verse index", r.verseIndex, "lastVerse", Prefs.shared.lastVerse)
+        // and with a session paused in the background
+        r.startRun(Plan(surah: 112, from: 1, to: 1, target: 5, gap: .none, veil: false))
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        r.next()
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        print("session after next:", r.run?.plan.from as Any, r.run?.done as Any)
         exit(0)
     }
     RunLoop.main.run()
