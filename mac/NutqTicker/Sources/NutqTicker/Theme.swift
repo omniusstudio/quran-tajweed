@@ -25,11 +25,20 @@ struct TickerTheme {
         dim: NSColor(srgbRed: 0.62, green: 0.67, blue: 0.64, alpha: 1),
         dark: true)
 
+    /// Quiet, neutral colours that follow the menu bar or the system appearance: ink, a faint highlight, no paper.
+    static func system(dark: Bool) -> TickerTheme {
+        dark
+            ? TickerTheme(background: NSColor(white: 0.16, alpha: 0.9), ink: NSColor(white: 1, alpha: 0.94), highlight: NSColor(white: 1, alpha: 0.17), rule: NSColor(white: 1, alpha: 0.45), dim: NSColor(white: 1, alpha: 0.6), dark: true)
+            : TickerTheme(background: NSColor(white: 0.97, alpha: 0.9), ink: NSColor(white: 0, alpha: 0.86), highlight: NSColor(white: 0, alpha: 0.1), rule: NSColor(white: 0, alpha: 0.34), dim: NSColor(white: 0, alpha: 0.52), dark: false)
+    }
+
+    static var systemIsDark: Bool { NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua }
+
     static func current(_ mode: ThemeMode) -> TickerTheme {
         switch mode {
         case .paper: return .paper
         case .dark: return .night
-        case .auto: return NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .night : .paper
+        case .system: return .system(dark: systemIsDark)
         }
     }
 

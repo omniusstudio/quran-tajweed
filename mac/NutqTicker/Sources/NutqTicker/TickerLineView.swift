@@ -2,14 +2,20 @@ import AppKit
 import CoreText
 import QuartzCore
 
-/// The tape: one verse on one line in the muṣḥaf font. A verse wider than the strip glides along so the
-/// word being recited stays near the middle; the word has a marker that slides from word to word, and
-/// words the session has veiled show only a line where they stand.
+/// The tape: verses in the muṣḥaf font on one line. In the large strip it is the one verse; in the menu bar it
+/// is the verse being read with the ones before and after it, so the ayat keep scrolling in without ever
+/// resetting. The tape glides so the word being recited stays near the middle, a marker slides from word to
+/// word, and words the session has veiled show only a line where they stand.
 final class TickerLineView: NSView {
     struct Content: Equatable {
         var surah: Int
-        var basri: Int
+        /// Baṣrī numbers of the verses on the tape, and which one is being read.
+        var basris: [Int]
+        var current: Int
+        /// The share of words hidden in the verses of the session (those from `veilFrom` to `veilTo`).
         var veil: Double
+        var veilFrom: Int
+        var veilTo: Int
         var peek: Bool
         var colours: Bool
         var kufi: Bool
@@ -21,18 +27,21 @@ final class TickerLineView: NSView {
     /// The preview line of the next verse: faded, no marker on a word, no veil lines.
     var isPreview = false
     var baseAlpha: CGFloat = 1
-    /// The word sounding now in the verse shown, or nil.
+    /// The word sounding now in the verse being read, or nil.
     var activeProvider: (() -> Int?)?
     var isPlaying: () -> Bool = { false }
+    /// How strongly the verses around the one being read are drawn.
+    var neighbourAlpha: CGFloat = 0.55
 
-    private var verse: VerseData?
+    private var verses: [VerseData] = []
     private var content: Content?
     private var line: CTLine?
     private var lineWidth: CGFloat = 0
     private var ascent: CGFloat = 0
     private var descent: CGFloat = 0
-    private var wordX: [(CGFloat, CGFloat)] = []
-    private var veiled: Set<Int> = []
+    /// x extent of every word, per verse on the tape.
+    private var wordX: [[(CGFloat, CGFloat)]] = []
+    private var veiled: [(Int, Int)] = []
     private var markers: [(x0: CGFloat, x1: CGFloat, label: String)] = []
 
     /// Where the line sits inside this view (the whole strip is the view's height so a line can rise into place).
@@ -96,18 +105,42 @@ final class TickerLineView: NSView {
 
     // MARK: content
 
-    /// Show a verse. `rise` brings it in from where the faded preview of the same verse stood: below, smaller, fainter.
+    /// One verse.
     func show(verse: VerseData?, content: Content, rise: (dy: CGFloat, scale: CGFloat, alpha: CGFloat)? = nil) {
-        let changed = verse?.b != self.verse?.b || content.surah != self.content?.surah
-        if self.content == content, !changed { return }
-        self.verse = verse
+        show(verses: verse.map { [$0] } ?? [], content: content, rise: rise)
+    }
+
+    /// Verses in a row; `content.current` is the one being read. When the next verse becomes current the tape
+    /// is rebuilt around it and slid so that nothing visibly moves.
+    func show(verses new: [VerseData], content: Content, rise: (dy: CGFloat, scale: CGFloat, alpha: CGFloat)? = nil) {
+        let key = new.indices.contains(content.current) ? "\(content.surah):\(new[content.current].b)" : nil
+        let sameTape = self.content?.basris == content.basris && self.content?.surah == content.surah
+        if self.content == content, sameTape { return }
+        let changedVerse = key != verseKey
+        // where, on screen, the verse about to become current stands now: the tape is re-aligned to it afterwards
+        var anchor: CGFloat?
+        if changedVerse, !sameTape, let old = self.content, let b = content.basris.indices.contains(content.current) ? content.basris[content.current] : nil,
+           old.surah == content.surah, let oi = old.basris.firstIndex(of: b), wordX.indices.contains(oi), let w = wordX[oi].first {
+            anchor = offsetX + (w.0 + w.1) / 2
+        }
+        verses = new
         self.content = content
-        verseKey = verse.map { "\(content.surah):\($0.b)" }
+        verseKey = key
         rebuild()
-        if changed {
-            if let r = rise { ySh = r.dy; sc = r.scale; alpha = r.alpha } else { ySh = 0; sc = 1; alpha = 0 }
-            prog = 0
-            retarget(jump: true)
+        if changedVerse {
+            if let a = anchor, wordX.indices.contains(content.current), let w = wordX[content.current].first {
+                // seamless: the same word stays where it was
+                offsetX = a - (w.0 + w.1) / 2
+                if rise == nil { alpha = 1 }
+                ySh = 0; sc = 1
+                prog = 0
+                retarget(jump: false)
+                hlX = hlTargetX; hlW = hlTargetW
+            } else {
+                if let r = rise { ySh = r.dy; sc = r.scale; alpha = r.alpha } else { ySh = 0; sc = 1; alpha = 0 }
+                prog = 0
+                retarget(jump: true)
+            }
         } else {
             retarget(jump: false)
         }
@@ -118,48 +151,55 @@ final class TickerLineView: NSView {
     func setVisible(_ on: Bool) { groupTarget = on ? 1 : 0; wake() }
     /// Dim the line while the reader says the verse back.
     func setDim(_ on: Bool) { dimTarget = on ? 0.5 : 1; wake() }
-
     func wake() { link?.isPaused = false }
 
     private func rebuild() {
-        guard let v = verse, let c = content else { line = nil; needsDisplay = true; return }
+        guard let c = content, !verses.isEmpty else { line = nil; needsDisplay = true; return }
         let font = QuranFont.font(size: c.fontSize)
         let sp = max(c.fontSize * 0.28, 5)
         let m = NSMutableAttributedString()
-        var ranges: [NSRange] = []
+        var ranges: [[NSRange]] = []
         var marks: [(NSRange, String)] = []
-        let endAt = Dictionary(v.ends.map { ($0.0, $0.1) }, uniquingKeysWith: { a, _ in a })
         veiled = []
-        for (i, word) in v.words.enumerated() {
-            let hidden = !c.peek && Memo.isVeiled(surah: c.surah, basri: c.basri, word: i, fraction: c.veil)
-            if hidden { veiled.insert(i) }
-            let start = m.length
-            for p in word {
-                let color: NSColor = hidden ? .clear : (c.colours ? (p.tone.flatMap { Quran.shared.tones[$0] }.map { theme.tone($0) } ?? theme.ink) : theme.ink)
-                // CoreText's own colour key keeps a fully transparent colour transparent (a veiled word)
-                m.append(NSAttributedString(string: p.text, attributes: [.font: font, NSAttributedString.Key(kCTForegroundColorAttributeName as String): color.cgColor]))
-            }
-            ranges.append(NSRange(location: start, length: m.length - start))
-            if let n = endAt[i + 1] {
-                let last = i + 1 == v.words.count
-                if last || c.kufi {
-                    let s = m.length
-                    m.append(NSAttributedString(string: " ", attributes: [.font: font, .kern: c.fontSize * 0.95]))
-                    marks.append((NSRange(location: s, length: 1), arNum(c.kufi ? n : v.b)))
+        for (k, v) in verses.enumerated() {
+            let isCurrent = k == c.current
+            let inSession = v.b >= c.veilFrom && v.b <= c.veilTo
+            let endAt = Dictionary(v.ends.map { ($0.0, $0.1) }, uniquingKeysWith: { a, _ in a })
+            var vr: [NSRange] = []
+            for (i, word) in v.words.enumerated() {
+                let hidden = !c.peek && inSession && Memo.isVeiled(surah: c.surah, basri: v.b, word: i, fraction: c.veil)
+                if hidden { veiled.append((k, i)) }
+                let start = m.length
+                for p in word {
+                    var color: NSColor = hidden ? .clear : (c.colours ? (p.tone.flatMap { Quran.shared.tones[$0] }.map { theme.tone($0) } ?? theme.ink) : theme.ink)
+                    if !isCurrent, !hidden { color = color.withAlphaComponent(neighbourAlpha) }
+                    // CoreText's own colour key keeps a fully transparent colour transparent (a veiled word)
+                    m.append(NSAttributedString(string: p.text, attributes: [.font: font, NSAttributedString.Key(kCTForegroundColorAttributeName as String): color.cgColor]))
                 }
+                vr.append(NSRange(location: start, length: m.length - start))
+                if let n = endAt[i + 1] {
+                    let last = i + 1 == v.words.count
+                    if last || c.kufi {
+                        let s = m.length
+                        m.append(NSAttributedString(string: " ", attributes: [.font: font, .kern: c.fontSize * 0.95]))
+                        marks.append((NSRange(location: s, length: 1), arNum(c.kufi ? n : v.b)))
+                    }
+                }
+                if i < v.words.count - 1 || k < verses.count - 1 { m.append(NSAttributedString(string: " ", attributes: [.font: font, .kern: sp * 0.4])) }
             }
-            if i < v.words.count - 1 { m.append(NSAttributedString(string: " ", attributes: [.font: font, .kern: sp * 0.4])) }
+            ranges.append(vr)
         }
-        if ProcessInfo.processInfo.environment["NUTQ_DEBUG"] != nil { print("rebuild verse=\(c.surah):\(c.basri) veil=\(c.veil) peek=\(c.peek) veiled=\(veiled.sorted()) of \(v.words.count)") }
         let l = CTLineCreateWithAttributedString(m)
         var a: CGFloat = 0, d: CGFloat = 0
         lineWidth = CGFloat(CTLineGetTypographicBounds(l, &a, &d, nil))
         ascent = a; descent = d
         line = l
         func x(_ idx: Int) -> CGFloat { CTLineGetOffsetForStringIndex(l, idx, nil) }
-        wordX = ranges.map { r in
-            let p = x(r.location), q = x(r.location + r.length)
-            return (min(p, q), max(p, q))
+        wordX = ranges.map { vr in
+            vr.map { r in
+                let p = x(r.location), q = x(r.location + r.length)
+                return (min(p, q), max(p, q))
+            }
         }
         markers = marks.map { r, label in
             let p = x(r.location), q = x(r.location + r.length)
@@ -172,20 +212,22 @@ final class TickerLineView: NSView {
 
     private func retarget(jump: Bool) {
         let V = row.width
-        guard line != nil, V > 0 else { return }
+        guard line != nil, V > 0, let c = content else { return }
         let pad: CGFloat = 14
-        let active = activeProvider?().flatMap { wordX.indices.contains($0) ? $0 : nil }
+        let words = wordX.indices.contains(c.current) ? wordX[c.current] : []
+        let active = activeProvider?().flatMap { words.indices.contains($0) ? $0 : nil }
         if lineWidth <= V - 2 * pad {
             targetX = (V - lineWidth) / 2
-        } else {
+        } else if let focus = words[safe: active ?? 0] ?? words.first {
             // upcoming words are to the left, so the word in focus sits a little right of centre
-            let focus = wordX[active ?? 0]
             let want = V * 0.6 - (focus.0 + focus.1) / 2
             targetX = min(pad, max(V - pad - lineWidth, want))
+            // a tape of several verses never runs out of text, so it may run past the edges
+            if verses.count > 1 { targetX = want }
         }
-        if let i = active {
-            hlTargetX = wordX[i].0
-            hlTargetW = wordX[i].1 - wordX[i].0
+        if let i = active, words.indices.contains(i) {
+            hlTargetX = words[i].0
+            hlTargetW = words[i].1 - words[i].0
             if !hasHighlight { hlX = hlTargetX; hlW = hlTargetW; hasHighlight = true }
         } else {
             hasHighlight = false
@@ -227,7 +269,7 @@ final class TickerLineView: NSView {
         let h = ascent + descent
         let base = row.minY + (row.height - h) / 2 + descent
         if hasHighlight, !isPreview {
-            let r = CGRect(x: offsetX + hlX - 5, y: base - descent - 1, width: hlW + 10, height: h + 2)
+            let r = CGRect(x: offsetX + hlX - 4, y: base - descent - 1, width: hlW + 8, height: h + 2)
             ctx.setFillColor(theme.highlight.cgColor)
             ctx.addPath(CGPath(roundedRect: r, cornerWidth: 5, cornerHeight: 5, transform: nil))
             ctx.fillPath()
@@ -236,10 +278,10 @@ final class TickerLineView: NSView {
         ctx.setStrokeColor(theme.rule.withAlphaComponent(0.85).cgColor)
         ctx.setLineWidth(1.8)
         ctx.setLineCap(.round)
-        for i in veiled where wordX.indices.contains(i) {
+        for (k, i) in veiled where wordX.indices.contains(k) && wordX[k].indices.contains(i) {
             let y = base - descent * 0.2
-            ctx.move(to: CGPoint(x: offsetX + wordX[i].0 + 1, y: y))
-            ctx.addLine(to: CGPoint(x: offsetX + wordX[i].1 - 1, y: y))
+            ctx.move(to: CGPoint(x: offsetX + wordX[k][i].0 + 1, y: y))
+            ctx.addLine(to: CGPoint(x: offsetX + wordX[k][i].1 - 1, y: y))
         }
         ctx.strokePath()
         ctx.textMatrix = .identity
@@ -279,4 +321,8 @@ final class TickerLineView: NSView {
             ctx.strokePath()
         }
     }
+}
+
+private extension Array {
+    subscript(safe i: Int) -> Element? { indices.contains(i) ? self[i] : nil }
 }

@@ -38,6 +38,7 @@ final class TickerController: NSObject {
     private let line = TickerLineView(frame: .zero)
     private let preview = TickerLineView(frame: .zero)
     private let backdrop = NSView()
+    private let effect = NSVisualEffectView()
     private var host: FirstMouseHost<OverlayView>!
     private var bag = Set<AnyCancellable>()
     private var peekTimer: Timer?
@@ -71,6 +72,12 @@ final class TickerController: NSObject {
         backdrop.layer?.cornerRadius = 8
         backdrop.layer?.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         backdrop.layer?.borderWidth = 1
+        effect.material = .menu
+        effect.blendingMode = .behindWindow
+        effect.state = .active
+        effect.wantsLayer = true
+        effect.layer?.cornerRadius = 8
+        root.addSubview(effect)
         root.addSubview(backdrop)
         root.addSubview(line)
         preview.isPreview = true
@@ -190,6 +197,8 @@ final class TickerController: NSObject {
         let bounds = NSRect(origin: .zero, size: size)
         panel.contentView?.frame = bounds
         backdrop.frame = bounds
+        effect.frame = bounds
+        effect.layer?.maskedCorners = prefs.dock == .top || prefs.mode == .menuBar ? [.layerMinXMinYCorner, .layerMaxXMinYCorner] : [.layerMinXMaxYCorner, .layerMaxXMaxYCorner]
         host.frame = bounds
         let pv = prefs.showNext ? TickerLayout.previewHeight(prefs.height) : 0
         let lw = max(80, size.width - TickerLayout.leftInset - TickerLayout.rightInset - 34)
@@ -222,8 +231,10 @@ final class TickerController: NSObject {
         panel.ignoresMouseEvents = prefs.clickThrough
         if lastFrame.height != totalHeight || abs(lastFrame.width - width(for: NSScreen.screens.first ?? NSScreen.main!)) > 1 { lastFrame = .zero; reposition() }
         let theme = TickerTheme.current(prefs.theme)
-        backdrop.layer?.backgroundColor = theme.background.cgColor
-        backdrop.layer?.borderColor = theme.rule.withAlphaComponent(0.55).cgColor
+        backdrop.layer?.backgroundColor = (prefs.theme == .system ? NSColor.clear : theme.background).cgColor
+        backdrop.layer?.borderColor = theme.rule.withAlphaComponent(prefs.theme == .system ? 0.35 : 0.55).cgColor
+        effect.isHidden = prefs.theme != .system
+        effect.appearance = prefs.theme == .system ? nil : NSAppearance(named: theme.dark ? .darkAqua : .aqua)
         line.theme = theme
         preview.theme = theme
         let showMessage: Bool = { if case .playing = rec.state { return false }; if case .paused = rec.state { return false }; if case .idle = rec.state { return false }; return true }()
@@ -245,14 +256,15 @@ final class TickerController: NSObject {
             rise = (dy: pv / 2 - (pv + (lastFrame.height - pv) / 2), scale: TickerLayout.previewScale, alpha: 0.55)
         }
         line.progressProvider = { [weak self] in self?.progress() }
-        line.show(verse: cv.verse, content: TickerLineView.Content(surah: cv.surah.n, basri: cv.verse.b, veil: veil, peek: ui.peek, colours: prefs.colours, kufi: prefs.kufi, dark: theme.dark, fontSize: CGFloat(prefs.height) * 0.5 * CGFloat(prefs.fontScale)), rise: rise)
+        let range = sessionRange(cv.surah.n)
+        line.show(verse: cv.verse, content: TickerLineView.Content(surah: cv.surah.n, basris: [cv.verse.b], current: 0, veil: veil, veilFrom: range.0, veilTo: range.1, peek: ui.peek, colours: prefs.colours, kufi: prefs.kufi, dark: theme.dark, fontSize: CGFloat(prefs.height) * 0.5 * CGFloat(prefs.fontScale)), rise: rise)
         line.wake()
         updateBar(cv: cv, veil: veil, theme: theme, hidden: showMessage || prompting)
         // the next verse, faded under this one
         if prefs.showNext, let next = cv.surah.verses.first(where: { $0.b > cv.verse.b }) {
             let pf = CGFloat(prefs.height) * 0.5 * CGFloat(prefs.fontScale) * TickerLayout.previewScale
             lastPreviewKey = "\(cv.surah.n):\(next.b)"
-            preview.show(verse: next, content: TickerLineView.Content(surah: cv.surah.n, basri: next.b, veil: 0, peek: true, colours: prefs.colours, kufi: prefs.kufi, dark: theme.dark, fontSize: pf))
+            preview.show(verse: next, content: TickerLineView.Content(surah: cv.surah.n, basris: [next.b], current: 0, veil: 0, veilFrom: 0, veilTo: -1, peek: true, colours: prefs.colours, kufi: prefs.kufi, dark: theme.dark, fontSize: pf))
             preview.isHidden = false
         } else {
             preview.isHidden = true
@@ -269,13 +281,26 @@ final class TickerController: NSObject {
         return (CGFloat(min(1, max(0, (t - v.start) / max(0.1, v.end - v.start)))), false)
     }
 
+    /// The verses a running session veils.
+    private func sessionRange(_ surah: Int) -> (Int, Int) {
+        if let r = rec.run, !r.completed, r.plan.veil, r.plan.surah == surah { return (r.plan.from, r.plan.to) }
+        return (0, -1)
+    }
+
     private func updateBar(cv: (surah: SurahData, verse: VerseData), veil: Double, theme: TickerTheme, hidden: Bool) {
         guard let m = menuBar, m.installed else { return }
-        m.theme(theme)
+        m.refreshAppearance()
+        m.applyTheme()
         m.line.setVisible(!hidden)
         if case .gap = rec.phase { m.line.setDim(true) } else { m.line.setDim(false) }
         m.line.progressProvider = { [weak self] in self?.progress() }
-        m.line.show(verse: cv.verse, content: TickerLineView.Content(surah: cv.surah.n, basri: cv.verse.b, veil: veil, peek: ui.peek, colours: prefs.colours, kufi: prefs.kufi, dark: theme.dark, fontSize: m.height * 0.68 * CGFloat(prefs.fontScale)))
+        // the verse being read with the ones around it, so the ayat keep scrolling in
+        let all = cv.surah.verses
+        let i = all.firstIndex(where: { $0.b == cv.verse.b }) ?? 0
+        let lo = max(0, i - 1), hi = min(all.count - 1, i + 3)
+        let seq = Array(all[lo...hi])
+        let range = sessionRange(cv.surah.n)
+        m.line.show(verses: seq, content: TickerLineView.Content(surah: cv.surah.n, basris: seq.map(\.b), current: i - lo, veil: veil, veilFrom: range.0, veilTo: range.1, peek: ui.peek, colours: prefs.colours, kufi: prefs.kufi, dark: m.theme.dark, fontSize: m.height * 0.74 * CGFloat(prefs.fontScale)))
         m.line.wake()
     }
 

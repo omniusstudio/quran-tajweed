@@ -17,9 +17,9 @@ enum Dock: String, CaseIterable, Identifiable {
     var label: String { self == .top ? "أعلى الشاشة" : "أسفل الشاشة" }
 }
 enum ThemeMode: String, CaseIterable, Identifiable {
-    case paper, dark, auto
+    case system, paper, dark
     var id: String { rawValue }
-    var label: String { self == .paper ? "ورقي" : self == .dark ? "داكن" : "تلقائي" }
+    var label: String { self == .system ? "مثل النظام" : self == .paper ? "ورقي" : "داكن" }
 }
 
 /// Everything the reader can change, remembered between launches. One place, so the ticker, the menu and
@@ -59,7 +59,7 @@ final class Prefs: ObservableObject {
         barWidth = num("barWidth", 560)
         width = WidthMode(rawValue: d.string(forKey: "width") ?? "") ?? .compact
         dock = Dock(rawValue: d.string(forKey: "dock") ?? "") ?? .top
-        theme = ThemeMode(rawValue: d.string(forKey: "theme") ?? "") ?? .paper
+        theme = ThemeMode(rawValue: d.string(forKey: "theme") ?? "") ?? .system
         height = num("height", 46)
         fontScale = num("fontScale", 1)
         speed = num("speed", 1)

@@ -39,8 +39,16 @@ final class MenuBarTicker: NSObject {
         }
     }
 
+    /// Whether the menu bar itself is dark right now (it follows the wallpaper), for the colour of the text.
+    nonisolated(unsafe) static var barDark = false
     var thickness: CGFloat { NSStatusBar.system.thickness }
-    var height: CGFloat { thickness - 4 }
+    var height: CGFloat { thickness - 2 }
+    var theme: TickerTheme { .system(dark: Self.barDark) }
+
+    func refreshAppearance() {
+        let dark = item.button?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        if dark != Self.barDark { Self.barDark = dark }
+    }
 
     func install(width: CGFloat) {
         guard let b = item.button else { return }
@@ -51,7 +59,7 @@ final class MenuBarTicker: NSObject {
             b.addSubview(container)
             installed = true
         }
-        container.frame = NSRect(x: 0, y: 2, width: width, height: height)
+        container.frame = NSRect(x: 0, y: 1, width: width, height: height)
         backdrop.frame = container.bounds
         host.frame = container.bounds
         let lw = max(60, width - Self.insetRight - Self.insetLeft)
@@ -72,10 +80,11 @@ final class MenuBarTicker: NSObject {
     /// Where the bar sits on screen, so the hover strip can open right under it.
     var screenFrame: NSRect? { item.button?.window?.frame }
 
-    func theme(_ t: TickerTheme) {
-        backdrop.layer?.backgroundColor = t.background.cgColor
-        backdrop.layer?.borderColor = t.rule.withAlphaComponent(0.5).cgColor
-        line.theme = t
+    /// The strip has no background of its own: it is part of the menu bar.
+    func applyTheme() {
+        backdrop.layer?.backgroundColor = NSColor.clear.cgColor
+        backdrop.layer?.borderWidth = 0
+        line.theme = theme
     }
 }
 
@@ -86,7 +95,7 @@ struct CompactOverlay: View {
     let onMenu: () -> Void
     @State private var pulse = false
 
-    private var theme: TickerTheme { TickerTheme.current(prefs.theme) }
+    private var theme: TickerTheme { .system(dark: MenuBarTicker.barDark) }
     private var ink: Color { Color(nsColor: theme.ink) }
     private var dim: Color { Color(nsColor: theme.dim) }
     private var accent: Color { Color(nsColor: theme.dark ? NSColor(srgbRed: 0.38, green: 0.81, blue: 0.59, alpha: 1) : NSColor(srgbRed: 0.082, green: 0.38, blue: 0.239, alpha: 1)) }
@@ -127,7 +136,7 @@ struct CompactOverlay: View {
                     Button("لاحقًا") { rec.later() }.buttonStyle(.plain).foregroundStyle(dim).font(.system(size: 11))
                 }
                 .padding(.horizontal, 10)
-                .background(RoundedRectangle(cornerRadius: 5).fill(Color(nsColor: theme.background)))
+                .background(RoundedRectangle(cornerRadius: 5).fill(Color(nsColor: theme.dark ? NSColor(white: 0.2, alpha: 0.95) : NSColor(white: 0.97, alpha: 0.95))))
             }
         }
         .environment(\.layoutDirection, .rightToLeft)

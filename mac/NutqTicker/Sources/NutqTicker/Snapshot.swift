@@ -45,6 +45,24 @@ enum Snapshot {
                 }
             }
             return
+        case "barflow":
+            // the menu-bar tape across a verse boundary: nothing should jump
+            Prefs.shared.lastSurah = 112; Prefs.shared.lastVerse = 1
+            ticker.refresh()
+            rec.read(surah: 112, from: 1)
+            var frame = 0
+            var started = false
+            Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { t in
+                MainActor.assumeIsolated {
+                    if !started, rec.verseIndex == 1 { started = true }
+                    if started, frame < 6, let v = ticker.menuBar?.view {
+                        write(v, to: out.replacingOccurrences(of: ".png", with: "\(frame).png"))
+                        frame += 1
+                    }
+                    if frame >= 6 || (!started && rec.now() > 12) { t.invalidate(); NSApp.terminate(nil) }
+                }
+            }
+            return
         case "rise":
             // frames of the next verse rising into the main row, as the recitation crosses from one verse to the next
             Prefs.shared.lastSurah = 112; Prefs.shared.lastVerse = 1
